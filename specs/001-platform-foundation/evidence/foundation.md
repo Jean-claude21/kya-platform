@@ -27,13 +27,23 @@
 - rejet testé pour audience, issuer, expiration, sujet vide, claim absent et jeton vide ;
 - l'identité authentifiée est immuable ; l'autorisation reste hors du JWT et relève d'OpenFGA.
 
+## Observabilité et erreurs — T015
+
+- chaque requête reçoit un UUID de corrélation dans le contexte, la réponse et les journaux ;
+- un UUID fourni par le client est conservé seulement s'il est valide ;
+- les erreurs attendues, HTTP, de validation et internes utilisent un contrat Problem Details ;
+- les erreurs internes ne sont jamais renvoyées au client ;
+- messages, champs imbriqués, `SecretStr`, Bearer tokens et identifiants de connexion sont masqués
+  avant sérialisation JSON ;
+- les journaux d'accès ne contiennent ni query string ni corps de requête.
+
 ## Contrôles exécutés
 
 | Contrôle                        | Résultat                             |
 | ------------------------------- | ------------------------------------ |
 | Ruff                            | réussi                               |
 | mypy strict                     | réussi sur 20 fichiers source        |
-| pytest                          | 24 tests réussis, couverture 97,36 % |
+| pytest                          | 34 tests réussis, couverture 96,39 % |
 | pnpm lint/typecheck/test/format | réussi, 2 tests TypeScript           |
 | Image backend Python 3.14       | construite                           |
 | Santé du conteneur              | `ready`, environnement `test`        |

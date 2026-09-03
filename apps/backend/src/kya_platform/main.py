@@ -8,12 +8,18 @@ from fastapi import FastAPI
 
 from kya_platform.api.router import api_router
 from kya_platform.config import Settings, get_settings
+from kya_platform.observability import (
+    CorrelationMiddleware,
+    configure_logging,
+    install_error_handlers,
+)
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     """Build an isolated application instance for runtime or tests."""
 
     resolved_settings = settings or get_settings()
+    configure_logging(resolved_settings.log_level)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -31,6 +37,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     application.state.settings = resolved_settings
     application.state.is_ready = False
+    application.add_middleware(CorrelationMiddleware)
+    install_error_handlers(application)
     application.include_router(api_router, prefix="/api/v1")
     return application
 
