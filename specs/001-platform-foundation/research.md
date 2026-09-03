@@ -1,7 +1,7 @@
 # Recherche et décisions — Fondation KYA Platform
 
 **Date**: 2026-09-03  
-**Statut**: décisions initiales à confirmer par les preuves du pilote
+**Statut**: choix approuvés le 2026-09-03, adoption de production conditionnée par les preuves du pilote
 
 ## Règle de décision
 
@@ -149,9 +149,9 @@ preview exécute du code non encore approuvé et doit donc être traitée comme 
 **Alternatives considérées**: reconstruire à chaque environnement ou injecter les secrets de
 production dans les previews, rejeté.
 
-## Questions de validation différée
+## Décisions validées et contrôles différés
 
-Ces choix n'empêchent pas le plan. Ils seront validés par les pilotes avant production :
+Ces choix ont été approuvés. Leur conformité opérationnelle sera encore démontrée avant production :
 
 1. **IdP Groupe** — proposition : Better Auth maintenant, interface OIDC stable, puis raccordement
    au fournisseur Groupe retenu sans migrer les autorisations.

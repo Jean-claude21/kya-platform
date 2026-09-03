@@ -15,6 +15,8 @@ l'implémentation sans affaiblir les résultats.
 7. Publier une nouvelle version, exécuter la vérification quotidienne, mettre à jour puis revenir à
    la version saine précédente.
 8. Reconstituer toutes les actions depuis l'audit sans révéler la valeur d'un secret.
+9. Désactiver une identité, révoquer ses sessions et jetons, puis démontrer que les appels déjà
+   ouverts sont refusés.
 
 ## Déploiement factuel
 
@@ -41,3 +43,5 @@ primaire n'est choisi qu'après ce rapport.
 - Les opérations répétées avec la même clé d'idempotence ne produisent aucun doublon.
 - Le retrait d'une affectation coupe les accès dans le délai défini par la spécification.
 - Le rollback restaure la dernière version saine et conserve la preuve de l'échec.
+- Une restauration contrôlée des données du Hub, des relations d'autorisation et des métadonnées de
+  secrets respecte les objectifs de reprise définis, sans réintroduire d'accès révoqué.
