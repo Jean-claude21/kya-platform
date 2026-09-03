@@ -1,0 +1,29 @@
+# Dependencies and build outputs
+node_modules/
+.turbo/
+.output/
+dist/
+coverage/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Local tooling state
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/settings.json
+
+# Test and temporary artifacts
+playwright-report/
+test-results/
+tmp/
+temp/
+
