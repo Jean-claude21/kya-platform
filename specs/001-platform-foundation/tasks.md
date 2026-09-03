@@ -18,13 +18,13 @@
 
 ## Phase 2 — Foundational blockers
 
-- [x] T011 Configure uv, Python 3.13, FastAPI app factory, lifespan, health routes and pytest in apps/backend/
+- [x] T011 Configure uv, Python 3.14, FastAPI app factory, lifespan, health routes and pytest in apps/backend/
 - [x] T012 Write failing manifest contract tests in apps/backend/tests/contract/test_artifact_manifest.py
 - [x] T013 Implement shared Pydantic contracts and export OpenAPI/JSON Schema in apps/backend/src/kya_platform/contracts/
-- [ ] T014 [P] Configure async SQLAlchemy 2, Alembic and the initial domain/audit migration in apps/backend/
+- [x] T014 [P] Configure async SQLAlchemy 2, Alembic and the initial domain/audit migration in apps/backend/
 - [ ] T015 [P] Implement correlation, typed errors and redacted logs in apps/backend/src/kya_platform/observability/
 - [ ] T016 [P] Implement transaction, outbox and idempotency ports in apps/backend/src/kya_platform/application/
-- [ ] T017 [P] Implement FastAPI OIDC/JWKS validation and immutable issuer/subject mapping; keep Better Auth at the Web boundary
+- [x] T017 [P] Implement FastAPI Neon Auth JWT/JWKS validation and immutable issuer/subject mapping
 - [ ] T018 Write failing OpenFGA model tests for the KYA reference matrix in tests/policy/
 - [ ] T019 Implement versioned OpenFGA model and authorization port in apps/backend/src/kya_platform/authorization/
 - [ ] T020 [P] Implement SecretReference port with no-value types in apps/backend/src/kya_platform/secrets/

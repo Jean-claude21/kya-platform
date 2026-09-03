@@ -13,7 +13,8 @@ des instances locales ou des adapters simulés.
 | Étape               | Accès à fournir                             | Finalité                         | Séparation obligatoire        |
 | ------------------- | ------------------------------------------- | -------------------------------- | ----------------------------- |
 | Persistance Neon    | URL poolée runtime + URL directe migrations | API et Alembic                   | preview, test, production     |
-| Identité            | secret Better Auth + client OIDC            | sessions et jetons               | non-production, production    |
+| Identité            | URL Neon Auth, issuer, audience et JWKS     | sessions et jetons               | par branche/environnement     |
+| Fichiers            | identité S3 Neon Object Storage             | objets privés et publications    | par branche/environnement     |
 | Autorisation        | store/model OpenFGA + identité machine      | décisions serveur                | par environnement             |
 | Secrets             | identité machine Infisical                  | lecture de références autorisées | par workload et environnement |
 | Synchronisation     | GitHub App ID, installation ID, clé privée  | dépôts, PR, tags et manifestes   | permissions minimales         |

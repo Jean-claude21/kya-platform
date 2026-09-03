@@ -2,10 +2,14 @@
 name = "kya-platform-backend"
 version = "0.0.1"
 description = "Backend métier, API et surfaces MCP de KYA Platform"
-requires-python = ">=3.13,<3.14"
+requires-python = ">=3.14,<3.15"
 dependencies = [
+  "alembic>=1.16",
+  "asyncpg>=0.30",
   "fastapi>=0.116",
+  "pyjwt[crypto]>=2.12",
   "pydantic-settings>=2.10",
+  "sqlalchemy[asyncio]>=2.0",
   "uvicorn[standard]>=0.35",
 ]
 

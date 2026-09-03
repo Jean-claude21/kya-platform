@@ -14,10 +14,11 @@ GitHub porte les sources et validations ; Dokploy et Coolify implémentent un m�
 
 ## Technical Context
 
-**Language/Version**: Python 3.13 pour le backend ; TypeScript strict et Node.js 24 LTS pour le Web
+**Language/Version**: Python 3.14 pour le backend ; TypeScript strict et Node.js 24 LTS pour le Web
 **Primary Dependencies**: FastAPI, Pydantic v2, SQLAlchemy 2, Alembic, MCP Python SDK,
-TanStack Start, Better Auth, OpenFGA, Zod, OpenTelemetry
-**Storage**: Neon Postgres ; Infisical pour les valeurs secrètes ; stockage OpenFGA géré  
+TanStack Start, Neon Auth, OpenFGA, Zod, OpenTelemetry
+**Storage**: Neon Postgres ; Neon Object Storage derrière un port S3 ; Infisical pour les valeurs
+secrètes ; stockage OpenFGA géré
 **Testing**: pytest, Vitest, Playwright, tests de contrats, tests de politiques et intégration conteneurisée
 **Target Platform**: conteneurs Linux déployables par Dokploy ou Coolify  
 **Project Type**: monorepo Web TypeScript + backend Python modulaire
@@ -70,7 +71,7 @@ notifications et reprise des opérations idempotentes.
 
 ```text
 apps/
-├── web/                     # Interface TanStack et frontière Better Auth
+├── web/                     # Interface TanStack et client Neon Auth
 └── backend/                 # FastAPI : API, MCP, domaine, adapters et workers
     ├── src/kya_platform/
     │   ├── api/             # routes HTTP versionnées et dépendances

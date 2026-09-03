@@ -24,7 +24,7 @@ multiplient CI, versions et opérations avant que les frontières réelles soien
 
 ## D02 — Runtime et surfaces applicatives
 
-**Décision**: Python 3.13 et FastAPI portent l'API métier, le Registry MCP et les workers. Node.js 24
+**Décision**: Python 3.14 et FastAPI portent l'API métier, le Registry MCP et les workers. Node.js 24
 LTS et TypeScript strict portent TanStack Start et la frontière de session. Le Registry utilise le
 SDK Python MCP et Streamable HTTP ; le mode stdio est réservé aux usages locaux approuvés.
 
@@ -50,15 +50,17 @@ accès SQL libre depuis chaque module, rejeté pour préserver les frontières.
 
 ## D04 — Authentification et identités
 
-**Décision**: Better Auth gère uniquement les sessions Web et la façade OIDC/OAuth 2.1. FastAPI
-valide chaque jeton serveur par émetteur, audience, signature JWKS et expiration, puis demande la
-décision métier à OpenFGA. Les identités sont liées par couple immuable émetteur/sujet.
+**Décision**: Neon Auth gère utilisateurs, sessions, organisations, OAuth et émission des JWT dans
+le schéma branchable `neon_auth`. FastAPI valide chaque jeton par émetteur, audience, signature
+JWKS et expiration, puis demande la décision métier à OpenFGA. Les identités KYA sont liées par
+couple immuable émetteur/sujet.
 
-**Rationale**: la prise en charge d'un fournisseur OIDC générique, de PKCE et d'un serveur OAuth
-permet de servir l'interface, les applications et les clients MCP sans enfermer KYA dans un IdP.
+**Rationale**: l'identité suit les branches de preview avec Postgres, sans synchronisation externe.
+Neon Auth authentifie ; OpenFGA reste l'autorité des relations et permissions fines KYA.
 
-**Alternatives considérées**: Keycloak immédiatement, différé tant que fédération, annuaire et
-exploitation HA ne sont pas établis ; comptes maison, rejetés.
+**Alternatives considérées**: Better Auth direct est redondant car Neon Auth l'intègre déjà ;
+Keycloak est différé tant que fédération et exploitation HA ne sont pas établies ; comptes maison,
+rejetés.
 
 ## D05 — Autorisation fine
 
@@ -163,12 +165,25 @@ future possible sans payer dès maintenant le coût de microservices.
 **Alternatives considérées**: deux backends Hono/FastAPI, rejetés pour éviter divergence et double
 maintenance ; accès Neon depuis TanStack, rejeté car la sécurité ne doit pas dépendre du navigateur.
 
+## D13 — Fichiers et Neon Object Storage
+
+**Décision**: Neon Object Storage est l'adaptateur pilote du port S3 `ObjectStorage` pour fichiers,
+aperçus, preuves et bundles. GitHub reste l'autorité du code, Postgres celle des métadonnées et
+Infisical celle des secrets. Aucun objet critique ne dépend d'une copie unique tant que le service
+est en bêta.
+
+**Rationale**: les objets suivent les branches Neon, ce qui rend les previews cohérentes. Le port
+S3 maintient la possibilité de migrer vers un fournisseur compatible sans modifier le domaine.
+
+**Alternatives considérées**: stocker les blobs dans Postgres, rejeté ; coupler le domaine aux API
+Neon, rejeté ; ignorer Storage, rejeté car les artefacts et leçons comportent des fichiers.
+
 ## Décisions validées et contrôles différés
 
 Ces choix ont été approuvés. Leur conformité opérationnelle sera encore démontrée avant production :
 
-1. **IdP Groupe** — proposition : Better Auth maintenant, interface OIDC stable, puis raccordement
-   au fournisseur Groupe retenu sans migrer les autorisations.
+1. **Identité** — Neon Auth est retenu ; FastAPI consomme seulement son contrat JWT/JWKS et OpenFGA
+   conserve l'autorisation KYA.
 2. **Gestionnaire de secrets** — proposition : Infisical pour le pilote ; passage à Vault seulement
    si les secrets dynamiques, la PKI ou une exigence réglementaire le justifient.
 3. **Déploiement primaire** — proposition : benchmark identique Dokploy/Coolify, puis choix d'un

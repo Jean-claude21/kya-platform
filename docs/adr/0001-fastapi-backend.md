@@ -19,8 +19,8 @@ FastAPI devient l'unique backend métier. Le même package Python expose trois p
 2. Registry MCP protégé ;
 3. workers et routines planifiées.
 
-TanStack reste responsable de l'expérience utilisateur et de la session Better Auth. FastAPI
-valide les jetons OIDC/OAuth et demande les décisions d'autorisation à OpenFGA. SQLAlchemy 2 et
+TanStack reste responsable de l'expérience utilisateur et intègre Neon Auth. FastAPI valide les
+jetons Neon Auth par issuer, audience et JWKS, puis demande les décisions d'autorisation à OpenFGA. SQLAlchemy 2 et
 Alembic deviennent l'unique couche de persistance vers Neon.
 
 ## Conséquences

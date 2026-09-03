@@ -3,6 +3,7 @@
 from functools import lru_cache
 from typing import Literal
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -20,6 +21,11 @@ class Settings(BaseSettings):
     environment: Literal["local", "preview", "test", "production"] = "local"
     version: str = "0.0.1"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
+    database_url: SecretStr | None = None
+    database_migration_url: SecretStr | None = None
+    neon_auth_issuer: str | None = None
+    neon_auth_jwks_url: str | None = None
+    neon_auth_audience: str = "kya-platform"
 
 
 @lru_cache
