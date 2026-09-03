@@ -37,13 +37,22 @@
   avant sérialisation JSON ;
 - les journaux d'accès ne contiennent ni query string ni corps de requête.
 
+## Transactions, idempotence et outbox — T016
+
+- les ports `UnitOfWork`, `IdempotencyPort` et `OutboxPort` sont indépendants de SQLAlchemy ;
+- le résultat et les effets externes sont enregistrés dans la transaction métier avant commit ;
+- un appel identique rejoue le résultat sans rappeler le traitement ;
+- une clé réutilisée avec un autre hash est rejetée ;
+- une erreur métier provoque un rollback sans résultat d'idempotence ;
+- le hash SHA-256 repose sur une sérialisation JSON canonique.
+
 ## Contrôles exécutés
 
 | Contrôle                        | Résultat                             |
 | ------------------------------- | ------------------------------------ |
 | Ruff                            | réussi                               |
 | mypy strict                     | réussi sur 20 fichiers source        |
-| pytest                          | 34 tests réussis, couverture 96,39 % |
+| pytest                          | 42 tests réussis, couverture 93,35 % |
 | pnpm lint/typecheck/test/format | réussi, 2 tests TypeScript           |
 | Image backend Python 3.14       | construite                           |
 | Santé du conteneur              | `ready`, environnement `test`        |

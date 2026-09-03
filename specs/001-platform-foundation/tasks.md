@@ -23,7 +23,7 @@
 - [x] T013 Implement shared Pydantic contracts and export OpenAPI/JSON Schema in apps/backend/src/kya_platform/contracts/
 - [x] T014 [P] Configure async SQLAlchemy 2, Alembic and the initial domain/audit migration in apps/backend/
 - [x] T015 [P] Implement correlation, typed errors and redacted logs in apps/backend/src/kya_platform/observability/
-- [ ] T016 [P] Implement transaction, outbox and idempotency ports in apps/backend/src/kya_platform/application/
+- [x] T016 [P] Implement transaction, outbox and idempotency ports in apps/backend/src/kya_platform/application/
 - [x] T017 [P] Implement FastAPI Neon Auth JWT/JWKS validation and immutable issuer/subject mapping
 - [ ] T018 Write failing OpenFGA model tests for the KYA reference matrix in tests/policy/
 - [ ] T019 Implement versioned OpenFGA model and authorization port in apps/backend/src/kya_platform/authorization/
