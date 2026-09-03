@@ -45,3 +45,17 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
+
+  backend-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v9
+        with:
+          enable-cache: true
+          python-version: '3.13'
+      - run: uv sync --locked --all-packages
+      - run: uv run ruff check apps/backend
+      - run: uv run ruff format --check apps/backend
+      - run: uv run mypy
+      - run: uv run pytest

@@ -7,19 +7,20 @@
 
 Construire un plan de contrôle interne qui gouverne les espaces, identités, autorisations,
 artefacts, publications, installations, secrets référencés et déploiements de KYA. La première
-livraison est un monolithe modulaire TypeScript : interface TanStack, API et MCP partageant des
-services de domaine, données du Hub dans Neon, autorisation OpenFGA et secrets dans Infisical.
+livraison est un monolithe modulaire polyglotte : interface TanStack en TypeScript et noyau métier
+FastAPI en Python, exposé par API, MCP et workers. Les données du Hub résident dans Neon,
+l'autorisation dans OpenFGA et les secrets dans Infisical.
 GitHub porte les sources et validations ; Dokploy et Coolify implémentent un même contrat.
 
 ## Technical Context
 
-**Language/Version**: TypeScript strict, Node.js 24 LTS  
-**Primary Dependencies**: TanStack Start, Hono, MCP TypeScript SDK v2, Better Auth, OpenFGA,
-Drizzle, Zod, OpenTelemetry  
+**Language/Version**: Python 3.13 pour le backend ; TypeScript strict et Node.js 24 LTS pour le Web
+**Primary Dependencies**: FastAPI, Pydantic v2, SQLAlchemy 2, Alembic, MCP Python SDK,
+TanStack Start, Better Auth, OpenFGA, Zod, OpenTelemetry
 **Storage**: Neon Postgres ; Infisical pour les valeurs secrètes ; stockage OpenFGA géré  
-**Testing**: Vitest, Playwright, tests de contrats, tests de politiques et intégration conteneurisée  
+**Testing**: pytest, Vitest, Playwright, tests de contrats, tests de politiques et intégration conteneurisée
 **Target Platform**: conteneurs Linux déployables par Dokploy ou Coolify  
-**Project Type**: monorepo Web/API/MCP/worker modulaire  
+**Project Type**: monorepo Web TypeScript + backend Python modulaire
 **Performance Goals**: lecture catalogue p95 < 500 ms ; décision d'autorisation p95 < 100 ms ;
 recherche p95 < 1 s à la charge pilote  
 **Constraints**: refus par défaut, aucune valeur secrète dans Neon ou les logs, faible bande
@@ -47,18 +48,18 @@ Aucune exception constitutionnelle n'est demandée.
 ```text
 Utilisateurs et agents IA
         │
-        ├── apps/web (TanStack Start)
-        ├── apps/api (Business API + OAuth resource surfaces)
-        └── apps/registry-mcp (outils MCP filtrés par identité)
-                         │
-                  packages/application
-                         │
-      ┌──────────────────┼──────────────────┐
- packages/iam      packages/catalog   packages/delivery
-      │                   │                  │
- OpenFGA          Neon PostgreSQL      GitHub / providers
-      │                                      │
- packages/secrets ── Infisical      Dokploy ou Coolify
+        ├── apps/web (TanStack Start + frontière d'identité)
+        └── apps/backend (FastAPI)
+                    ├── API métier versionnée
+                    ├── Registry MCP protégé
+                    └── workers et routines planifiées
+                               │
+                 modules de domaine Python
+                               │
+      ┌────────────────────────┼────────────────────────┐
+ OpenFGA                  Neon PostgreSQL        GitHub / providers
+      │                                               │
+ Infisical                                     Dokploy ou Coolify
 ```
 
 Les adapters dépendent des ports de domaine ; le domaine ne dépend d'aucun fournisseur. Les
@@ -69,27 +70,21 @@ notifications et reprise des opérations idempotentes.
 
 ```text
 apps/
-├── web/                     # Interface et BFF TanStack
-├── api/                     # API externe versionnée
-├── registry-mcp/            # Serveur MCP distant
-└── worker/                  # tâches planifiées et asynchrones
+├── web/                     # Interface TanStack et frontière Better Auth
+└── backend/                 # FastAPI : API, MCP, domaine, adapters et workers
+    ├── src/kya_platform/
+    │   ├── api/             # routes HTTP versionnées et dépendances
+    │   ├── mcp/             # outils MCP et Protected Resource Metadata
+    │   ├── workers/         # routines planifiées et asynchrones
+    │   ├── domain/          # entités et invariants purs
+    │   ├── application/     # cas d'usage, transactions et ports
+    │   └── infrastructure/  # Neon, OpenFGA, Infisical et fournisseurs
+    └── tests/
 packages/
-├── domain/                  # entités et invariants purs
-├── application/             # cas d'usage et transactions
-├── contracts/               # schémas publics et manifestes
-├── db/                      # Drizzle, migrations, repositories
-├── auth/                    # sessions et OIDC/OAuth
-├── authorization/           # ports et adapter OpenFGA
-├── secrets/                 # SecretReference et adapter Infisical
-├── catalog/                 # artefacts, versions, capacités
-├── organization/            # unités, espaces et affectations
-├── publication/             # revue et cycle de vie
-├── distribution/            # installation et mises à jour
-├── deployment/              # contrat Dokploy/Coolify
-├── audit/                   # événements append-only
-├── frappe-adapter/          # système externe référencé
+├── contracts/               # contrats TypeScript générés depuis OpenAPI/JSON Schema
+├── config/                  # validation de configuration Web sans secret serveur
 ├── design-system/           # composants et tokens KYA
-└── test-kit/                # builders, fixtures et matrices
+└── test-kit/                # builders et configuration de tests Web
 catalog/templates/
 ├── skill/
 ├── mcp-server/
@@ -111,9 +106,10 @@ tests/
 └── security/
 ```
 
-**Structure Decision**: un Spec Kit à la racine gouverne la plateforme. Les futurs artefacts
-autonomes pourront recevoir leur propre projet Spec Kit lors de leur extraction, sans dupliquer
-les modèles partagés prématurément.
+**Structure Decision**: FastAPI est l'unique backend métier. TanStack ne duplique ni règles
+d'autorisation ni accès direct à Neon. Un Spec Kit à la racine gouverne la plateforme. Les futurs
+artefacts autonomes pourront recevoir leur propre projet Spec Kit lors de leur extraction, sans
+dupliquer les modèles partagés prématurément.
 
 ## Delivery Sequence
 

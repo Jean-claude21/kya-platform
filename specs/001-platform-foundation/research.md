@@ -12,8 +12,9 @@ les tests de conformité avant d'être qualifié pour la production.
 
 ## D01 — Architecture du dépôt
 
-**Décision**: monorepo TypeScript sous pnpm, organisé en applications déployables et packages de
-domaine sans dépendances circulaires. Turborepo orchestre les tâches, sans contenir de logique métier.
+**Décision**: monorepo polyglotte. pnpm/Turborepo gouverne le Web TypeScript ; uv gouverne le
+backend Python. Le noyau FastAPI contient les modules métier et expose plusieurs points d'entrée
+déployables sans dupliquer les règles.
 
 **Rationale**: livraison rapide, contrats partagés, changements atomiques et extraction ultérieure
 possible. Les limites sont contrôlées par les imports, tests de contrat et propriétaires de code.
@@ -23,13 +24,13 @@ multiplient CI, versions et opérations avant que les frontières réelles soien
 
 ## D02 — Runtime et surfaces applicatives
 
-**Décision**: Node.js 24 LTS et TypeScript strict. TanStack Start porte l'interface et son BFF. Une
-API Hono versionnée porte les intégrations externes. Le Registry MCP utilise le SDK TypeScript MCP
-v2 et Streamable HTTP ; le mode stdio est réservé aux usages locaux explicitement approuvés.
+**Décision**: Python 3.13 et FastAPI portent l'API métier, le Registry MCP et les workers. Node.js 24
+LTS et TypeScript strict portent TanStack Start et la frontière de session. Le Registry utilise le
+SDK Python MCP et Streamable HTTP ; le mode stdio est réservé aux usages locaux approuvés.
 
-**Rationale**: un langage commun accélère l'équipe, tandis que des surfaces distinctes empêchent
-les fonctions propres à l'interface de devenir accidentellement une API publique. Le SDK MCP v2
-documente Hono, Streamable HTTP, l'authentification transmise par requête et les portées par outil.
+**Rationale**: FastAPI donne une frontière serveur explicite pour Neon, secrets, audit et
+autorisations, tout en restant naturel pour les traitements data/IA. Les surfaces API, MCP et worker
+partagent le même domaine Python, mais restent exécutables et dimensionnables séparément.
 
 **Alternatives considérées**: API uniquement dans l'application Web, rejetée pour préserver les
 contrats externes ; microservice MCP indépendant dès le premier jour, différé jusqu'à preuve d'un
@@ -37,21 +38,21 @@ cycle de déploiement distinct.
 
 ## D03 — Données et migrations
 
-**Décision**: Neon Postgres est autoritaire pour le Hub. Drizzle fournit schémas typés et migrations
-SQL révisables. Les domaines utilisent des schémas logiques distincts et accèdent aux données par
-leurs ports. Les migrations publiées sont immuables.
+**Décision**: Neon Postgres est autoritaire pour le Hub. SQLAlchemy 2 fournit les modèles et accès
+asynchrones ; Alembic produit des migrations SQL révisables. La connexion poolée sert le runtime et
+une connexion directe dédiée sert les migrations. Les migrations publiées sont immuables.
 
-**Rationale**: Neon fournit des branches isolées adaptées aux previews ; Drizzle conserve la
-lisibilité SQL et s'intègre naturellement à TypeScript.
+**Rationale**: Neon fournit des branches isolées adaptées aux previews ; SQLAlchemy/Alembic est le
+couple natif du backend Python et évite une seconde couche de persistance en TypeScript.
 
 **Alternatives considérées**: Prisma, valide mais moins direct pour les politiques et SQL avancé ;
 accès SQL libre depuis chaque module, rejeté pour préserver les frontières.
 
 ## D04 — Authentification et identités
 
-**Décision**: Better Auth gère les sessions initiales et expose une façade OIDC/OAuth 2.1. Les
-identités sont liées par couple immuable émetteur/sujet. L'inscription libre est désactivée. Un
-fournisseur OIDC Groupe pourra remplacer ou compléter la connexion sans changer le domaine IAM.
+**Décision**: Better Auth gère uniquement les sessions Web et la façade OIDC/OAuth 2.1. FastAPI
+valide chaque jeton serveur par émetteur, audience, signature JWKS et expiration, puis demande la
+décision métier à OpenFGA. Les identités sont liées par couple immuable émetteur/sujet.
 
 **Rationale**: la prise en charge d'un fournisseur OIDC générique, de PKCE et d'un serveur OAuth
 permet de servir l'interface, les applications et les clients MCP sans enfermer KYA dans un IdP.
@@ -148,6 +149,19 @@ preview exécute du code non encore approuvé et doit donc être traitée comme 
 
 **Alternatives considérées**: reconstruire à chaque environnement ou injecter les secrets de
 production dans les previews, rejeté.
+
+## D12 — Backend FastAPI et propriété de la logique
+
+**Décision**: FastAPI est l'unique backend métier. Le navigateur et le BFF TanStack ne disposent
+d'aucun accès direct à Neon, OpenFGA, Infisical ou aux clés fournisseurs. API, MCP et workers
+appellent les mêmes cas d'usage Python ; ils ne réimplémentent aucune règle métier.
+
+**Rationale**: cette séparation réduit la surface de secrets, facilite les traitements data/IA et
+permet des tests pytest identiques quel que soit le canal d'entrée. Elle conserve une extraction
+future possible sans payer dès maintenant le coût de microservices.
+
+**Alternatives considérées**: deux backends Hono/FastAPI, rejetés pour éviter divergence et double
+maintenance ; accès Neon depuis TanStack, rejeté car la sécurité ne doit pas dépendre du navigateur.
 
 ## Décisions validées et contrôles différés
 

@@ -1,4 +1,25 @@
 services:
+  backend:
+    build:
+      context: ../..
+      dockerfile: infra/containers/Dockerfile.backend
+    environment:
+      KYA_ENVIRONMENT: local
+      KYA_VERSION: 0.0.1
+    ports:
+      - '127.0.0.1:8000:8000'
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'python',
+          '-c',
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health/ready')",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
   postgres:
     image: postgres:17.6-alpine
     environment:

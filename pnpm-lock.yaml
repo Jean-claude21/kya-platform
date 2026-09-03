@@ -6,12 +6,6 @@ settings:
 
 catalogs:
   default:
-    '@modelcontextprotocol/hono':
-      specifier: 2.0.0
-      version: 2.0.0
-    '@modelcontextprotocol/server':
-      specifier: 2.0.0
-      version: 2.0.0
     '@tanstack/react-query':
       specifier: 5.102.8
       version: 5.102.8
@@ -21,9 +15,6 @@ catalogs:
     '@tanstack/react-start':
       specifier: 1.168.49
       version: 1.168.49
-    hono:
-      specifier: 4.13.5
-      version: 4.13.5
     zod:
       specifier: 4.5.4
       version: 4.5.4
@@ -66,30 +57,6 @@ importers:
         specifier: 4.5.4
         version: 4.5.4
 
-  apps/api:
-    dependencies:
-      hono:
-        specifier: 'catalog:'
-        version: 4.13.5
-      zod:
-        specifier: 'catalog:'
-        version: 4.5.4
-
-  apps/registry-mcp:
-    dependencies:
-      '@modelcontextprotocol/hono':
-        specifier: 'catalog:'
-        version: 2.0.0(@modelcontextprotocol/server@2.0.0)(hono@4.13.5)
-      '@modelcontextprotocol/server':
-        specifier: 'catalog:'
-        version: 2.0.0
-      hono:
-        specifier: 'catalog:'
-        version: 4.13.5
-      zod:
-        specifier: 'catalog:'
-        version: 4.5.4
-
   apps/web:
     dependencies:
       '@tanstack/react-query':
@@ -107,22 +74,6 @@ importers:
       react-dom:
         specifier: 19.2.8
         version: 19.2.8(react@19.2.8)
-
-  apps/worker:
-    dependencies:
-      zod:
-        specifier: 'catalog:'
-        version: 4.5.4
-
-  packages/application: {}
-
-  packages/audit: {}
-
-  packages/auth: {}
-
-  packages/authorization: {}
-
-  packages/catalog: {}
 
   packages/config:
     dependencies:
@@ -147,25 +98,7 @@ importers:
 
   packages/contracts: {}
 
-  packages/db: {}
-
-  packages/deployment: {}
-
   packages/design-system: {}
-
-  packages/distribution: {}
-
-  packages/frappe-adapter: {}
-
-  packages/notifications: {}
-
-  packages/observability: {}
-
-  packages/organization: {}
-
-  packages/publication: {}
-
-  packages/secrets: {}
 
   packages/test-kit: {}
 
@@ -316,21 +249,6 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
-
-  '@modelcontextprotocol/core@2.0.0':
-    resolution: {integrity: sha512-pJCEwGG7Lfr/+PQp9ZTwKXNeO5wzbfKL7H3MYpCorM4oFBoQrdjnBgEoqG+RjhsvS1FKrDbKux+M1HhlnGWqcA==}
-    engines: {node: '>=20'}
-
-  '@modelcontextprotocol/hono@2.0.0':
-    resolution: {integrity: sha512-lKCSXRusLxpX63G+6og9ewcRkqVbjB2xSxpvU/VJhxcUkpvGgpDrmcgNRQ4dTapGr8AspNFdRBdmJc500Vhl/A==}
-    engines: {node: '>=20'}
-    peerDependencies:
-      '@modelcontextprotocol/server': ^2.0.0
-      hono: ^4.11.4
-
-  '@modelcontextprotocol/server@2.0.0':
-    resolution: {integrity: sha512-YhHWdHfpFMQfd0prsEnxKeS3Qz3ytIGmsS0sth4KDjnacIT7hxk6hXHkJ9KysxlkvTM+WZAtQbbcUhdoP4Hvtw==}
-    engines: {node: '>=20'}
 
   '@oozcitak/dom@2.0.2':
     resolution: {integrity: sha512-GjpKhkSYC3Mj4+lfwEyI1dqnsKTgwGy48ytZEhm4A/xnH/8z9M3ZVXKr/YGQi3uCLs1AEBS+x5T2JPiueEDW8w==}
@@ -936,10 +854,6 @@ packages:
     peerDependenciesMeta:
       crossws:
         optional: true
-
-  hono@4.13.5:
-    resolution: {integrity: sha512-O6+/eCYRkzzzy0rPWwKLiGBR1nFuUPZynnwjxN1MBA62NNqbT0wQEzQyK2gSO5yDIDB336sXQleAhOHrzlYyKw==}
-    engines: {node: '>=16.9.0'}
 
   ignore@5.3.2:
     resolution: {integrity: sha512-hsBTNUqQTDwkWtcdYI2i06Y/nUBEsNEDJKjWdigLvegy8kDuJAS8uRlpkkcQpyEXL0Z/pjDy5HBmMjRCJ2gq+g==}
@@ -1656,20 +1570,6 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.6.0
 
-  '@modelcontextprotocol/core@2.0.0':
-    dependencies:
-      zod: 4.5.4
-
-  '@modelcontextprotocol/hono@2.0.0(@modelcontextprotocol/server@2.0.0)(hono@4.13.5)':
-    dependencies:
-      '@modelcontextprotocol/server': 2.0.0
-      hono: 4.13.5
-
-  '@modelcontextprotocol/server@2.0.0':
-    dependencies:
-      '@modelcontextprotocol/core': 2.0.0
-      zod: 4.5.4
-
   '@oozcitak/dom@2.0.2':
     dependencies:
       '@oozcitak/infra': 2.0.2
@@ -2303,8 +2203,6 @@ snapshots:
     dependencies:
       rou3: 0.8.1
       srvx: 0.11.22
-
-  hono@4.13.5: {}
 
   ignore@5.3.2: {}
 

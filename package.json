@@ -19,6 +19,12 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm format:check",
+    "backend:dev": "uv run uvicorn kya_platform.main:app --app-dir apps/backend/src --reload --port 8000",
+    "backend:lint": "uv run ruff check apps/backend && uv run ruff format --check apps/backend",
+    "backend:typecheck": "uv run mypy",
+    "backend:test": "uv run pytest",
+    "backend:check": "pnpm backend:lint && pnpm backend:typecheck && pnpm backend:test",
+    "check:all": "pnpm check && pnpm backend:check",
     "clean": "turbo run clean && rimraf node_modules"
   },
   "devDependencies": {
