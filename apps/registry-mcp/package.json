@@ -1,0 +1,13 @@
+{
+  "name": "@kya/registry-mcp",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "dependencies": {
+    "@modelcontextprotocol/hono": "catalog:",
+    "@modelcontextprotocol/server": "catalog:",
+    "hono": "catalog:",
+    "zod": "catalog:"
+  }
+}

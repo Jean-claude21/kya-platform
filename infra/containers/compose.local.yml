@@ -1,0 +1,43 @@
+services:
+  postgres:
+    image: postgres:17.6-alpine
+    environment:
+      POSTGRES_DB: kya_platform
+      POSTGRES_USER: kya
+      POSTGRES_PASSWORD: local-only-change-me
+    ports:
+      - '127.0.0.1:5432:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U kya -d kya_platform']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - kya-postgres:/var/lib/postgresql/data
+
+  openfga-migrate:
+    image: ${OPENFGA_IMAGE:-openfga/openfga:v1.8.16}
+    command: migrate
+    environment:
+      OPENFGA_DATASTORE_ENGINE: postgres
+      OPENFGA_DATASTORE_URI: postgres://kya:local-only-change-me@postgres:5432/kya_platform?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  openfga:
+    image: ${OPENFGA_IMAGE:-openfga/openfga:v1.8.16}
+    command: run
+    environment:
+      OPENFGA_DATASTORE_ENGINE: postgres
+      OPENFGA_DATASTORE_URI: postgres://kya:local-only-change-me@postgres:5432/kya_platform?sslmode=disable
+      OPENFGA_HTTP_ADDR: 0.0.0.0:8080
+      OPENFGA_PLAYGROUND_ENABLED: 'false'
+    ports:
+      - '127.0.0.1:8080:8080'
+    depends_on:
+      openfga-migrate:
+        condition: service_completed_successfully
+
+volumes:
+  kya-postgres:

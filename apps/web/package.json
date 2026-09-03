@@ -1,0 +1,14 @@
+{
+  "name": "@kya/web",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "dependencies": {
+    "@tanstack/react-query": "catalog:",
+    "@tanstack/react-router": "catalog:",
+    "@tanstack/react-start": "catalog:",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  }
+}

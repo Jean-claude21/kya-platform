@@ -10,7 +10,7 @@
 publier, installer et auditer ses systèmes, applications, API, données, MCP, Skills, modèles
 et standards dans des espaces organisationnels finement contrôlés.
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Accéder à un espace selon ses responsabilités (Priority: P1)
 
@@ -184,7 +184,7 @@ la décision et le résultat de chaque opération sensible.
 - Une demande tente d'énumérer des ressources auxquelles son auteur n'a pas accès.
 - Une clé fuit, est révoquée en urgence ou doit être remplacée sans interruption prolongée.
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -288,7 +288,7 @@ la décision et le résultat de chaque opération sensible.
 - **Approval**: Décision attribuable portant sur une action et un périmètre précis.
 - **Audit Event**: Preuve append-only d'une demande, décision ou exécution sensible.
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 

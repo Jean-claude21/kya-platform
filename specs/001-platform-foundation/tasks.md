@@ -5,16 +5,16 @@
 
 ## Phase 1 — Setup
 
-- [ ] T001 Create pnpm workspace and root scripts in package.json and pnpm-workspace.yaml
-- [ ] T002 Create Turborepo task graph in turbo.json
-- [ ] T003 [P] Configure TypeScript strict shared settings in packages/config-typescript/
-- [ ] T004 [P] Configure ESLint, formatting and import boundaries in packages/config-eslint/
-- [ ] T005 [P] Configure Vitest and Playwright shared settings in packages/test-kit/
-- [ ] T006 Create app and package directories from plan.md with minimal package manifests
-- [ ] T007 [P] Add secret-safe environment validation in packages/config/src/env.ts and .env.example
-- [ ] T008 [P] Add container build and local compose skeleton in infra/containers/
-- [ ] T009 Add GitHub CI checks for feat-xxx to dev and dev to main in .github/workflows/ci.yml
-- [ ] T010 Add SemVer tag verification and immutable artifact workflow in .github/workflows/release.yml
+- [x] T001 Create pnpm workspace and root scripts in package.json and pnpm-workspace.yaml
+- [x] T002 Create Turborepo task graph in turbo.json
+- [x] T003 [P] Configure TypeScript strict shared settings in packages/config-typescript/
+- [x] T004 [P] Configure ESLint, formatting and import boundaries in packages/config-eslint/
+- [x] T005 [P] Configure Vitest and Playwright shared settings in packages/test-kit/
+- [x] T006 Create app and package directories from plan.md with minimal package manifests
+- [x] T007 [P] Add secret-safe environment validation in packages/config/src/env.ts and .env.example
+- [x] T008 [P] Add container build and local compose skeleton in infra/containers/
+- [x] T009 Add GitHub CI checks for feat-xxx to dev and dev to main in .github/workflows/ci.yml
+- [x] T010 Add SemVer tag verification and immutable artifact workflow in .github/workflows/release.yml
 
 ## Phase 2 — Foundational blockers
 

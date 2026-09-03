@@ -1,0 +1,10 @@
+{
+  "name": "@kya/test-kit",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./vitest": "./vitest.config.ts",
+    "./playwright": "./playwright.config.ts"
+  }
+}

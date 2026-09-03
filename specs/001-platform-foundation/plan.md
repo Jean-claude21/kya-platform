@@ -29,16 +29,16 @@ passante, français initial, audit des actions sensibles, rollback
 
 ## Constitution Check
 
-| Gate | Pre-design | Post-design | Evidence |
-|---|---:|---:|---|
-| Spec Kit et traçabilité | PASS | PASS | spec, research, plan et futurs tasks |
-| Modules et contrats explicites | PASS | PASS | structure workspace et contracts |
-| Source autoritaire déclarée | PASS | PASS | Neon Hub, Frappe métier, Infisical secret |
-| Autorisation serveur et moindre privilège | PASS | PASS | OpenFGA + matrice négative |
-| Aucun secret dans le catalogue | PASS | PASS | SecretReference uniquement |
-| IA séparée de l'exécution | PASS | PASS | Skill ≠ outil MCP ; handlers déterministes |
-| Tests, audit et rollback | PASS | PASS | pipeline, événements et quickstart |
-| Preview isolée | PASS | PASS | branche Neon et secrets non productifs |
+| Gate                                      | Pre-design | Post-design | Evidence                                   |
+| ----------------------------------------- | ---------: | ----------: | ------------------------------------------ |
+| Spec Kit et traçabilité                   |       PASS |        PASS | spec, research, plan et futurs tasks       |
+| Modules et contrats explicites            |       PASS |        PASS | structure workspace et contracts           |
+| Source autoritaire déclarée               |       PASS |        PASS | Neon Hub, Frappe métier, Infisical secret  |
+| Autorisation serveur et moindre privilège |       PASS |        PASS | OpenFGA + matrice négative                 |
+| Aucun secret dans le catalogue            |       PASS |        PASS | SecretReference uniquement                 |
+| IA séparée de l'exécution                 |       PASS |        PASS | Skill ≠ outil MCP ; handlers déterministes |
+| Tests, audit et rollback                  |       PASS |        PASS | pipeline, événements et quickstart         |
+| Preview isolée                            |       PASS |        PASS | branche Neon et secrets non productifs     |
 
 Aucune exception constitutionnelle n'est demandée.
 
@@ -146,8 +146,8 @@ dev → PR main → tag obligatoire vX.Y.Z → production
 
 ## Complexity Tracking
 
-| Choix | Justification | Condition de simplification |
-|---|---|---|
-| OpenFGA | relations et héritages multi-périmètres | retirer si le benchmark montre qu'un moteur embarqué couvre toute la matrice |
-| Deux providers de déploiement | portabilité demandée et comparaison factuelle | conserver un seul adapter actif si le second n'apporte pas de reprise mesurable |
-| Infisical distinct | valeurs secrètes hors Hub et identités machines | aucun stockage maison autorisé ; seul le fournisseur peut changer |
+| Choix                         | Justification                                   | Condition de simplification                                                     |
+| ----------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------- |
+| OpenFGA                       | relations et héritages multi-périmètres         | retirer si le benchmark montre qu'un moteur embarqué couvre toute la matrice    |
+| Deux providers de déploiement | portabilité demandée et comparaison factuelle   | conserver un seul adapter actif si le second n'apporte pas de reprise mesurable |
+| Infisical distinct            | valeurs secrètes hors Hub et identités machines | aucun stockage maison autorisé ; seul le fournisseur peut changer               |
