@@ -67,10 +67,10 @@
 
 ## Phase 6 — US4: systèmes et autorités (P2)
 
-- [ ] T048 [P] [US4] Write unique-authority and conflict tests in apps/backend/tests/domain/test_data_authority.py
-- [ ] T049 [US4] Implement systems, capabilities and temporal DataAuthority in apps/backend/src/kya_platform/domain/systems/
-- [ ] T050 [US4] Implement Frappe registry adapter without data copying in apps/backend/src/kya_platform/infrastructure/frappe/
-- [ ] T051 [US4] Add system and authority API/UI in apps/backend/src/kya_platform/api/routes/systems.py and apps/web/src/features/systems/
+- [x] T048 [P] [US4] Write unique-authority and conflict tests in apps/backend/tests/domain/test_data_authority.py
+- [x] T049 [US4] Implement systems, capabilities and temporal DataAuthority in apps/backend/src/kya_platform/domain/systems/
+- [x] T050 [US4] Implement Frappe registry adapter without data copying in apps/backend/src/kya_platform/infrastructure/frappe/
+- [x] T051 [US4] Add system and authority API/UI in apps/backend/src/kya_platform/api/routes/systems.py and apps/web/src/features/systems/
 - [ ] T052 [US4] Register Frappe pilot authority and record evidence in specs/001-platform-foundation/evidence/us4.md
 
 ## Phase 7 — US5: identités techniques et secrets (P2)

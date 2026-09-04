@@ -9,6 +9,7 @@ import {
   type WorkspaceSummary,
 } from '../features/workspaces/workspace-control';
 import { PublicationWorkbench } from '../features/publication/publication-workbench';
+import { SystemAuthorityWorkbench } from '../features/systems/system-authority-workbench';
 import { CatalogWorkbench } from '../features/catalog/catalog-workbench';
 
 type Capability = {
@@ -250,6 +251,7 @@ function NetworkTopology({ selectedId }: { selectedId: string | null }) {
 const nav: Array<{ label: string; icon: IconName }> = [
   { label: 'Catalogue', icon: 'catalog' },
   { label: 'Réseau', icon: 'network' },
+  { label: 'Systèmes', icon: 'database' },
   { label: 'Déploiements', icon: 'deploy' },
   { label: 'Espaces', icon: 'people' },
   { label: 'Gouvernance', icon: 'governance' },
@@ -313,7 +315,7 @@ export function PlatformShell() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mobileLayerIndex, setMobileLayerIndex] = useState(0);
   const [activeModule, setActiveModule] = useState<
-    'Catalogue' | 'Réseau' | 'Espaces' | 'Gouvernance'
+    'Catalogue' | 'Réseau' | 'Systèmes' | 'Espaces' | 'Gouvernance'
   >('Réseau');
   const [activeWorkspaceKey, setActiveWorkspaceKey] = useState('platform');
   const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
@@ -416,6 +418,7 @@ export function PlatformShell() {
             disabled={
               item.label !== 'Catalogue' &&
               item.label !== 'Réseau' &&
+              item.label !== 'Systèmes' &&
               item.label !== 'Espaces' &&
               item.label !== 'Gouvernance'
             }
@@ -423,6 +426,7 @@ export function PlatformShell() {
             title={
               item.label === 'Catalogue' ||
               item.label === 'Réseau' ||
+              item.label === 'Systèmes' ||
               item.label === 'Espaces' ||
               item.label === 'Gouvernance'
                 ? `Ouvrir ${item.label}`
@@ -433,6 +437,7 @@ export function PlatformShell() {
               if (
                 item.label === 'Catalogue' ||
                 item.label === 'Réseau' ||
+                item.label === 'Systèmes' ||
                 item.label === 'Espaces' ||
                 item.label === 'Gouvernance'
               )
@@ -447,6 +452,8 @@ export function PlatformShell() {
 
       {activeModule === 'Catalogue' ? (
         <CatalogWorkbench />
+      ) : activeModule === 'Systèmes' ? (
+        <SystemAuthorityWorkbench />
       ) : activeModule === 'Espaces' ? (
         <WorkspaceAccessPanel
           activeKey={activeWorkspaceKey}
