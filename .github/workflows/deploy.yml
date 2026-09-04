@@ -1,0 +1,51 @@
+name: Promote immutable artifact
+
+on:
+  workflow_dispatch:
+    inputs:
+      provider:
+        description: Deployment provider
+        required: true
+        type: choice
+        options: [dokploy, coolify]
+      image_digest:
+        description: Immutable OCI image digest (sha256:...)
+        required: true
+        type: string
+      environment:
+        description: Target environment
+        required: true
+        type: choice
+        options: [preview, staging, production]
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Guard production promotion
+        if: inputs.environment == 'production'
+        env:
+          REF: ${{ github.ref_name }}
+        run: test "$REF" = "main"
+      - name: Validate digest
+        env:
+          DIGEST: ${{ inputs.image_digest }}
+        run: echo "$DIGEST" | grep -Eq '^sha256:[0-9a-f]{64}$'
+
+  promote:
+    needs: guard
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Submit provider-neutral promotion
+        env:
+          PROVIDER: ${{ inputs.provider }}
+          TARGET_ENV: ${{ inputs.environment }}
+          IMAGE_DIGEST: ${{ inputs.image_digest }}
+        run: |
+          echo "Promotion request: provider=$PROVIDER environment=$TARGET_ENV image=$IMAGE_DIGEST"
+          echo "Configure the provider API adapter after its URL and token are provisioned."
