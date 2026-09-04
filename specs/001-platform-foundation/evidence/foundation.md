@@ -88,16 +88,39 @@
 - revue visuelle indépendante : défauts matériels résolus, documentation du système produite avant
   clôture.
 
+## Worker, baux et reprises — T023
+
+- acquisition concurrente fondée sur `FOR UPDATE SKIP LOCKED`, sans transaction ouverte pendant les
+  appels externes ;
+- bail nominatif et limité dans le temps, avec reprise possible après expiration ;
+- compteur de tentative incrémenté à l'acquisition, backoff exponentiel borné et date de prochaine
+  disponibilité persistée ;
+- mise en quarantaine après cinq tentatives et conservation d'un code d'erreur sans message
+  potentiellement sensible ;
+- acquittement, reprogrammation et quarantaine échouent si le worker ne possède plus le bail ;
+- huit tests couvrent succès, reprise, plafond, sujet inconnu, configuration invalide et arrêt de la
+  boucle inactive.
+
+## Preuve intégrée des fondations — T024
+
+- migration complète `20260903_0001 → 20260904_0003` exécutée sur PostgreSQL 17.6 éphémère ;
+- présence vérifiée des colonnes `lease_owner`, `lease_expires_at`, `last_error` et
+  `dead_lettered_at` ;
+- conteneur de preuve supprimé après validation ;
+- frontend, backend, modèle d'autorisation et image de conteneur ont chacun une preuve locale
+  reproductible consignée dans ce document.
+
 ## Contrôles exécutés
 
 | Contrôle                        | Résultat                             |
 | ------------------------------- | ------------------------------------ |
 | Ruff                            | réussi                               |
 | mypy strict                     | réussi sur 20 fichiers source        |
-| pytest                          | 63 tests réussis, couverture 94,22 % |
+| pytest                          | 71 tests réussis, couverture 90,54 % |
 | pnpm lint/typecheck/test/format | réussi, 2 tests TypeScript           |
 | Build TanStack Start            | réussi, client et SSR                |
 | Rendu responsive                | réussi à 1 440 px et 390 px          |
+| Migration worker PostgreSQL     | 3 révisions appliquées               |
 | Modèle OpenFGA                  | 9 scénarios, 31 checks réussis       |
 | Image backend Python 3.14       | construite                           |
 | Santé du conteneur              | `ready`, environnement `test`        |
