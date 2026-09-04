@@ -11,12 +11,16 @@ WORKDIR /app
 COPY --from=uv /uv /uvx /bin/
 COPY pyproject.toml uv.lock ./
 COPY apps/backend/pyproject.toml apps/backend/pyproject.toml
-RUN uv sync --locked --no-dev --no-install-workspace
+RUN uv sync \
+    --locked \
+    --no-dev \
+    --package kya-platform-backend \
+    --no-install-package kya-platform-backend
 
 COPY apps/backend apps/backend
 RUN uv sync --locked --no-dev --package kya-platform-backend
 
-RUN useradd --create-home --uid 10001 kya && chown -R kya:kya /app
+RUN useradd --no-log-init --create-home --uid 10001 kya
 USER kya
 EXPOSE 8000
 

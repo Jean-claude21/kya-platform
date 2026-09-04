@@ -7,6 +7,7 @@ import uvicorn
 from fastapi import FastAPI
 
 from kya_platform.api.router import api_router
+from kya_platform.api.security import configure_security_runtime
 from kya_platform.config import Settings, get_settings
 from kya_platform.observability import (
     CorrelationMiddleware,
@@ -37,6 +38,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     application.state.settings = resolved_settings
     application.state.is_ready = False
+    configure_security_runtime(application.state, resolved_settings)
     application.add_middleware(CorrelationMiddleware)
     install_error_handlers(application)
     application.include_router(api_router, prefix="/api/v1")

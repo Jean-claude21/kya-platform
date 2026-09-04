@@ -28,7 +28,7 @@
 - [x] T018 Write failing OpenFGA model tests for the KYA reference matrix in tests/policy/
 - [x] T019 Implement versioned OpenFGA model and authorization port in apps/backend/src/kya_platform/authorization/
 - [x] T020 [P] Implement SecretReference port with no-value types in apps/backend/src/kya_platform/secrets/
-- [ ] T021 Create FastAPI security middleware and dependency guards in apps/backend/src/kya_platform/api/
+- [x] T021 Create FastAPI security middleware and dependency guards in apps/backend/src/kya_platform/api/
 - [ ] T022 Create TanStack application shell using the Design System package in apps/web/
 - [ ] T023 Create Python worker runner with leases and retries in apps/backend/src/kya_platform/workers/
 - [ ] T024 Prove foundational checks locally and record results in specs/001-platform-foundation/evidence/foundation.md

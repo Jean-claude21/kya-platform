@@ -65,13 +65,22 @@
 - les champs `value`, `secret`, `plaintext` et `credential` sont explicitement rejetés ;
 - le port permet catalogage et révocation sans méthode de lecture de valeur.
 
+## Barrière de sécurité FastAPI — T021
+
+- jeton Bearer obligatoire et validé par le vérificateur Neon Auth ;
+- le couple issuer/subject est résolu vers un identifiant interne KYA avant toute décision ;
+- l'unité active doit être fournie explicitement et devient un tuple contextuel non persistant ;
+- chaque route protégée demande une permission et un objet précis à OpenFGA ;
+- identité non liée, configuration absente et décision négative échouent toutes fermées ;
+- les raisons cryptographiques internes ne sont jamais retournées au client.
+
 ## Contrôles exécutés
 
 | Contrôle                        | Résultat                             |
 | ------------------------------- | ------------------------------------ |
 | Ruff                            | réussi                               |
 | mypy strict                     | réussi sur 20 fichiers source        |
-| pytest                          | 55 tests réussis, couverture 94,06 % |
+| pytest                          | 63 tests réussis, couverture 94,22 %   |
 | pnpm lint/typecheck/test/format | réussi, 2 tests TypeScript           |
 | Modèle OpenFGA                  | 9 scénarios, 31 checks réussis       |
 | Image backend Python 3.14       | construite                           |

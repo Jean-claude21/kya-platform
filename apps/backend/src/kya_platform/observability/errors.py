@@ -1,6 +1,7 @@
 """Stable problem-detail responses that never expose internal exceptions."""
 
 import logging
+from collections.abc import Mapping
 from dataclasses import dataclass
 from http import HTTPStatus
 
@@ -33,6 +34,7 @@ class ApiError(Exception):
     code: str
     title: str
     detail: str
+    headers: Mapping[str, str] | None = None
 
 
 def _correlation_id(request: Request) -> str:
@@ -46,6 +48,7 @@ def _problem_response(
     code: str,
     title: str,
     detail: str,
+    headers: Mapping[str, str] | None = None,
 ) -> JSONResponse:
     problem = ProblemDetail(
         type=f"https://errors.kya-energy.com/{code}",
@@ -60,6 +63,7 @@ def _problem_response(
         status_code=status_code,
         content=problem.model_dump(),
         media_type="application/problem+json",
+        headers=headers,
     )
 
 
@@ -72,6 +76,7 @@ async def api_error_handler(request: Request, error: Exception) -> JSONResponse:
         code=error.code,
         title=error.title,
         detail=error.detail,
+        headers=error.headers,
     )
 
 

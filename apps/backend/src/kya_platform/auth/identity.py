@@ -3,7 +3,8 @@
 from collections.abc import Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
-from typing import Any
+from typing import Any, Protocol
+from uuid import UUID
 
 
 @dataclass(frozen=True, slots=True)
@@ -18,3 +19,16 @@ class AuthenticatedIdentity:
         if not self.issuer or not self.subject:
             raise ValueError("issuer and subject must be non-empty")
         object.__setattr__(self, "claims", MappingProxyType(dict(self.claims)))
+
+
+class TokenVerifier(Protocol):
+    async def verify(self, token: str) -> AuthenticatedIdentity:
+        """Verify an external token and return its immutable identity."""
+
+
+class IdentityMappingPort(Protocol):
+    async def resolve_principal_id(self, identity: AuthenticatedIdentity) -> UUID | None:
+        """Resolve issuer/subject to an internal KYA principal."""
+
+
+__all__ = ["AuthenticatedIdentity", "IdentityMappingPort", "TokenVerifier"]
