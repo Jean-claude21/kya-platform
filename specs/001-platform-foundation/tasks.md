@@ -41,8 +41,8 @@
 - [x] T028 [US1] Implement workspaces, memberships, inheritance and explicit deny in apps/backend/src/kya_platform/domain/workspaces/
 - [x] T029 [US1] Implement authorization explanation and filtered-list services in apps/backend/src/kya_platform/authorization/
 - [x] T030 [US1] Add workspace and membership API routes in apps/backend/src/kya_platform/api/routes/workspaces.py
-- [ ] T031 [US1] Build workspace switcher and access administration UI in apps/web/src/features/workspaces/
-- [ ] T032 [US1] Execute Alice/Bob/Chloé/Sam matrix and record evidence in specs/001-platform-foundation/evidence/us1.md
+- [x] T031 [US1] Build workspace switcher and access administration UI in apps/web/src/features/workspaces/
+- [x] T032 [US1] Execute Alice/Bob/Chloé/Sam matrix and record evidence in specs/001-platform-foundation/evidence/us1.md
 
 ## Phase 4 — US2: publication d'artefacts (P1)
 

@@ -92,12 +92,75 @@
   cursor: pointer;
   background: transparent;
 }
+.workspace-control {
+  position: relative;
+}
 .context-switcher {
   display: flex;
   align-items: center;
   gap: 8px;
   font-weight: 650;
   white-space: nowrap;
+}
+.context-switcher > span {
+  display: grid;
+  text-align: left;
+}
+.context-switcher small {
+  color: var(--kya-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.workspace-menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 12px);
+  right: 0;
+  display: grid;
+  width: min(370px, calc(100vw - 28px));
+  padding: 8px;
+  border: 1px solid var(--kya-line);
+  border-radius: var(--kya-radius-md);
+  background: white;
+  box-shadow: 0 18px 44px rgba(7, 59, 37, 0.18);
+}
+.workspace-menu header {
+  display: grid;
+  gap: 3px;
+  padding: 10px 10px 12px;
+  border-bottom: 1px solid var(--kya-line);
+}
+.workspace-menu header span,
+.workspace-menu button small {
+  color: var(--kya-muted);
+  font-size: 12px;
+}
+.workspace-menu button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  text-align: left;
+  background: white;
+  cursor: pointer;
+}
+.workspace-menu button:hover,
+.workspace-menu button[aria-selected='true'] {
+  background: var(--kya-green-100);
+}
+.workspace-menu button > span {
+  display: grid;
+  gap: 3px;
+}
+.workspace-menu button > svg:first-child {
+  color: var(--kya-green-800);
+}
+.workspace-menu button > svg:last-child {
+  color: var(--kya-orange-700);
 }
 .context-switcher svg {
   rotate: 90deg;
@@ -168,6 +231,179 @@ main {
   max-width: 1680px;
   margin: 0 auto;
   padding: 20px clamp(14px, 2vw, 32px) 48px;
+}
+.workspace-page {
+  grid-template-columns: 290px minmax(0, 1fr);
+}
+.workspace-intro {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 4px 2px 10px;
+}
+.workspace-intro h1,
+.workspace-intro p,
+.workspace-list h2,
+.access-detail h2,
+.access-detail h3,
+.access-detail p {
+  margin: 0;
+}
+.workspace-intro h1 {
+  color: var(--kya-green-950);
+  font-size: clamp(24px, 2vw, 32px);
+  letter-spacing: -0.03em;
+}
+.workspace-intro p {
+  max-width: 70ch;
+  margin-top: 6px;
+  color: var(--kya-muted);
+}
+.workspace-intro button,
+.access-detail header button,
+.member-heading button {
+  min-height: 40px;
+  padding: 0 13px;
+  border: 1px solid var(--kya-line);
+  border-radius: 8px;
+  color: var(--kya-green-800);
+  background: white;
+  font-weight: 750;
+}
+.workspace-intro button:disabled,
+.member-heading button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+.workspace-list,
+.access-detail {
+  border: 1px solid var(--kya-line);
+  border-radius: var(--kya-radius-md);
+  background: white;
+}
+.workspace-list {
+  align-self: start;
+  padding: 12px;
+}
+.workspace-list header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 5px 12px;
+}
+.workspace-list header span {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--kya-green-800);
+  background: var(--kya-green-100);
+  font-size: 12px;
+  font-weight: 800;
+}
+.workspace-list button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 70px;
+  padding: 10px;
+  border: 0;
+  border-radius: var(--kya-radius-sm);
+  text-align: left;
+  background: transparent;
+  cursor: pointer;
+}
+.workspace-list button[aria-current='true'] {
+  color: var(--kya-green-950);
+  background: var(--kya-green-100);
+}
+.workspace-list button > span:nth-child(2) {
+  display: grid;
+  gap: 4px;
+}
+.workspace-list button > svg {
+  color: var(--kya-green-800);
+}
+.workspace-list button small {
+  color: var(--kya-muted);
+}
+.workspace-list .kya-status {
+  grid-column: 2;
+  width: max-content;
+}
+.access-detail {
+  min-width: 0;
+  padding: clamp(18px, 3vw, 30px);
+}
+.access-detail > header,
+.member-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+.access-detail > header span {
+  color: var(--kya-muted);
+  font-size: 12px;
+}
+.access-detail > header h2 {
+  margin-top: 3px;
+  color: var(--kya-green-950);
+  font-size: 20px;
+}
+.access-detail > header p,
+.member-heading p {
+  margin-top: 5px;
+  color: var(--kya-muted);
+  font-size: 14px;
+}
+.access-proof {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  margin: 24px 0 30px;
+  padding: 14px;
+  border-radius: 10px;
+  color: var(--kya-green-950);
+  background: var(--kya-green-100);
+}
+.access-proof svg {
+  color: var(--kya-green-800);
+}
+.access-proof p {
+  max-width: 75ch;
+  margin-top: 3px;
+  font-size: 14px;
+}
+.member-heading h3 {
+  color: var(--kya-green-950);
+  font-size: 15px;
+}
+.member-table {
+  margin-top: 16px;
+  border-top: 1px solid var(--kya-line);
+}
+.member-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr auto;
+  align-items: center;
+  gap: 16px;
+  min-width: 670px;
+  padding: 14px 8px;
+  border-bottom: 1px solid var(--kya-line);
+  font-size: 14px;
+}
+.member-row--head {
+  color: var(--kya-muted);
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 .network-panel,
 .decision-panel,
@@ -576,6 +812,18 @@ th {
     color: var(--kya-green-950);
     font-size: 12px;
   }
+  .workspace-control {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .workspace-control .context-switcher {
+    grid-column: auto;
+    grid-row: auto;
+  }
+  .workspace-menu {
+    right: auto;
+    left: 0;
+  }
   main {
     grid-template-columns: 1fr;
   }
@@ -619,6 +867,21 @@ th {
   main {
     grid-template-columns: minmax(0, 1fr);
     padding: 12px 10px 36px;
+  }
+  .workspace-page {
+    display: grid;
+  }
+  .workspace-intro,
+  .access-detail > header,
+  .member-heading {
+    display: grid;
+  }
+  .workspace-list,
+  .access-detail {
+    min-width: 0;
+  }
+  .member-table {
+    overflow-x: auto;
   }
   .network-panel,
   .decision-panel,

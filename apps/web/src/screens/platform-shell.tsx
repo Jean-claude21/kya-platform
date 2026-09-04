@@ -3,6 +3,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Icon, IconButton, KyaMark, StatusBadge } from '@kya/design-system';
 import type { IconName, StatusTone } from '@kya/design-system';
 
+import {
+  WorkspaceAccessPanel,
+  WorkspaceControl,
+  type WorkspaceSummary,
+} from '../features/workspaces/workspace-control';
+
 type Capability = {
   id: string;
   name: string;
@@ -275,11 +281,38 @@ const recommendations: Array<readonly [title: string, meta: string]> = [
   ['Publier une nouvelle capacité', 'Workflow · Gouvernance'],
 ];
 
+const workspaces: WorkspaceSummary[] = [
+  {
+    key: 'platform',
+    name: 'KYA Platform',
+    scope: 'CVSI · Togo',
+    role: 'Gestionnaire',
+    classification: 'Interne',
+  },
+  {
+    key: 'sol-design',
+    name: 'KYA SolDesign',
+    scope: 'DST · Groupe',
+    role: 'Contributeur',
+    classification: 'Interne',
+  },
+  {
+    key: 'interns',
+    name: 'Espace stagiaires',
+    scope: 'CVSI · Togo',
+    role: 'Lecteur',
+    classification: 'Restreint',
+  },
+];
+
 export function PlatformShell() {
   const [query, setQuery] = useState('');
   const [notice, setNotice] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mobileLayerIndex, setMobileLayerIndex] = useState(0);
+  const [activeModule, setActiveModule] = useState<'Réseau' | 'Espaces'>('Réseau');
+  const [activeWorkspaceKey, setActiveWorkspaceKey] = useState('platform');
+  const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const isFiltering = query.trim().length > 0;
   const visibleLayers = useMemo(() => {
@@ -337,6 +370,11 @@ export function PlatformShell() {
       ?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
   }
 
+  function selectWorkspace(workspace: WorkspaceSummary) {
+    setActiveWorkspaceKey(workspace.key);
+    acknowledge(`${workspace.name} est maintenant le contexte actif.`);
+  }
+
   return (
     <div className="platform-shell">
       <header className="topbar">
@@ -354,15 +392,13 @@ export function PlatformShell() {
           />
           <kbd>Ctrl K</kbd>
         </label>
-        <button
-          className="context-switcher"
-          type="button"
-          onClick={() => {
-            acknowledge('Le changement de contexte sera relié à l’organisation active.');
-          }}
-        >
-          KYA-Energy Group · Togo <Icon name="chevron" />
-        </button>
+        <WorkspaceControl
+          activeKey={activeWorkspaceKey}
+          isOpen={isWorkspaceMenuOpen}
+          workspaces={workspaces}
+          onOpenChange={setIsWorkspaceMenuOpen}
+          onSelect={selectWorkspace}
+        />
         <IconButton icon="bell" label="Ouvrir les notifications" />
         <button className="user-menu" type="button" aria-label="Ouvrir le menu du compte">
           AA
@@ -372,11 +408,18 @@ export function PlatformShell() {
       <nav className="module-nav" aria-label="Navigation principale">
         {nav.map((item) => (
           <button
-            aria-current={item.label === 'Réseau' ? 'page' : undefined}
-            disabled={item.label !== 'Réseau'}
+            aria-current={item.label === activeModule ? 'page' : undefined}
+            disabled={item.label !== 'Réseau' && item.label !== 'Espaces'}
             key={item.label}
-            title={item.label === 'Réseau' ? 'Vue active' : 'Disponible dans un prochain incrément'}
+            title={
+              item.label === 'Réseau' || item.label === 'Espaces'
+                ? `Ouvrir ${item.label}`
+                : 'Disponible dans un prochain incrément'
+            }
             type="button"
+            onClick={() => {
+              if (item.label === 'Réseau' || item.label === 'Espaces') setActiveModule(item.label);
+            }}
           >
             <Icon name={item.icon} />
             {item.label}
@@ -384,268 +427,277 @@ export function PlatformShell() {
         ))}
       </nav>
 
-      <main>
-        <section className="network-panel" aria-labelledby="network-title">
-          <div className="section-heading">
-            <div>
-              <h1 id="network-title">Réseau de capacités</h1>
-              <p>
-                Une vue commune des briques disponibles, de leurs dépendances et de leurs accès.
-              </p>
+      {activeModule === 'Espaces' ? (
+        <WorkspaceAccessPanel
+          activeKey={activeWorkspaceKey}
+          workspaces={workspaces}
+          onSelect={selectWorkspace}
+        />
+      ) : (
+        <main>
+          <section className="network-panel" aria-labelledby="network-title">
+            <div className="section-heading">
+              <div>
+                <h1 id="network-title">Réseau de capacités</h1>
+                <p>
+                  Une vue commune des briques disponibles, de leurs dépendances et de leurs accès.
+                </p>
+              </div>
+              <div className="legend" aria-label="Légende des états">
+                <StatusBadge tone="healthy">Disponible</StatusBadge>
+                <StatusBadge tone="attention">À valider</StatusBadge>
+                <StatusBadge tone="warning">À traiter</StatusBadge>
+                <StatusBadge tone="restricted">Restreint</StatusBadge>
+              </div>
             </div>
-            <div className="legend" aria-label="Légende des états">
-              <StatusBadge tone="healthy">Disponible</StatusBadge>
-              <StatusBadge tone="attention">À valider</StatusBadge>
-              <StatusBadge tone="warning">À traiter</StatusBadge>
-              <StatusBadge tone="restricted">Restreint</StatusBadge>
-            </div>
-          </div>
 
-          {isFiltering && (
-            <div className="filter-summary" role="status">
-              <span>
-                {visibleLayers.reduce((count, layer) => count + layer.items.length, 0)} résultat(s)
-                dans {visibleLayers.length} couche(s)
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  setQuery('');
-                }}
-              >
-                Effacer la recherche
-              </button>
-            </div>
-          )}
-
-          {!isFiltering && (
-            <div className="layer-overview" aria-label="Parcourir les six couches du réseau">
-              <button
-                aria-label="Couche précédente"
-                type="button"
-                disabled={mobileLayerIndex === 0}
-                onClick={() => {
-                  moveToLayer(mobileLayerIndex - 1);
-                }}
-              >
-                ‹
-              </button>
-              <ol>
-                {layers.map((layer, index) => (
-                  <li key={layer.id}>
-                    <button
-                      aria-current={mobileLayerIndex === index ? 'step' : undefined}
-                      type="button"
-                      onClick={() => {
-                        moveToLayer(index);
-                      }}
-                    >
-                      <span>{index + 1}</span>
-                      {layer.label}
-                    </button>
-                  </li>
-                ))}
-              </ol>
-              <button
-                aria-label="Couche suivante"
-                type="button"
-                disabled={mobileLayerIndex === layers.length - 1}
-                onClick={() => {
-                  moveToLayer(mobileLayerIndex + 1);
-                }}
-              >
-                ›
-              </button>
-            </div>
-          )}
-
-          <div
-            className={`network-grid ${isFiltering ? 'network-grid--filtered' : ''}`}
-            aria-label="Chaîne des capacités KYA"
-          >
-            {!isFiltering && <NetworkTopology selectedId={selectedId} />}
-            {visibleLayers.map((layer) => (
-              <section
-                className="network-layer"
-                key={layer.id}
-                aria-labelledby={`layer-${layer.id}`}
-              >
-                <header>
-                  <span className="layer-icon">
-                    <Icon name={layer.icon} />
-                  </span>
-                  <h2 id={`layer-${layer.id}`}>{layer.label}</h2>
-                  <span>{layer.items.length}</span>
-                </header>
-                <div className="network-items">
-                  {layer.items.length
-                    ? layer.items.map((item) => (
-                        <button
-                          aria-pressed={selectedId === item.id}
-                          className={`capability-node ${selectedId === item.id ? 'capability-node--selected' : ''} ${relatedIds.has(item.id) ? 'capability-node--related' : ''}`}
-                          key={item.name}
-                          type="button"
-                          onClick={() => {
-                            setSelectedId(item.id);
-                            acknowledge(`${item.name} : dépendances mises en évidence.`);
-                          }}
-                        >
-                          <span className="node-top">
-                            <strong>{item.name}</strong>
-                            {item.restricted && <Icon name="shield" />}
-                          </span>
-                          <span className="node-meta">
-                            <span>
-                              {item.kind} · {item.detail}
-                            </span>
-                            <StatusBadge tone={item.tone}>{item.state}</StatusBadge>
-                          </span>
-                        </button>
-                      ))
-                    : null}
-                </div>
-              </section>
-            ))}
-          </div>
-          {selectedCapability && (
-            <div className="relationship-summary" role="status">
-              <Icon name="network" />
-              <p>
-                <strong>{selectedCapability.name}</strong> dépend de{' '}
-                {selectedCapability.dependsOn?.length ?? 0} capacité(s) et alimente{' '}
-                {
-                  allCapabilities.filter((item) => item.dependsOn?.includes(selectedCapability.id))
-                    .length
-                }{' '}
-                capacité(s) directement.
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedId(null);
-                }}
-              >
-                Fermer
-              </button>
-            </div>
-          )}
-        </section>
-
-        <aside className="decision-panel" aria-labelledby="decision-title">
-          <div className="section-heading">
-            <div>
-              <h2 id="decision-title">À décider</h2>
-              <p>3 éléments attendent une action.</p>
-            </div>
-            <span className="decision-count">3</span>
-          </div>
-          <div className="decision-list">
-            {decisions.map((decision) => (
-              <article className="decision" key={decision.title}>
-                <StatusBadge tone={decision.tone}>{decision.title}</StatusBadge>
-                <h3>{decision.detail}</h3>
-                <p>{decision.owner}</p>
-                <div>
-                  <Button disabled title="L’action sera activée avec le workflow de gouvernance">
-                    <Icon name="check" />À connecter
-                  </Button>
-                  <button disabled title="Disponible dans un prochain incrément" type="button">
-                    Détail · bientôt
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-          <button className="all-decisions" disabled type="button">
-            Toutes les décisions · bientôt <Icon name="chevron" />
-          </button>
-        </aside>
-
-        <section className="recommended" aria-labelledby="recommended-title">
-          <div className="section-heading">
-            <div>
-              <h2 id="recommended-title">Recommandé pour votre rôle</h2>
-              <p>Responsable de domaine · DST · Togo</p>
-            </div>
-            <button disabled title="Disponible dans un prochain incrément" type="button">
-              Catalogue · bientôt <Icon name="chevron" />
-            </button>
-          </div>
-          <div className="recommendation-list">
-            {recommendations.map(([title, meta]) => (
-              <button
-                key={title}
-                type="button"
-                onClick={() => {
-                  acknowledge(`${title} sélectionné.`);
-                }}
-              >
-                <Icon name="branch" />
+            {isFiltering && (
+              <div className="filter-summary" role="status">
                 <span>
-                  <strong>{title}</strong>
-                  <small>{meta}</small>
+                  {visibleLayers.reduce((count, layer) => count + layer.items.length, 0)}{' '}
+                  résultat(s) dans {visibleLayers.length} couche(s)
                 </span>
-                <Icon name="chevron" />
-              </button>
-            ))}
-          </div>
-        </section>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuery('');
+                  }}
+                >
+                  Effacer la recherche
+                </button>
+              </div>
+            )}
 
-        <section className="deployments" aria-labelledby="deployment-title">
-          <div className="section-heading">
-            <div>
-              <h2 id="deployment-title">Déploiements récents</h2>
-              <p>Traçabilité des versions et environnements.</p>
+            {!isFiltering && (
+              <div className="layer-overview" aria-label="Parcourir les six couches du réseau">
+                <button
+                  aria-label="Couche précédente"
+                  type="button"
+                  disabled={mobileLayerIndex === 0}
+                  onClick={() => {
+                    moveToLayer(mobileLayerIndex - 1);
+                  }}
+                >
+                  ‹
+                </button>
+                <ol>
+                  {layers.map((layer, index) => (
+                    <li key={layer.id}>
+                      <button
+                        aria-current={mobileLayerIndex === index ? 'step' : undefined}
+                        type="button"
+                        onClick={() => {
+                          moveToLayer(index);
+                        }}
+                      >
+                        <span>{index + 1}</span>
+                        {layer.label}
+                      </button>
+                    </li>
+                  ))}
+                </ol>
+                <button
+                  aria-label="Couche suivante"
+                  type="button"
+                  disabled={mobileLayerIndex === layers.length - 1}
+                  onClick={() => {
+                    moveToLayer(mobileLayerIndex + 1);
+                  }}
+                >
+                  ›
+                </button>
+              </div>
+            )}
+
+            <div
+              className={`network-grid ${isFiltering ? 'network-grid--filtered' : ''}`}
+              aria-label="Chaîne des capacités KYA"
+            >
+              {!isFiltering && <NetworkTopology selectedId={selectedId} />}
+              {visibleLayers.map((layer) => (
+                <section
+                  className="network-layer"
+                  key={layer.id}
+                  aria-labelledby={`layer-${layer.id}`}
+                >
+                  <header>
+                    <span className="layer-icon">
+                      <Icon name={layer.icon} />
+                    </span>
+                    <h2 id={`layer-${layer.id}`}>{layer.label}</h2>
+                    <span>{layer.items.length}</span>
+                  </header>
+                  <div className="network-items">
+                    {layer.items.length
+                      ? layer.items.map((item) => (
+                          <button
+                            aria-pressed={selectedId === item.id}
+                            className={`capability-node ${selectedId === item.id ? 'capability-node--selected' : ''} ${relatedIds.has(item.id) ? 'capability-node--related' : ''}`}
+                            key={item.name}
+                            type="button"
+                            onClick={() => {
+                              setSelectedId(item.id);
+                              acknowledge(`${item.name} : dépendances mises en évidence.`);
+                            }}
+                          >
+                            <span className="node-top">
+                              <strong>{item.name}</strong>
+                              {item.restricted && <Icon name="shield" />}
+                            </span>
+                            <span className="node-meta">
+                              <span>
+                                {item.kind} · {item.detail}
+                              </span>
+                              <StatusBadge tone={item.tone}>{item.state}</StatusBadge>
+                            </span>
+                          </button>
+                        ))
+                      : null}
+                  </div>
+                </section>
+              ))}
             </div>
-          </div>
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>Capacité</th>
-                  <th>Type</th>
-                  <th>Version</th>
-                  <th>Environnement</th>
-                  <th>État</th>
-                  <th>Mis à jour</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>API Catalogue</td>
-                  <td>Business API</td>
-                  <td>0.1.0-dev</td>
-                  <td>Dev</td>
-                  <td>
-                    <StatusBadge tone="attention">En construction</StatusBadge>
-                  </td>
-                  <td>Aujourd’hui</td>
-                </tr>
-                <tr>
-                  <td>Frappe / ERPNext</td>
-                  <td>Application</td>
-                  <td>Socle actuel</td>
-                  <td>Production</td>
-                  <td>
-                    <StatusBadge tone="healthy">Disponible</StatusBadge>
-                  </td>
-                  <td>Hier</td>
-                </tr>
-                <tr>
-                  <td>KYA SolDesign</td>
-                  <td>Skill</td>
-                  <td>0.2.0</td>
-                  <td>Sandbox</td>
-                  <td>
-                    <StatusBadge tone="warning">À valider</StatusBadge>
-                  </td>
-                  <td>Hier</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </main>
+            {selectedCapability && (
+              <div className="relationship-summary" role="status">
+                <Icon name="network" />
+                <p>
+                  <strong>{selectedCapability.name}</strong> dépend de{' '}
+                  {selectedCapability.dependsOn?.length ?? 0} capacité(s) et alimente{' '}
+                  {
+                    allCapabilities.filter((item) =>
+                      item.dependsOn?.includes(selectedCapability.id),
+                    ).length
+                  }{' '}
+                  capacité(s) directement.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedId(null);
+                  }}
+                >
+                  Fermer
+                </button>
+              </div>
+            )}
+          </section>
+
+          <aside className="decision-panel" aria-labelledby="decision-title">
+            <div className="section-heading">
+              <div>
+                <h2 id="decision-title">À décider</h2>
+                <p>3 éléments attendent une action.</p>
+              </div>
+              <span className="decision-count">3</span>
+            </div>
+            <div className="decision-list">
+              {decisions.map((decision) => (
+                <article className="decision" key={decision.title}>
+                  <StatusBadge tone={decision.tone}>{decision.title}</StatusBadge>
+                  <h3>{decision.detail}</h3>
+                  <p>{decision.owner}</p>
+                  <div>
+                    <Button disabled title="L’action sera activée avec le workflow de gouvernance">
+                      <Icon name="check" />À connecter
+                    </Button>
+                    <button disabled title="Disponible dans un prochain incrément" type="button">
+                      Détail · bientôt
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+            <button className="all-decisions" disabled type="button">
+              Toutes les décisions · bientôt <Icon name="chevron" />
+            </button>
+          </aside>
+
+          <section className="recommended" aria-labelledby="recommended-title">
+            <div className="section-heading">
+              <div>
+                <h2 id="recommended-title">Recommandé pour votre rôle</h2>
+                <p>Responsable de domaine · DST · Togo</p>
+              </div>
+              <button disabled title="Disponible dans un prochain incrément" type="button">
+                Catalogue · bientôt <Icon name="chevron" />
+              </button>
+            </div>
+            <div className="recommendation-list">
+              {recommendations.map(([title, meta]) => (
+                <button
+                  key={title}
+                  type="button"
+                  onClick={() => {
+                    acknowledge(`${title} sélectionné.`);
+                  }}
+                >
+                  <Icon name="branch" />
+                  <span>
+                    <strong>{title}</strong>
+                    <small>{meta}</small>
+                  </span>
+                  <Icon name="chevron" />
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section className="deployments" aria-labelledby="deployment-title">
+            <div className="section-heading">
+              <div>
+                <h2 id="deployment-title">Déploiements récents</h2>
+                <p>Traçabilité des versions et environnements.</p>
+              </div>
+            </div>
+            <div className="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Capacité</th>
+                    <th>Type</th>
+                    <th>Version</th>
+                    <th>Environnement</th>
+                    <th>État</th>
+                    <th>Mis à jour</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>API Catalogue</td>
+                    <td>Business API</td>
+                    <td>0.1.0-dev</td>
+                    <td>Dev</td>
+                    <td>
+                      <StatusBadge tone="attention">En construction</StatusBadge>
+                    </td>
+                    <td>Aujourd’hui</td>
+                  </tr>
+                  <tr>
+                    <td>Frappe / ERPNext</td>
+                    <td>Application</td>
+                    <td>Socle actuel</td>
+                    <td>Production</td>
+                    <td>
+                      <StatusBadge tone="healthy">Disponible</StatusBadge>
+                    </td>
+                    <td>Hier</td>
+                  </tr>
+                  <tr>
+                    <td>KYA SolDesign</td>
+                    <td>Skill</td>
+                    <td>0.2.0</td>
+                    <td>Sandbox</td>
+                    <td>
+                      <StatusBadge tone="warning">À valider</StatusBadge>
+                    </td>
+                    <td>Hier</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </main>
+      )}
       <div className={`toast ${notice ? 'toast--visible' : ''}`} role="status" aria-live="polite">
         {notice}
       </div>
