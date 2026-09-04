@@ -8,6 +8,7 @@ import {
   WorkspaceControl,
   type WorkspaceSummary,
 } from '../features/workspaces/workspace-control';
+import { PublicationWorkbench } from '../features/publication/publication-workbench';
 
 type Capability = {
   id: string;
@@ -310,7 +311,7 @@ export function PlatformShell() {
   const [notice, setNotice] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mobileLayerIndex, setMobileLayerIndex] = useState(0);
-  const [activeModule, setActiveModule] = useState<'Réseau' | 'Espaces'>('Réseau');
+  const [activeModule, setActiveModule] = useState<'Réseau' | 'Espaces' | 'Gouvernance'>('Réseau');
   const [activeWorkspaceKey, setActiveWorkspaceKey] = useState('platform');
   const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -409,16 +410,23 @@ export function PlatformShell() {
         {nav.map((item) => (
           <button
             aria-current={item.label === activeModule ? 'page' : undefined}
-            disabled={item.label !== 'Réseau' && item.label !== 'Espaces'}
+            disabled={
+              item.label !== 'Réseau' && item.label !== 'Espaces' && item.label !== 'Gouvernance'
+            }
             key={item.label}
             title={
-              item.label === 'Réseau' || item.label === 'Espaces'
+              item.label === 'Réseau' || item.label === 'Espaces' || item.label === 'Gouvernance'
                 ? `Ouvrir ${item.label}`
                 : 'Disponible dans un prochain incrément'
             }
             type="button"
             onClick={() => {
-              if (item.label === 'Réseau' || item.label === 'Espaces') setActiveModule(item.label);
+              if (
+                item.label === 'Réseau' ||
+                item.label === 'Espaces' ||
+                item.label === 'Gouvernance'
+              )
+                setActiveModule(item.label);
             }}
           >
             <Icon name={item.icon} />
@@ -433,6 +441,8 @@ export function PlatformShell() {
           workspaces={workspaces}
           onSelect={selectWorkspace}
         />
+      ) : activeModule === 'Gouvernance' ? (
+        <PublicationWorkbench />
       ) : (
         <main>
           <section className="network-panel" aria-labelledby="network-title">
