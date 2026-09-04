@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "1",
+  "id": "kya:app:kya-tanstack-app",
+  "type": "app",
+  "name": "KYA TanStack Application",
+  "version": "0.1.0",
+  "summary": "Template for a KYA application that consumes governed Business APIs.",
+  "owners": {
+    "business": "replace-with-product-owner",
+    "technical": "cvsi-platform",
+    "workspace": "replace-with-workspace"
+  },
+  "source": {
+    "repository": "https://github.com/kya-energy/replace-me",
+    "commit": "0000000000000000000000000000000000000000",
+    "path": "apps/kya-tanstack-app"
+  },
+  "integrity": {
+    "algorithm": "sha256",
+    "digest": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "compatibility": {
+    "node": ">=24",
+    "tanstack-start": ">=1"
+  },
+  "dependencies": [],
+  "scopes": ["app.access"],
+  "risk": "read"
+}

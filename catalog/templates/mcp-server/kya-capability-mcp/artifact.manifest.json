@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "1",
+  "id": "kya:mcp-server:kya-capability-mcp",
+  "type": "mcp-server",
+  "name": "KYA Capability MCP",
+  "version": "0.1.0",
+  "summary": "Template for exposing one governed KYA capability through MCP.",
+  "owners": {
+    "business": "replace-with-capability-owner",
+    "technical": "cvsi-platform",
+    "workspace": "replace-with-workspace"
+  },
+  "source": {
+    "repository": "https://github.com/kya-energy/replace-me",
+    "commit": "0000000000000000000000000000000000000000",
+    "path": "mcp/kya-capability-mcp"
+  },
+  "integrity": {
+    "algorithm": "sha256",
+    "digest": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "compatibility": {
+    "mcp-python": ">=2,<3",
+    "transport": "streamable-http"
+  },
+  "dependencies": [],
+  "scopes": ["capability.discover"],
+  "risk": "read"
+}
