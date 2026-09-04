@@ -49,8 +49,8 @@
 - [x] T033 [P] [US2] Write artifact lifecycle and separation-of-duty tests in apps/backend/tests/domain/
 - [x] T034 [P] [US2] Create official Skill, MCP, app and connector templates in catalog/templates/
 - [x] T035 [US2] Implement Artifact, ArtifactVersion and lifecycle rules in apps/backend/src/kya_platform/domain/catalog/
-- [ ] T036 [US2] Implement submission, review, approval and immutable release in apps/backend/src/kya_platform/application/publication/
-- [ ] T037 [US2] Add publication API routes in apps/backend/src/kya_platform/api/routes/publications.py
+- [x] T036 [US2] Implement submission, review, approval and immutable release in apps/backend/src/kya_platform/application/publication/
+- [x] T037 [US2] Add publication API routes in apps/backend/src/kya_platform/api/routes/publications.py
 - [ ] T038 [US2] Build artifact editor and approval inbox in apps/web/src/features/publication/
 - [ ] T039 [US2] Publish one reference Skill end to end and record evidence in specs/001-platform-foundation/evidence/us2.md
 

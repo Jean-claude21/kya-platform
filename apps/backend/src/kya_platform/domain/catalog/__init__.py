@@ -142,6 +142,8 @@ class PublicationRequest:
     status: PublicationStatus
     review_record: Review | None = None
     approval: Approval | None = None
+    published_by: UUID | None = None
+    published_at: datetime | None = None
 
     @classmethod
     def open(
@@ -202,6 +204,24 @@ class PublicationRequest:
             self,
             status=next_status,
             approval=Approval(approver_id, decision, at),
+        )
+
+    def mark_published(
+        self,
+        publisher_id: UUID,
+        *,
+        content_digest: str,
+        at: datetime,
+    ) -> PublicationRequest:
+        if self.status is not PublicationStatus.APPROVED:
+            raise ValueError("only an approved candidate can be published")
+        if content_digest != self.candidate.content_digest:
+            raise ValueError("published content digest differs from the approved candidate")
+        return replace(
+            self,
+            status=PublicationStatus.PUBLISHED,
+            published_by=publisher_id,
+            published_at=at,
         )
 
 
