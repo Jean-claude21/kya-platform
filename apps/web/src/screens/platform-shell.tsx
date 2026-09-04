@@ -9,6 +9,7 @@ import {
   type WorkspaceSummary,
 } from '../features/workspaces/workspace-control';
 import { PublicationWorkbench } from '../features/publication/publication-workbench';
+import { CatalogWorkbench } from '../features/catalog/catalog-workbench';
 
 type Capability = {
   id: string;
@@ -311,7 +312,9 @@ export function PlatformShell() {
   const [notice, setNotice] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mobileLayerIndex, setMobileLayerIndex] = useState(0);
-  const [activeModule, setActiveModule] = useState<'Réseau' | 'Espaces' | 'Gouvernance'>('Réseau');
+  const [activeModule, setActiveModule] = useState<
+    'Catalogue' | 'Réseau' | 'Espaces' | 'Gouvernance'
+  >('Réseau');
   const [activeWorkspaceKey, setActiveWorkspaceKey] = useState('platform');
   const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -411,17 +414,24 @@ export function PlatformShell() {
           <button
             aria-current={item.label === activeModule ? 'page' : undefined}
             disabled={
-              item.label !== 'Réseau' && item.label !== 'Espaces' && item.label !== 'Gouvernance'
+              item.label !== 'Catalogue' &&
+              item.label !== 'Réseau' &&
+              item.label !== 'Espaces' &&
+              item.label !== 'Gouvernance'
             }
             key={item.label}
             title={
-              item.label === 'Réseau' || item.label === 'Espaces' || item.label === 'Gouvernance'
+              item.label === 'Catalogue' ||
+              item.label === 'Réseau' ||
+              item.label === 'Espaces' ||
+              item.label === 'Gouvernance'
                 ? `Ouvrir ${item.label}`
                 : 'Disponible dans un prochain incrément'
             }
             type="button"
             onClick={() => {
               if (
+                item.label === 'Catalogue' ||
                 item.label === 'Réseau' ||
                 item.label === 'Espaces' ||
                 item.label === 'Gouvernance'
@@ -435,7 +445,9 @@ export function PlatformShell() {
         ))}
       </nav>
 
-      {activeModule === 'Espaces' ? (
+      {activeModule === 'Catalogue' ? (
+        <CatalogWorkbench />
+      ) : activeModule === 'Espaces' ? (
         <WorkspaceAccessPanel
           activeKey={activeWorkspaceKey}
           workspaces={workspaces}

@@ -56,13 +56,13 @@
 
 ## Phase 5 — US3: découverte, installation et mises à jour (P1)
 
-- [ ] T040 [P] [US3] Write rights-filtered search and update-policy tests in apps/backend/tests/domain/
-- [ ] T041 [P] [US3] Write Registry MCP schema and authorization tests in apps/backend/tests/contract/test_registry_mcp.py
-- [ ] T042 [US3] Implement catalog search filtered before disclosure in apps/backend/src/kya_platform/application/catalog/
-- [ ] T043 [US3] Implement installation, compatibility, update and rollback services in apps/backend/src/kya_platform/application/distribution/
-- [ ] T044 [US3] Implement daily update assessment job in apps/backend/src/kya_platform/workers/check_updates.py
-- [ ] T045 [US3] Implement OAuth-protected Registry MCP tools in apps/backend/src/kya_platform/mcp/
-- [ ] T046 [US3] Build catalog, installation and update UI in apps/web/src/features/catalog/
+- [x] T040 [P] [US3] Write rights-filtered search and update-policy tests in apps/backend/tests/domain/
+- [x] T041 [P] [US3] Write Registry MCP schema and authorization tests in apps/backend/tests/contract/test_registry_mcp.py
+- [x] T042 [US3] Implement catalog search filtered before disclosure in apps/backend/src/kya_platform/application/catalog/
+- [x] T043 [US3] Implement installation, compatibility, update and rollback services in apps/backend/src/kya_platform/application/distribution/
+- [x] T044 [US3] Implement daily update assessment job in apps/backend/src/kya_platform/workers/check_updates.py
+- [x] T045 [US3] Implement OAuth-protected Registry MCP tools in apps/backend/src/kya_platform/mcp/
+- [x] T046 [US3] Build catalog, installation and update UI in apps/web/src/features/catalog/
 - [ ] T047 [US3] Validate install-update-rollback through UI and MCP in specs/001-platform-foundation/evidence/us3.md
 
 ## Phase 6 — US4: systèmes et autorités (P2)
