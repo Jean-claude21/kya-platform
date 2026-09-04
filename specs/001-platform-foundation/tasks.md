@@ -27,7 +27,7 @@
 - [x] T017 [P] Implement FastAPI Neon Auth JWT/JWKS validation and immutable issuer/subject mapping
 - [x] T018 Write failing OpenFGA model tests for the KYA reference matrix in tests/policy/
 - [x] T019 Implement versioned OpenFGA model and authorization port in apps/backend/src/kya_platform/authorization/
-- [ ] T020 [P] Implement SecretReference port with no-value types in apps/backend/src/kya_platform/secrets/
+- [x] T020 [P] Implement SecretReference port with no-value types in apps/backend/src/kya_platform/secrets/
 - [ ] T021 Create FastAPI security middleware and dependency guards in apps/backend/src/kya_platform/api/
 - [ ] T022 Create TanStack application shell using the Design System package in apps/web/
 - [ ] T023 Create Python worker runner with leases and retries in apps/backend/src/kya_platform/workers/

@@ -57,13 +57,21 @@
 - découverte d'un outil MCP et droit de l'invoquer sont séparés ;
 - le port applicatif exige un identifiant de modèle immuable et échoue fermé.
 
+## Références de secrets — T020
+
+- le contrat contient uniquement fournisseur, localisateur opaque, propriétaire, usage et cycle de
+  vie ;
+- le modèle est immuable et refuse tout champ supplémentaire ;
+- les champs `value`, `secret`, `plaintext` et `credential` sont explicitement rejetés ;
+- le port permet catalogage et révocation sans méthode de lecture de valeur.
+
 ## Contrôles exécutés
 
 | Contrôle                        | Résultat                             |
 | ------------------------------- | ------------------------------------ |
 | Ruff                            | réussi                               |
 | mypy strict                     | réussi sur 20 fichiers source        |
-| pytest                          | 49 tests réussis, couverture 93,72 % |
+| pytest                          | 55 tests réussis, couverture 94,06 % |
 | pnpm lint/typecheck/test/format | réussi, 2 tests TypeScript           |
 | Modèle OpenFGA                  | 9 scénarios, 31 checks réussis       |
 | Image backend Python 3.14       | construite                           |
