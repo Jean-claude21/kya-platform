@@ -1,11 +1,13 @@
-"""Infisical Universal Auth adapter for machine identities."""
+"""Infisical Universal Auth and secret-resolution adapters."""
 
+import asyncio
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Protocol
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 
+import httpx
 from pydantic import SecretStr
 
 
@@ -13,8 +15,64 @@ class InfisicalAuthenticationError(RuntimeError):
     """Infisical refused or returned an invalid machine-identity session."""
 
 
+@dataclass(frozen=True, slots=True)
+class InfisicalRequestError(RuntimeError):
+    """A redacted Infisical request failure safe for logs and API boundaries."""
+
+    status_code: int
+    operation: str
+
+    def __str__(self) -> str:
+        return f"Infisical {self.operation} failed with status {self.status_code}"
+
+
 class InfisicalHttpPort(Protocol):
     async def post_json(self, url: str, payload: Mapping[str, str]) -> Mapping[str, object]: ...
+
+    async def get_json(
+        self,
+        url: str,
+        *,
+        params: Mapping[str, str],
+        bearer_token: SecretStr,
+    ) -> Mapping[str, object]: ...
+
+
+@dataclass(frozen=True, slots=True)
+class HttpxInfisicalTransport:
+    """Perform HTTPS requests without logging credentials or response bodies."""
+
+    client: httpx.AsyncClient
+
+    @staticmethod
+    def _mapping(response: httpx.Response, operation: str) -> Mapping[str, object]:
+        if response.is_error:
+            raise InfisicalRequestError(response.status_code, operation)
+        try:
+            payload = response.json()
+        except ValueError:
+            raise InfisicalRequestError(response.status_code, operation) from None
+        if not isinstance(payload, dict):
+            raise InfisicalRequestError(response.status_code, operation)
+        return payload
+
+    async def post_json(self, url: str, payload: Mapping[str, str]) -> Mapping[str, object]:
+        response = await self.client.post(url, json=payload)
+        return self._mapping(response, "authentication")
+
+    async def get_json(
+        self,
+        url: str,
+        *,
+        params: Mapping[str, str],
+        bearer_token: SecretStr,
+    ) -> Mapping[str, object]:
+        response = await self.client.get(
+            url,
+            params=params,
+            headers={"Authorization": f"Bearer {bearer_token.get_secret_value()}"},
+        )
+        return self._mapping(response, "secret retrieval")
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,6 +91,17 @@ class MachineAccessToken:
 
     def usable_at(self, instant: datetime) -> bool:
         return instant < self.expires_at
+
+
+@dataclass(frozen=True, slots=True)
+class ResolvedSecret:
+    """A secret value whose representation is always redacted."""
+
+    key_name: str
+    value: SecretStr
+
+    def __repr__(self) -> str:
+        return f"ResolvedSecret(key_name={self.key_name!r}, value=SecretStr('**********'))"
 
 
 @dataclass(frozen=True, slots=True)
@@ -98,9 +167,67 @@ class InfisicalMachineIdentityAdapter:
         )
 
 
+@dataclass(slots=True)
+class InfisicalSecretResolver:
+    """Resolve one secret with automatic short-lived token refresh."""
+
+    http: InfisicalHttpPort
+    authentication: InfisicalMachineIdentityAdapter
+    project_id: str
+    environment: str
+    secret_path: str = "/"  # noqa: S105 -- path, not credential material
+    _token: MachineAccessToken | None = field(default=None, init=False, repr=False)
+    _token_lock: asyncio.Lock = field(default_factory=asyncio.Lock, init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        if not self.project_id.strip():
+            raise ValueError("Infisical project ID is required")
+        if self.environment not in {"dev", "staging", "prod"}:
+            raise ValueError("Infisical environment is invalid")
+        if not self.secret_path.startswith("/"):
+            raise ValueError("Infisical secret path must start with /")
+
+    async def _access_token(self, *, at: datetime) -> MachineAccessToken:
+        if self._token is not None and self._token.usable_at(at):
+            return self._token
+        async with self._token_lock:
+            if self._token is None or not self._token.usable_at(at):
+                self._token = await self.authentication.authenticate(at=at)
+            return self._token
+
+    async def resolve(self, key_name: str, *, at: datetime) -> ResolvedSecret:
+        if not key_name or "/" in key_name:
+            raise ValueError("Infisical secret key name is invalid")
+        token = await self._access_token(at=at)
+        response = await self.http.get_json(
+            f"{self.authentication.base_url}/api/v4/secrets/{quote(key_name, safe='')}",
+            params={
+                "projectId": self.project_id,
+                "environment": self.environment,
+                "secretPath": self.secret_path,
+                "type": "shared",
+                "viewSecretValue": "true",
+                "expandSecretReferences": "false",
+            },
+            bearer_token=token.value,
+        )
+        secret = response.get("secret")
+        if not isinstance(secret, dict):
+            raise InfisicalRequestError(502, "secret decoding")
+        value = secret.get("secretValue")
+        returned_key = secret.get("secretKey")
+        if not isinstance(value, str) or returned_key != key_name:
+            raise InfisicalRequestError(502, "secret decoding")
+        return ResolvedSecret(key_name=key_name, value=SecretStr(value))
+
+
 __all__ = [
+    "HttpxInfisicalTransport",
     "InfisicalAuthenticationError",
     "InfisicalHttpPort",
     "InfisicalMachineIdentityAdapter",
+    "InfisicalRequestError",
+    "InfisicalSecretResolver",
     "MachineAccessToken",
+    "ResolvedSecret",
 ]

@@ -79,14 +79,14 @@
 - [x] T054 [US5] Implement Infisical machine-identity adapter in apps/backend/src/kya_platform/infrastructure/infisical/
 - [x] T055 [US5] Implement secret-use request and approval service in apps/backend/src/kya_platform/application/secrets/
 - [x] T056 [US5] Add secret metadata administration without reveal in apps/backend/src/kya_platform/api/routes/secrets.py and apps/web/src/features/secrets/
-- [ ] T057 [US5] Validate preview-only secret expiry and emergency revocation in specs/001-platform-foundation/evidence/us5.md
+- [x] T057 [US5] Validate preview-only secret expiry and emergency revocation in specs/001-platform-foundation/evidence/us5.md
 
 ## Phase 8 — US6: promotions Dokploy et Coolify (P2)
 
-- [ ] T058 [P] [US6] Write DeploymentProvider conformance suite in apps/backend/tests/contract/test_deployment_provider.py
-- [ ] T059 [P] [US6] Implement Dokploy adapter in apps/backend/src/kya_platform/infrastructure/dokploy/
-- [ ] T060 [P] [US6] Implement Coolify adapter in apps/backend/src/kya_platform/infrastructure/coolify/
-- [ ] T061 [US6] Implement provider-neutral promotion and rollback service in apps/backend/src/kya_platform/application/deployment/
+- [x] T058 [P] [US6] Write DeploymentProvider conformance suite in apps/backend/tests/contract/test_deployment_provider.py
+- [x] T059 [P] [US6] Implement Dokploy adapter in apps/backend/src/kya_platform/infrastructure/dokploy/
+- [x] T060 [P] [US6] Implement Coolify adapter in apps/backend/src/kya_platform/infrastructure/coolify/
+- [x] T061 [US6] Implement provider-neutral promotion and rollback service in apps/backend/src/kya_platform/application/deployment/
 - [ ] T062 [US6] Automate Neon preview branch create/cleanup in infra/neon/
 - [ ] T063 [US6] Add preview, test and production workflows in .github/workflows/deploy.yml
 - [ ] T064 [US6] Run identical provider benchmark and record decision in specs/001-platform-foundation/evidence/deployment-benchmark.md

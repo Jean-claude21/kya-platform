@@ -2,14 +2,14 @@
 
 Date de contrôle : 2026-09-04
 
-État : implémentation T053–T056 terminée ; exercice raccordé à Infisical T057 encore à finaliser.
+État : T053–T057 terminées ; exercice réel Infisical exécuté le 2026-09-04.
 
 ## Décisions appliquées
 
 - Infisical reste le coffre autoritaire des valeurs ; Neon et le catalogue ne reçoivent que des
   références opaques et des métadonnées de gouvernance.
 - Une identité machine utilise Universal Auth pour obtenir un jeton court. Le jeton est plafonné à
-  7 200 secondes par défaut et encapsulé dans un type dont la représentation est masquée.
+  900 secondes et encapsulé dans un type dont la représentation est masquée.
 - Chaque autorisation d'usage lie exactement un bénéficiaire, une finalité, un périmètre, un
   environnement et une période fermée.
 - Le demandeur ne peut pas approuver sa propre demande.
@@ -21,10 +21,10 @@ Date de contrôle : 2026-09-04
 ## Validation automatisée actuelle
 
 ```text
-Backend complet : 159 tests réussis — couverture 91,61 % (seuil 90 %)
-Scénarios US5 ciblés : 9 tests réussis
+Backend complet : 167 tests réussis — couverture 91,45 % (seuil 90 %)
+Scénarios US5 ciblés : 26 tests réussis
 API de métadonnées : 3 tests d'intégration réussis
-Interface web : 9 tests composants réussis dans l'ensemble web
+Interface web : 11 tests réussis dans l'ensemble web
 TypeScript et builds client/SSR : réussis
 Ruff ciblé : réussi
 mypy ciblé : réussi
@@ -43,11 +43,34 @@ Références officielles :
 - <https://infisical.com/docs/documentation/platform/secrets-mgmt/project>
 - <https://infisical.com/docs/documentation/platform/secrets-mgmt/concepts/secrets-rotation>
 
-## Conditions restantes
+## Exercice réel T057
 
-T057 exigera un exercice automatisé complet : accès preview accepté, tentative production refusée, expiration
-refusée, révocation d'urgence refusée, et vérification qu'aucune valeur n'apparaît dans les logs ou
-réponses.
+Projet créé par API : `KYA Platform Runtime Secrets` (`kya-platform-runtime`), avec protection
+contre la suppression. L'identifiant du projet et les identifiants Universal Auth sont injectés
+dans un fichier `.env` local ignoré par Git ; aucune valeur secrète n'est versionnée.
 
-Aucun identifiant Infisical réel n'est requis avant le branchement d'un environnement. Le moment
-venu, le Client ID et le secret d'amorçage devront être injectés au runtime, jamais commités.
+Résultats observés sans afficher de jeton ni de valeur secrète :
+
+```text
+Authentification Universal Auth       : 200
+TTL émis / TTL maximal                : 900 s / 900 s
+Lecture de la sonde en staging        : 200
+Écriture après passage au rôle Viewer : 403
+Lecture de la sonde en production     : 404 (aucune valeur créée)
+Lecture après révocation du jeton     : 401
+Nouvelle session après révocation     : 200, TTL 900 s
+Résolveur Python réel                 : lecture réussie, représentation masquée
+```
+
+L'identité `kya-platform-preview` a été ramenée à `No Access` dans l'organisation, `Viewer` dans
+le projet, et protégée contre la suppression. Elle ne peut plus administrer l'organisation ni
+écrire des secrets.
+
+La formule Infisical Free ne permet pas un rôle personnalisé limité à un seul environnement. En
+conséquence, aucun secret de production ne doit être placé dans ce projet. La production utilisera
+un projet et une identité machine distincts ; cette séparation est une condition de mise en
+production. Le résolveur de la preview reçoit par configuration un environnement fixe `staging`
+et n'expose aucune API permettant à un appelant de le remplacer.
+
+Le Client Secret d'amorçage reste hors d'Infisical et doit être injecté au runtime par
+Dokploy/Coolify, jamais commité. Sa rotation est indépendante des jetons d'accès de 900 secondes.

@@ -3,7 +3,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import SecretStr
+from pydantic import SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -26,6 +26,34 @@ class Settings(BaseSettings):
     neon_auth_issuer: str | None = None
     neon_auth_jwks_url: str | None = None
     neon_auth_audience: str = "kya-platform"
+    infisical_api_url: str | None = None
+    infisical_client_id: str | None = None
+    infisical_client_secret: SecretStr | None = None
+    infisical_project_id: str | None = None
+    infisical_environment: Literal["dev", "staging", "prod"] = "staging"
+    infisical_secret_path: str = "/"  # noqa: S105 -- path, not credential material
+    infisical_organization_slug: str | None = None
+    infisical_maximum_token_ttl_seconds: int = 900
+
+    @model_validator(mode="after")
+    def validate_infisical_configuration(self) -> Settings:
+        required = (
+            self.infisical_api_url,
+            self.infisical_client_id,
+            self.infisical_client_secret,
+            self.infisical_project_id,
+        )
+        if any(item is not None for item in required) and not all(required):
+            raise ValueError("Infisical configuration must be complete")
+        if not self.infisical_secret_path.startswith("/"):
+            raise ValueError("Infisical secret path must start with /")
+        if not 1 <= self.infisical_maximum_token_ttl_seconds <= 7_200:
+            raise ValueError("Infisical maximum token TTL must be between 1 and 7200 seconds")
+        return self
+
+    @property
+    def has_infisical_configuration(self) -> bool:
+        return self.infisical_api_url is not None
 
 
 @lru_cache

@@ -3,12 +3,19 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+import httpx
 import uvicorn
 from fastapi import FastAPI
+from pydantic import SecretStr
 
 from kya_platform.api.router import api_router
 from kya_platform.api.security import configure_security_runtime
 from kya_platform.config import Settings, get_settings
+from kya_platform.infrastructure.infisical import (
+    HttpxInfisicalTransport,
+    InfisicalMachineIdentityAdapter,
+    InfisicalSecretResolver,
+)
 from kya_platform.observability import (
     CorrelationMiddleware,
     configure_logging,
@@ -24,9 +31,39 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        infisical_http_client: httpx.AsyncClient | None = None
+        app.state.infisical_secret_resolver = None
+        if resolved_settings.has_infisical_configuration:
+            api_url = resolved_settings.infisical_api_url
+            client_id = resolved_settings.infisical_client_id
+            client_secret = resolved_settings.infisical_client_secret
+            project_id = resolved_settings.infisical_project_id
+            if api_url is None or client_id is None or client_secret is None or project_id is None:
+                raise RuntimeError("validated Infisical configuration is incomplete")
+            infisical_http_client = httpx.AsyncClient(timeout=10.0)
+            transport = HttpxInfisicalTransport(infisical_http_client)
+            authentication = InfisicalMachineIdentityAdapter(
+                transport,
+                api_url,
+                client_id,
+                SecretStr(client_secret.get_secret_value()),
+                resolved_settings.infisical_organization_slug,
+                resolved_settings.infisical_maximum_token_ttl_seconds,
+            )
+            app.state.infisical_secret_resolver = InfisicalSecretResolver(
+                transport,
+                authentication,
+                project_id,
+                resolved_settings.infisical_environment,
+                resolved_settings.infisical_secret_path,
+            )
         app.state.is_ready = True
-        yield
-        app.state.is_ready = False
+        try:
+            yield
+        finally:
+            app.state.is_ready = False
+            if infisical_http_client is not None:
+                await infisical_http_client.aclose()
 
     application = FastAPI(
         title=resolved_settings.app_name,

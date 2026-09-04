@@ -11,9 +11,12 @@ const valid = {
   OPENFGA_API_URL: 'http://localhost:8080',
   OPENFGA_STORE_ID: 'store',
   OPENFGA_MODEL_ID: 'model',
-  INFISICAL_API_URL: 'http://localhost:8081',
-  INFISICAL_CLIENT_ID: 'client',
-  INFISICAL_CLIENT_SECRET: 'secret',
+  KYA_INFISICAL_API_URL: 'http://localhost:8081',
+  KYA_INFISICAL_CLIENT_ID: 'client',
+  KYA_INFISICAL_CLIENT_SECRET: 'secret',
+  KYA_INFISICAL_PROJECT_ID: 'project',
+  KYA_INFISICAL_ENVIRONMENT: 'staging',
+  KYA_INFISICAL_SECRET_PATH: '/',
   DEPLOYMENT_PROVIDER: 'mock',
 } as const;
 
