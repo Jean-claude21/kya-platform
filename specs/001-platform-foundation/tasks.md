@@ -36,11 +36,11 @@
 ## Phase 3 — US1: espaces et accès (P1, MVP)
 
 - [x] T025 [P] [US1] Write organization and workspace domain tests in apps/backend/tests/domain/
-- [ ] T026 [P] [US1] Write negative authorization integration tests in apps/backend/tests/integration/test_workspace_access.py
+- [x] T026 [P] [US1] Write negative authorization integration tests in apps/backend/tests/integration/test_workspace_access.py
 - [x] T027 [US1] Implement units, relations, positions and dated assignments in apps/backend/src/kya_platform/domain/organization/
 - [x] T028 [US1] Implement workspaces, memberships, inheritance and explicit deny in apps/backend/src/kya_platform/domain/workspaces/
-- [ ] T029 [US1] Implement authorization explanation and filtered-list services in apps/backend/src/kya_platform/authorization/
-- [ ] T030 [US1] Add workspace and membership API routes in apps/backend/src/kya_platform/api/routes/workspaces.py
+- [x] T029 [US1] Implement authorization explanation and filtered-list services in apps/backend/src/kya_platform/authorization/
+- [x] T030 [US1] Add workspace and membership API routes in apps/backend/src/kya_platform/api/routes/workspaces.py
 - [ ] T031 [US1] Build workspace switcher and access administration UI in apps/web/src/features/workspaces/
 - [ ] T032 [US1] Execute Alice/Bob/Chloé/Sam matrix and record evidence in specs/001-platform-foundation/evidence/us1.md
 

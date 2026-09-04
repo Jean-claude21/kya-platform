@@ -1,9 +1,11 @@
 """Workspace boundaries and explainable access resolution."""
 
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import IntEnum, StrEnum
+from enum import StrEnum
+from typing import Protocol
 from uuid import UUID
 
 from kya_platform.domain.organization import DateRange
@@ -22,14 +24,25 @@ class WorkspaceKind(StrEnum):
     RESTRICTED = "restricted"
 
 
-class AccessLevel(IntEnum):
-    VIEWER = 10
-    GUEST = 20
-    MEMBER = 30
-    CONTRIBUTOR = 40
-    EDITOR = 50
-    MANAGER = 60
-    OWNER = 70
+class AccessLevel(StrEnum):
+    VIEWER = "viewer"
+    GUEST = "guest"
+    MEMBER = "member"
+    CONTRIBUTOR = "contributor"
+    EDITOR = "editor"
+    MANAGER = "manager"
+    OWNER = "owner"
+
+
+_ACCESS_RANK = {
+    AccessLevel.VIEWER: 10,
+    AccessLevel.GUEST: 20,
+    AccessLevel.MEMBER: 30,
+    AccessLevel.CONTRIBUTOR: 40,
+    AccessLevel.EDITOR: 50,
+    AccessLevel.MANAGER: 60,
+    AccessLevel.OWNER: 70,
+}
 
 
 class AccessSource(StrEnum):
@@ -67,6 +80,21 @@ class WorkspaceMembership:
 
     def is_active(self, instant: datetime) -> bool:
         return self.validity.contains(instant)
+
+
+class WorkspaceQueryPort(Protocol):
+    async def get(self, workspace_key: str) -> Workspace | None:
+        """Load one workspace after an access decision."""
+
+    async def list_by_keys(self, workspace_keys: Sequence[str]) -> Sequence[Workspace]:
+        """Load only keys already filtered by the authorization provider."""
+
+
+class WorkspaceCommandPort(Protocol):
+    async def add_membership(
+        self, membership: WorkspaceMembership, *, actor_id: UUID
+    ) -> WorkspaceMembership:
+        """Persist a validated membership and enqueue its policy projection."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -114,7 +142,7 @@ def resolve_workspace_access(
     if not candidates:
         return WorkspaceAccess.denied("no_applicable_grant")
 
-    level, source = max(candidates, key=lambda candidate: candidate[0])
+    level, source = max(candidates, key=lambda candidate: _ACCESS_RANK[candidate[0]])
     return WorkspaceAccess(True, level, source, f"{source.value}_{level.name.lower()}")
 
 
@@ -123,7 +151,9 @@ __all__ = [
     "AccessSource",
     "Workspace",
     "WorkspaceAccess",
+    "WorkspaceCommandPort",
     "WorkspaceKind",
     "WorkspaceMembership",
+    "WorkspaceQueryPort",
     "resolve_workspace_access",
 ]

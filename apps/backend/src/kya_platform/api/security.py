@@ -36,6 +36,39 @@ class AuthorizedPrincipal:
     active_unit_id: str
 
 
+async def active_principal(
+    request: Request,
+    identity: Annotated[AuthenticatedIdentity, Depends(authenticated_identity)],
+) -> AuthorizedPrincipal:
+    """Resolve the internal principal and require an explicit organization context."""
+
+    mapping: IdentityMappingPort | None = request.app.state.identity_mapping
+    if mapping is None:
+        raise ApiError(
+            503,
+            "authorization_unavailable",
+            "Autorisation indisponible",
+            "Le service d'autorisation n'est pas configuré.",
+        )
+    principal_id = await mapping.resolve_principal_id(identity)
+    if principal_id is None:
+        raise ApiError(
+            403,
+            "identity_not_linked",
+            "Identité non rattachée",
+            "Cette identité n'est pas rattachée à un principal KYA actif.",
+        )
+    active_unit_id = request.headers.get("X-KYA-Unit-ID")
+    if not active_unit_id:
+        raise ApiError(
+            400,
+            "active_unit_required",
+            "Unité active requise",
+            "Sélectionnez explicitement l'unité organisationnelle active.",
+        )
+    return AuthorizedPrincipal(principal_id, identity, active_unit_id)
+
+
 def configure_security_runtime(app_state: State, settings: Settings) -> None:
     """Configure token validation now; infrastructure adapters arrive during startup."""
 
@@ -98,11 +131,10 @@ def require_permission(
 
     async def dependency(
         request: Request,
-        identity: Annotated[AuthenticatedIdentity, Depends(authenticated_identity)],
+        principal: Annotated[AuthorizedPrincipal, Depends(active_principal)],
     ) -> AuthorizedPrincipal:
-        mapping: IdentityMappingPort | None = request.app.state.identity_mapping
         authorization: AuthorizationPort | None = request.app.state.authorization
-        if mapping is None or authorization is None:
+        if authorization is None:
             raise ApiError(
                 503,
                 "authorization_unavailable",
@@ -110,36 +142,18 @@ def require_permission(
                 "Le service d'autorisation n'est pas configuré.",
             )
 
-        principal_id = await mapping.resolve_principal_id(identity)
-        if principal_id is None:
-            raise ApiError(
-                403,
-                "identity_not_linked",
-                "Identité non rattachée",
-                "Cette identité n'est pas rattachée à un principal KYA actif.",
-            )
-
-        active_unit_id = request.headers.get("X-KYA-Unit-ID")
-        if not active_unit_id:
-            raise ApiError(
-                400,
-                "active_unit_required",
-                "Unité active requise",
-                "Sélectionnez explicitement l'unité organisationnelle active.",
-            )
-
         object_id = request.path_params.get(object_parameter)
         if not isinstance(object_id, str) or not object_id:
             raise RuntimeError(f"missing guarded path parameter: {object_parameter}")
 
         context, contextual_tuples = active_unit_context(
-            user_id=str(principal_id),
-            unit_id=active_unit_id,
+            user_id=str(principal.principal_id),
+            unit_id=principal.active_unit_id,
             current_time=datetime.now(UTC),
         )
         decision = await authorization.check(
             CheckRequest(
-                user=f"user:{principal_id}",
+                user=f"user:{principal.principal_id}",
                 relation=relation,
                 object=f"{object_type}:{object_id}",
                 context=context,
@@ -154,17 +168,14 @@ def require_permission(
                 "Vous ne disposez pas de l'autorisation requise.",
             )
 
-        return AuthorizedPrincipal(
-            principal_id=principal_id,
-            identity=identity,
-            active_unit_id=active_unit_id,
-        )
+        return principal
 
     return dependency
 
 
 __all__ = [
     "AuthorizedPrincipal",
+    "active_principal",
     "authenticated_identity",
     "configure_security_runtime",
     "require_permission",
