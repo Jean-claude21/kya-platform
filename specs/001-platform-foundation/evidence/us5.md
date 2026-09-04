@@ -2,8 +2,7 @@
 
 Date de contrôle : 2026-09-04
 
-État : socle de sécurité T053–T055 terminé ; administration API/UI T056 et exercice T057 encore à
-finaliser.
+État : implémentation T053–T056 terminée ; exercice raccordé à Infisical T057 encore à finaliser.
 
 ## Décisions appliquées
 
@@ -22,8 +21,11 @@ finaliser.
 ## Validation automatisée actuelle
 
 ```text
-Backend complet : 156 tests réussis — couverture 91,83 % (seuil 90 %)
+Backend complet : 159 tests réussis — couverture 91,61 % (seuil 90 %)
 Scénarios US5 ciblés : 9 tests réussis
+API de métadonnées : 3 tests d'intégration réussis
+Interface web : 9 tests composants réussis dans l'ensemble web
+TypeScript et builds client/SSR : réussis
 Ruff ciblé : réussi
 mypy ciblé : réussi
 ```
@@ -43,8 +45,7 @@ Références officielles :
 
 ## Conditions restantes
 
-T056 doit exposer uniquement les métadonnées autorisées dans l'API et l'interface. T057 exigera un
-exercice automatisé complet : accès preview accepté, tentative production refusée, expiration
+T057 exigera un exercice automatisé complet : accès preview accepté, tentative production refusée, expiration
 refusée, révocation d'urgence refusée, et vérification qu'aucune valeur n'apparaît dans les logs ou
 réponses.
 

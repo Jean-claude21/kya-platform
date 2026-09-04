@@ -14,6 +14,9 @@ class SecretReferencePort(Protocol):
     async def list_for_scope(self, owner_scope: str) -> Sequence[SecretReference]:
         """List only references visible in one authorized scope."""
 
+    async def list_by_ids(self, reference_ids: tuple[UUID, ...]) -> Sequence[SecretReference]:
+        """Load references only after authorization has filtered their identifiers."""
+
     async def register(self, reference: SecretReference) -> None:
         """Register an opaque provider locator."""
 
