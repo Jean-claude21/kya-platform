@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "1",
+  "id": "kya:skill:kya-business-method",
+  "type": "skill",
+  "name": "KYA Business Method",
+  "version": "0.1.0",
+  "summary": "Reference Skill proving KYA's governed business-method publication path.",
+  "owners": {
+    "business": "direction-pilote",
+    "technical": "cvsi-platform",
+    "workspace": "platform"
+  },
+  "source": {
+    "repository": "https://github.com/Jean-claude21/kya-platform",
+    "commit": "ddbb9c688e83d5d1016c691a6673a00b7f8ab5ae",
+    "path": "catalog/templates/skill/kya-business-method/SKILL.md"
+  },
+  "integrity": {
+    "algorithm": "sha256",
+    "digest": "094762a78dd0a27b71a86ba791941c210256b705ef426504251c41cb7060bb74"
+  },
+  "compatibility": {
+    "codex": ">=2026-09"
+  },
+  "dependencies": [],
+  "scopes": ["skill.discover"],
+  "risk": "read"
+}

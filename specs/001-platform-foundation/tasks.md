@@ -52,7 +52,7 @@
 - [x] T036 [US2] Implement submission, review, approval and immutable release in apps/backend/src/kya_platform/application/publication/
 - [x] T037 [US2] Add publication API routes in apps/backend/src/kya_platform/api/routes/publications.py
 - [x] T038 [US2] Build artifact editor and approval inbox in apps/web/src/features/publication/
-- [ ] T039 [US2] Publish one reference Skill end to end and record evidence in specs/001-platform-foundation/evidence/us2.md
+- [x] T039 [US2] Publish one reference Skill end to end and record evidence in specs/001-platform-foundation/evidence/us2.md
 
 ## Phase 5 — US3: découverte, installation et mises à jour (P1)
 
