@@ -32,5 +32,6 @@ Thumbs.db
 # Test and temporary artifacts
 playwright-report/
 test-results/
+apps/web/.impeccable/screenshots/
 tmp/
 temp/

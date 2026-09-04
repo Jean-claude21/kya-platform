@@ -74,14 +74,30 @@
 - identité non liée, configuration absente et décision négative échouent toutes fermées ;
 - les raisons cryptographiques internes ne sont jamais retournées au client.
 
+## Shell TanStack et Design System KYA — T022
+
+- shell TanStack Start rendu côté serveur et routage de fichiers validés par un build de production ;
+- tokens, icônes SVG et primitives partagés dans `@kya/design-system` ;
+- réseau typé de 13 capacités et 15 dépendances, avec chemins restreints et mise en évidence des
+  relations ;
+- recherche transversale, raccourci `Ctrl/Cmd+K`, effacement par `Échap` et résumé textuel des
+  dépendances ;
+- contexte Groupe/pays visible à tous les breakpoints et navigation mobile des six couches ;
+- aucune action non connectée ne simule une mutation ou une navigation réelle ;
+- contrôles réels à 1 440 × 1 000 et 390 × 844 : aucun débordement de page, cibles tactiles de 44 px ;
+- revue visuelle indépendante : défauts matériels résolus, documentation du système produite avant
+  clôture.
+
 ## Contrôles exécutés
 
 | Contrôle                        | Résultat                             |
 | ------------------------------- | ------------------------------------ |
 | Ruff                            | réussi                               |
 | mypy strict                     | réussi sur 20 fichiers source        |
-| pytest                          | 63 tests réussis, couverture 94,22 %   |
+| pytest                          | 63 tests réussis, couverture 94,22 % |
 | pnpm lint/typecheck/test/format | réussi, 2 tests TypeScript           |
+| Build TanStack Start            | réussi, client et SSR                |
+| Rendu responsive                | réussi à 1 440 px et 390 px          |
 | Modèle OpenFGA                  | 9 scénarios, 31 checks réussis       |
 | Image backend Python 3.14       | construite                           |
 | Santé du conteneur              | `ready`, environnement `test`        |
@@ -92,5 +108,7 @@
 - aucun projet Neon réel n'est encore provisionné ; les issuer, audience et URL JWKS restent donc
   des paramètres sans valeur réelle dans le dépôt ;
 - l'environnement local exécute Node.js 22 alors que la cible CI et production est Node.js 24 ;
-- l'injection de l'identité dans les routes FastAPI relève de T021 ;
-- le modèle OpenFGA et sa matrice KYA relèvent de T018–T019.
+- les identifiants d'organisation et de rôles visibles dans le shell restent illustratifs jusqu'au
+  branchement sur la Business API et OpenFGA ;
+- le logo vectoriel officiel et l'éventuelle police institutionnelle restent à fournir avant la
+  diffusion finale.

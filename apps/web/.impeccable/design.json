@@ -1,0 +1,425 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-04T04:32:09.6363872+00:00",
+  "title": "Design System: KYA Platform",
+  "extensions": {
+    "colorMeta": {
+      "forest-deep": {
+        "role": "primary",
+        "displayName": "Vert forêt profond",
+        "canonical": "#073b25",
+        "tonalRamp": [
+          "#01180f",
+          "#03271a",
+          "#053321",
+          "#073b25",
+          "#456c59",
+          "#839d92",
+          "#c1cec9",
+          "#e7ecea"
+        ]
+      },
+      "forest-structural": {
+        "role": "primary",
+        "displayName": "Vert structurel",
+        "canonical": "#145a32",
+        "tonalRamp": [
+          "#082414",
+          "#0d3a20",
+          "#114c2a",
+          "#145a32",
+          "#4f8365",
+          "#89ac98",
+          "#c4d6cb",
+          "#e8efeb"
+        ]
+      },
+      "forest-signal": {
+        "role": "primary",
+        "displayName": "Vert signal",
+        "canonical": "#1f8a4c",
+        "tonalRamp": [
+          "#0c371e",
+          "#145a32",
+          "#1a7541",
+          "#1f8a4c",
+          "#57a879",
+          "#8fc5a6",
+          "#c7e2d2",
+          "#e9f3ed"
+        ]
+      },
+      "forest-wash": {
+        "role": "primary",
+        "displayName": "Voile végétal",
+        "canonical": "#e6f3e9",
+        "tonalRamp": [
+          "#263d2b",
+          "#526a57",
+          "#829787",
+          "#b1c5b6",
+          "#e6f3e9",
+          "#edf7ef",
+          "#f5faf6",
+          "#fbfdfb"
+        ]
+      },
+      "action-orange": {
+        "role": "secondary",
+        "displayName": "Orange d’action",
+        "canonical": "#d85f00",
+        "tonalRamp": [
+          "#361800",
+          "#6c3000",
+          "#a24700",
+          "#d85f00",
+          "#e28740",
+          "#ecaf80",
+          "#f5d7bf",
+          "#fbece5"
+        ]
+      },
+      "decision-orange": {
+        "role": "secondary",
+        "displayName": "Orange de décision",
+        "canonical": "#a84300",
+        "tonalRamp": [
+          "#2a1100",
+          "#542200",
+          "#7e3200",
+          "#a84300",
+          "#be7240",
+          "#d3a180",
+          "#e9d0bf",
+          "#f6e9e5"
+        ]
+      },
+      "orange-wash": {
+        "role": "secondary",
+        "displayName": "Voile orange",
+        "canonical": "#fff0e2",
+        "tonalRamp": [
+          "#403c39",
+          "#807871",
+          "#bfb4aa",
+          "#dfd2c6",
+          "#fff0e2",
+          "#fff4ea",
+          "#fff9f4",
+          "#fffdfb"
+        ]
+      },
+      "warning-amber": {
+        "role": "tertiary",
+        "displayName": "Ambre d’alerte",
+        "canonical": "#9a6500",
+        "tonalRamp": [
+          "#271900",
+          "#4d3300",
+          "#744c00",
+          "#9a6500",
+          "#b38c40",
+          "#ccb280",
+          "#e6d9bf",
+          "#f5efe5"
+        ]
+      },
+      "amber-wash": {
+        "role": "tertiary",
+        "displayName": "Voile ambré",
+        "canonical": "#fff4c5",
+        "tonalRamp": [
+          "#403d31",
+          "#807b63",
+          "#bfb894",
+          "#dfd6ac",
+          "#fff4c5",
+          "#fff7d4",
+          "#fffbe2",
+          "#fffdf6"
+        ]
+      },
+      "restricted-coffee": {
+        "role": "tertiary",
+        "displayName": "Café restreint",
+        "canonical": "#6b4b3e",
+        "tonalRamp": [
+          "#1b1310",
+          "#36261f",
+          "#50382f",
+          "#6b4b3e",
+          "#90786f",
+          "#b5a5a0",
+          "#dad2cf",
+          "#f0edec"
+        ]
+      },
+      "control-ink": {
+        "role": "neutral",
+        "displayName": "Encre de conduite",
+        "canonical": "#17211b",
+        "tonalRamp": [
+          "#060806",
+          "#0c110e",
+          "#111914",
+          "#17211b",
+          "#515955",
+          "#8b908d",
+          "#c5c8c6",
+          "#e8e9e8"
+        ]
+      },
+      "muted-ink": {
+        "role": "neutral",
+        "displayName": "Encre secondaire",
+        "canonical": "#5b665f",
+        "tonalRamp": [
+          "#171a18",
+          "#2e3330",
+          "#444d47",
+          "#5b665f",
+          "#848c87",
+          "#adb3af",
+          "#d6d9d7",
+          "#eeefef"
+        ]
+      },
+      "circuit-line": {
+        "role": "neutral",
+        "displayName": "Ligne de circuit",
+        "canonical": "#dfe5de",
+        "tonalRamp": [
+          "#383938",
+          "#70736f",
+          "#a7aca7",
+          "#c3c9c2",
+          "#dfe5de",
+          "#e7ebe6",
+          "#eff2ef",
+          "#f9faf9"
+        ]
+      },
+      "warm-ground": {
+        "role": "neutral",
+        "displayName": "Sol chaud",
+        "canonical": "#f7f4ed",
+        "tonalRamp": [
+          "#3e3d3b",
+          "#7c7a77",
+          "#b9b7b2",
+          "#d8d6cf",
+          "#f7f4ed",
+          "#f9f7f2",
+          "#fbfaf9",
+          "#fefdfc"
+        ]
+      },
+      "control-surface": {
+        "role": "neutral",
+        "displayName": "Surface de contrôle",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#404040",
+          "#808080",
+          "#bfbfbf",
+          "#dfdfdf",
+          "#ffffff",
+          "#ffffff",
+          "#ffffff",
+          "#ffffff"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Titre principal de la surface." },
+      "headline": { "displayName": "Headline", "purpose": "Titres de panneaux et de sections." },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Décisions et contenus prioritaires de carte."
+      },
+      "body": { "displayName": "Body", "purpose": "Explications et textes courants." },
+      "label": { "displayName": "Label", "purpose": "Statuts, métadonnées et repères denses." }
+    },
+    "shadows": [
+      {
+        "name": "node-rest",
+        "value": "0 7px 17px rgba(7, 59, 37, 0.055)",
+        "purpose": "Distingue discrètement un nœud cliquable du réseau."
+      },
+      {
+        "name": "raised",
+        "value": "0 10px 28px rgba(7, 59, 37, 0.08)",
+        "purpose": "Relief fonctionnel au survol d’un nœud."
+      },
+      {
+        "name": "selected",
+        "value": "0 9px 22px rgba(168, 67, 0, 0.15)",
+        "purpose": "Signale un nœud sélectionné avec une profondeur orange."
+      },
+      {
+        "name": "toast",
+        "value": "0 12px 32px rgba(7, 59, 37, 0.22)",
+        "purpose": "Détache une notification temporaire du shell."
+      },
+      {
+        "name": "focus",
+        "value": "0 0 0 3px rgba(31, 138, 76, 0.25)",
+        "purpose": "Anneau de focus clavier partagé."
+      }
+    ],
+    "motion": [
+      {
+        "name": "edge-state",
+        "value": "180ms ease-out",
+        "purpose": "Transition de couleur, largeur et opacité des relations."
+      },
+      {
+        "name": "toast-opacity",
+        "value": "180ms ease-out",
+        "purpose": "Apparition et disparition du toast."
+      },
+      {
+        "name": "toast-translate",
+        "value": "300ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Glissement court du toast, neutralisé en réduction de mouvement."
+      }
+    ],
+    "breakpoints": [
+      { "name": "stack", "value": "1100px" },
+      { "name": "mobile", "value": "720px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Action générale disponible dans le shell.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">Ouvrir la capacité</button>",
+      "css": ".ds-btn-primary { display:inline-flex; min-height:40px; align-items:center; justify-content:center; gap:8px; padding:0 16px; border:0; border-radius:var(--kya-radius-sm, 8px); color:var(--kya-surface, #fff); background:var(--kya-green-800, #145a32); font:700 14px/1.5 Aptos, 'Segoe UI Variable', 'Segoe UI', sans-serif; cursor:pointer; transition:background 180ms ease-out, transform 180ms ease-out; } .ds-btn-primary:hover { background:var(--kya-green-950, #073b25); } .ds-btn-primary:active { transform:translateY(1px); } .ds-btn-primary:focus-visible { outline:none; box-shadow:var(--kya-focus, 0 0 0 3px rgba(31,138,76,.25)); } .ds-btn-primary:disabled { cursor:not-allowed; opacity:.52; transform:none; }"
+    },
+    {
+      "name": "Decision Button",
+      "kind": "button",
+      "refersTo": "button-decision",
+      "description": "Action compacte réservée à une décision de gouvernance disponible.",
+      "html": "<button class=\"ds-btn-decision\" type=\"button\">Valider</button>",
+      "css": ".ds-btn-decision { display:inline-flex; min-height:36px; align-items:center; justify-content:center; gap:8px; padding:0 12px; border:0; border-radius:var(--kya-radius-sm, 8px); color:var(--kya-surface, #fff); background:var(--kya-orange-700, #a84300); font:700 13px/1.3 Aptos, 'Segoe UI Variable', 'Segoe UI', sans-serif; cursor:pointer; transition:background 180ms ease-out, transform 180ms ease-out; } .ds-btn-decision:hover { background:#ad4c00; } .ds-btn-decision:active { transform:translateY(1px); } .ds-btn-decision:focus-visible { outline:none; box-shadow:var(--kya-focus, 0 0 0 3px rgba(31,138,76,.25)); } .ds-btn-decision:disabled { cursor:not-allowed; opacity:.52; transform:none; }"
+    },
+    {
+      "name": "Icon Button",
+      "kind": "button",
+      "refersTo": "icon-button",
+      "description": "Commande carrée compacte avec libellé accessible.",
+      "html": "<button class=\"ds-icon-button\" type=\"button\" aria-label=\"Ouvrir les notifications\"><svg aria-hidden=\"true\" viewBox=\"0 0 24 24\"><path d=\"M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4\"/></svg></button>",
+      "css": ".ds-icon-button { display:inline-grid; width:40px; height:40px; place-items:center; padding:0; border:0; border-radius:var(--kya-radius-sm, 8px); color:var(--kya-ink, #17211b); background:transparent; cursor:pointer; transition:background 180ms ease-out; } .ds-icon-button svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; } .ds-icon-button:hover { background:var(--kya-green-100, #e6f3e9); } .ds-icon-button:active { background:#d7eadc; } .ds-icon-button:focus-visible { outline:none; box-shadow:var(--kya-focus, 0 0 0 3px rgba(31,138,76,.25)); }"
+    },
+    {
+      "name": "Global Search",
+      "kind": "input",
+      "refersTo": "search-field",
+      "description": "Commande globale visible et accessible par Ctrl K.",
+      "html": "<label class=\"ds-search\"><svg aria-hidden=\"true\" viewBox=\"0 0 24 24\"><circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"m20 20-4-4\"/></svg><input placeholder=\"Rechercher une capacité ou une action…\"><kbd>Ctrl K</kbd></label>",
+      "css": ".ds-search { display:flex; min-height:42px; align-items:center; gap:10px; padding:0 12px; border:1px solid var(--kya-line, #dfe5de); border-radius:var(--kya-radius-sm, 8px); color:var(--kya-muted, #5b665f); background:var(--kya-surface, #fff); font:400 14px/1.5 Aptos, 'Segoe UI Variable', 'Segoe UI', sans-serif; } .ds-search:focus-within { border-color:var(--kya-green-600, #1f8a4c); box-shadow:var(--kya-focus, 0 0 0 3px rgba(31,138,76,.25)); } .ds-search svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; } .ds-search input { width:100%; min-width:180px; border:0; outline:0; color:var(--kya-ink, #17211b); background:transparent; font:inherit; } .ds-search input::placeholder { color:#68736c; opacity:1; } .ds-search kbd { padding:3px 6px; border:1px solid var(--kya-line, #dfe5de); border-radius:5px; background:var(--kya-ground, #f7f4ed); font-size:11px; white-space:nowrap; }"
+    },
+    {
+      "name": "Healthy Status",
+      "kind": "chip",
+      "refersTo": "status-label",
+      "description": "État sain exprimé simultanément par point, couleur et texte.",
+      "html": "<span class=\"ds-status ds-status-healthy\"><span aria-hidden=\"true\" class=\"ds-status-dot\"></span>Disponible</span>",
+      "css": ".ds-status { display:inline-flex; align-items:center; gap:6px; width:max-content; color:var(--kya-muted, #5b665f); font:680 12px/1.3 Aptos, 'Segoe UI Variable', 'Segoe UI', sans-serif; } .ds-status-dot { width:8px; height:8px; border-radius:50%; background:#8d9690; } .ds-status-healthy { color:var(--kya-green-800, #145a32); } .ds-status-healthy .ds-status-dot { background:var(--kya-green-600, #1f8a4c); }"
+    },
+    {
+      "name": "Module Navigation Item",
+      "kind": "nav",
+      "description": "Destination de module avec état courant souligné.",
+      "html": "<button class=\"ds-nav-item\" type=\"button\" aria-current=\"page\"><svg aria-hidden=\"true\" viewBox=\"0 0 24 24\"><circle cx=\"5\" cy=\"12\" r=\"2\"/><circle cx=\"12\" cy=\"5\" r=\"2\"/><circle cx=\"19\" cy=\"12\" r=\"2\"/><circle cx=\"12\" cy=\"19\" r=\"2\"/><path d=\"m6.5 10.5 4-4m3 0 4 4m0 3-4 4m-3 0-4-4\"/></svg>Réseau</button>",
+      "css": ".ds-nav-item { position:relative; display:inline-flex; min-height:50px; align-items:center; gap:8px; padding:0 14px; border:0; color:#445048; background:transparent; font:650 14px/1.3 Aptos, 'Segoe UI Variable', 'Segoe UI', sans-serif; cursor:pointer; } .ds-nav-item svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; } .ds-nav-item:hover { color:var(--kya-green-800, #145a32); background:var(--kya-green-100, #e6f3e9); } .ds-nav-item[aria-current='page'] { color:var(--kya-green-800, #145a32); } .ds-nav-item[aria-current='page']::after { position:absolute; right:12px; bottom:0; left:12px; height:3px; border-radius:3px 3px 0 0; background:var(--kya-green-600, #1f8a4c); content:''; } .ds-nav-item:focus-visible { outline:none; box-shadow:var(--kya-focus, 0 0 0 3px rgba(31,138,76,.25)); } .ds-nav-item:disabled { cursor:not-allowed; opacity:.52; }"
+    },
+    {
+      "name": "Capability Node",
+      "kind": "custom",
+      "refersTo": "capability-node",
+      "description": "Unité interactive du réseau avec identité, métadonnées et état.",
+      "html": "<button class=\"ds-capability\" type=\"button\"><span class=\"ds-capability-top\"><strong>API Catalogue</strong></span><span class=\"ds-capability-meta\"><span>API · v0.1</span><span class=\"ds-status\"><i></i>En construction</span></span></button>",
+      "css": ".ds-capability { display:grid; gap:11px; min-width:180px; min-height:92px; padding:12px; border:1px solid #cdd8ce; border-radius:10px; text-align:left; color:var(--kya-green-950, #073b25); background:var(--kya-surface, #fff); box-shadow:0 7px 17px rgba(7,59,37,.055); font-family:Aptos, 'Segoe UI Variable', 'Segoe UI', sans-serif; cursor:pointer; transition:border-color 180ms ease-out, box-shadow 180ms ease-out, transform 180ms ease-out; } .ds-capability:hover { border-color:var(--kya-green-600, #1f8a4c); transform:translateY(-2px); box-shadow:var(--kya-shadow-raised, 0 10px 28px rgba(7,59,37,.08)); } .ds-capability:active { transform:translateY(0); } .ds-capability:focus-visible { outline:none; box-shadow:var(--kya-focus, 0 0 0 3px rgba(31,138,76,.25)); } .ds-capability-top { display:flex; justify-content:space-between; gap:8px; font-size:13px; } .ds-capability-meta { display:flex; align-items:flex-end; flex-direction:column; gap:8px; color:var(--kya-muted, #5b665f); font-size:11px; } .ds-status { display:inline-flex; align-items:center; gap:6px; color:var(--kya-orange-700, #a84300); font-size:12px; font-weight:680; } .ds-status i { width:8px; height:8px; border-radius:50%; background:var(--kya-orange-600, #d85f00); }"
+    },
+    {
+      "name": "Control Panel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "Surface plate qui regroupe une fonction sans devenir une tuile autonome.",
+      "html": "<section class=\"ds-panel\"><h2>À décider</h2><p>3 éléments attendent une action.</p></section>",
+      "css": ".ds-panel { min-width:0; padding:20px; border:1px solid var(--kya-line, #dfe5de); border-radius:var(--kya-radius-md, 12px); color:var(--kya-ink, #17211b); background:var(--kya-surface, #fff); font-family:Aptos, 'Segoe UI Variable', 'Segoe UI', sans-serif; } .ds-panel h2 { margin:0; color:var(--kya-green-950, #073b25); font-size:20px; letter-spacing:-.025em; } .ds-panel p { margin:6px 0 0; color:var(--kya-muted, #5b665f); font-size:14px; line-height:1.5; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Le tableau de conduite énergétique",
+    "overview": "KYA Platform se présente comme une salle de conduite claire : un fond chaud et calme accueille des surfaces blanches, tandis que le vert structure la lecture et que l’orange signale les décisions. Les relations entre capacités forment un circuit lisible plutôt qu’un décor ; l’interface rend la provenance, l’état et l’autorité visibles avant l’action.\n\nLe système est institutionnel, direct et dense sans être encombré. Il privilégie les lignes fines, les libellés précis, les états explicites et les gestes prévisibles. Il refuse les tableaux de bord SaaS composés de tuiles sans relations, les animations gratuites et tout logo ou police prétendument officiel sans actif fourni.",
+    "keyCharacteristics": [
+      "Fond ivoire chaud, surfaces blanches et séparateurs gris-vert.",
+      "Vert profond pour la structure et la confiance ; orange sombre pour les décisions.",
+      "Réseau de dépendances comme motif fonctionnel et signature visuelle.",
+      "Densité opérationnelle, hiérarchie compacte et vocabulaire d’état toujours textuel.",
+      "Comportements sobres, clavier en premier et réduction de mouvement respectée."
+    ],
+    "rules": [
+      {
+        "name": "The Signal, Not Decoration Rule",
+        "body": "Le vert construit le parcours ; l’orange, l’ambre et le café n’apparaissent que pour exprimer une décision, un avertissement ou une restriction.",
+        "section": "colors"
+      },
+      {
+        "name": "The Text Completes Color Rule",
+        "body": "Aucun état, droit ou avertissement ne repose sur la couleur seule : point, libellé et contexte voyagent ensemble.",
+        "section": "colors"
+      },
+      {
+        "name": "The System Voice Rule",
+        "body": "Aptos et ses replis système restent la seule pile tant qu’aucune police institutionnelle officielle n’est fournie.",
+        "section": "typography"
+      },
+      {
+        "name": "The Compact Hierarchy Rule",
+        "body": "Les écrans d’opération utilisent peu de niveaux, nettement différenciés ; les libellés compacts ne deviennent jamais le corps de lecture.",
+        "section": "typography"
+      },
+      {
+        "name": "The Context Before Content Rule",
+        "body": "Le contexte organisationnel reste visible dans le shell, y compris lorsqu’il passe sur une deuxième ligne sous 1100 px.",
+        "section": "layout"
+      },
+      {
+        "name": "The 44-Pixel Mobile Rule",
+        "body": "Tout contrôle de parcours de couche sur petit écran offre une cible de 44 × 44 px, même si son glyphe est plus petit.",
+        "section": "layout"
+      },
+      {
+        "name": "The Flat Until Active Rule",
+        "body": "Une surface reste bordée et plate au repos ; l’élévation signale une interaction, une sélection ou une notification.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Soft Instrument Rule",
+        "body": "Les coins sont accueillants mais compacts : pas de capsules généralisées ni de rayons exagérés sur les grands panneaux.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "Do utiliser le vert pour la structure, la santé et le focus, puis réserver l’orange sombre aux décisions et sélections.",
+      "Do accompagner chaque couleur d’état d’un point, d’un libellé et du contexte nécessaire.",
+      "Do conserver le réseau comme explication navigable des dépendances et des droits.",
+      "Do maintenir les cibles critiques de navigation mobile à 44 × 44 px minimum.",
+      "Do désactiver et marquer « bientôt » toute action visible qui n’est pas encore reliée au produit.",
+      "Do respecter prefers-reduced-motion et garder les transitions brèves et fonctionnelles."
+    ],
+    "donts": [
+      "Don't inventer un logo, une typographie officielle, une métrique d’usage ou une preuve absente du produit.",
+      "Don't remplacer les relations par une grille de cartes indépendantes ou une animation décorative.",
+      "Don't utiliser l’orange clair pour un compteur de décision lorsque l’orange sombre assure le contraste requis.",
+      "Don't ajouter des ombres à chaque panneau : la bordure et la hiérarchie tonale suffisent au repos.",
+      "Don't présenter une action future comme cliquable ou compter uniquement sur une infobulle pour expliquer son indisponibilité."
+    ]
+  }
+}
