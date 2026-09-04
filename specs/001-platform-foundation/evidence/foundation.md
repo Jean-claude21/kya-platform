@@ -46,14 +46,26 @@
 - une erreur métier provoque un rollback sans résultat d'idempotence ;
 - le hash SHA-256 repose sur une sérialisation JSON canonique.
 
+## Autorisation KYA — T018–T019
+
+- modèle OpenFGA 1.1 versionné dans Git et validé par le CLI officiel 0.7.15 ;
+- 9 scénarios et 31 décisions réussis ;
+- hiérarchie Groupe → pays → Direction, équipes, rôles personnalisables et espaces couverts ;
+- contexte organisationnel actif obligatoire pour les droits hiérarchiques ;
+- stagiaire limité à la lecture, délégation temporelle et expiration vérifiées ;
+- l'interdiction explicite prime sur les droits hérités ;
+- découverte d'un outil MCP et droit de l'invoquer sont séparés ;
+- le port applicatif exige un identifiant de modèle immuable et échoue fermé.
+
 ## Contrôles exécutés
 
 | Contrôle                        | Résultat                             |
 | ------------------------------- | ------------------------------------ |
 | Ruff                            | réussi                               |
 | mypy strict                     | réussi sur 20 fichiers source        |
-| pytest                          | 42 tests réussis, couverture 93,35 % |
+| pytest                          | 49 tests réussis, couverture 93,72 % |
 | pnpm lint/typecheck/test/format | réussi, 2 tests TypeScript           |
+| Modèle OpenFGA                  | 9 scénarios, 31 checks réussis       |
 | Image backend Python 3.14       | construite                           |
 | Santé du conteneur              | `ready`, environnement `test`        |
 | Utilisateur du conteneur        | non-root, UID 10001                  |

@@ -1,0 +1,61 @@
+model
+  schema 1.1
+
+type user
+
+type team
+  relations
+    define member: [user, user with active_grant]
+
+type role
+  relations
+    define assignee: [user, team#member, user with active_grant]
+
+type org_unit
+  relations
+    define parent: [org_unit]
+    define user_in_context: [user]
+    define base_member: [user, team#member, role#assignee, user with active_grant]
+    define member: base_member and user_in_context
+    define base_manager: [user, team#member, role#assignee, user with active_grant]
+    define manager: base_manager and user_in_context
+    define base_administrator: [user] or base_administrator from parent
+    define administrator: base_administrator and user_in_context
+    define blocked: [user, team#member]
+    define can_view: (member or manager or administrator) but not blocked
+    define can_manage: (manager or administrator) but not blocked
+
+type workspace
+  relations
+    define unit: [org_unit]
+    define viewer: [user, team#member, role#assignee, user with active_grant]
+    define editor: [user, team#member, role#assignee, user with active_grant]
+    define manager: [user, team#member, role#assignee, user with active_grant]
+    define blocked: [user, team#member]
+    define can_view: (viewer or editor or manager or manager from unit or administrator from unit) but not blocked
+    define can_edit: (editor or manager or manager from unit or administrator from unit) but not blocked
+    define can_manage: (manager or administrator from unit) but not blocked
+
+type artifact
+  relations
+    define workspace: [workspace]
+    define publisher: [user, team#member, role#assignee, user with active_grant]
+    define reviewer: [user, team#member, role#assignee, user with active_grant]
+    define approver: [user, team#member, role#assignee, user with active_grant]
+    define blocked: [user, team#member]
+    define can_view: (publisher or reviewer or approver or can_view from workspace) but not blocked
+    define can_submit: (publisher or can_edit from workspace) but not blocked
+    define can_review: reviewer but not blocked
+    define can_approve: approver but not blocked
+
+type mcp_tool
+  relations
+    define workspace: [workspace]
+    define invoker: [user, team#member, role#assignee, user with active_grant]
+    define blocked: [user, team#member]
+    define can_discover: can_view from workspace but not blocked
+    define can_invoke: invoker but not blocked
+
+condition active_grant(current_time: timestamp, starts_at: timestamp, expires_at: timestamp) {
+  current_time >= starts_at && current_time < expires_at
+}

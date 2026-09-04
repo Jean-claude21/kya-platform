@@ -59,3 +59,15 @@ jobs:
       - run: uv run ruff format --check apps/backend
       - run: uv run mypy
       - run: uv run pytest
+
+  authorization-model:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test the pinned KYA OpenFGA model
+        run: >-
+          docker run --rm
+          --volume "$PWD:/work"
+          --workdir /work
+          openfga/cli:v0.7.15@sha256:889801086b7b5d5239b9a2210e03e75ed8ff141bdfbe0238894bcb06d02d6780
+          model test --tests tests/policy/kya-platform.fga.yaml
