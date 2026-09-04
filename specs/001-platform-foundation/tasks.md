@@ -75,9 +75,9 @@
 
 ## Phase 7 — US5: identités techniques et secrets (P2)
 
-- [ ] T053 [P] [US5] Write scope, expiry, revocation and redaction tests in apps/backend/tests/security/
-- [ ] T054 [US5] Implement Infisical machine-identity adapter in apps/backend/src/kya_platform/infrastructure/infisical/
-- [ ] T055 [US5] Implement secret-use request and approval service in apps/backend/src/kya_platform/application/secrets/
+- [x] T053 [P] [US5] Write scope, expiry, revocation and redaction tests in apps/backend/tests/security/
+- [x] T054 [US5] Implement Infisical machine-identity adapter in apps/backend/src/kya_platform/infrastructure/infisical/
+- [x] T055 [US5] Implement secret-use request and approval service in apps/backend/src/kya_platform/application/secrets/
 - [ ] T056 [US5] Add secret metadata administration without reveal in apps/backend/src/kya_platform/api/routes/secrets.py and apps/web/src/features/secrets/
 - [ ] T057 [US5] Validate preview-only secret expiry and emergency revocation in specs/001-platform-foundation/evidence/us5.md
 
