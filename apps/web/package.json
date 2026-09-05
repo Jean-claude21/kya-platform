@@ -7,6 +7,7 @@
   "scripts": {
     "build": "vite build",
     "dev": "vite --host 0.0.0.0 --port 3000",
+    "start": "node .output/server/index.mjs",
     "typecheck": "tsc --noEmit",
     "test:unit": "vitest run --passWithNoTests"
   },
@@ -15,6 +16,7 @@
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-router": "catalog:",
     "@tanstack/react-start": "catalog:",
+    "nitro": "3.0.260903-beta",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
