@@ -108,7 +108,7 @@
 - [x] T074 [P] Prove identity deprovisioning revokes sessions and tokens in apps/backend/tests/security/test_deprovisioning.py
 - [x] T075 [P] Implement artifact signing, verification and compromise revocation in apps/backend/src/kya_platform/application/publication/integrity/
 - [x] T076 [P] Run catalog, authorization, API and MCP load tests from tests/performance/
-- [ ] T077 Automate backup verification for Neon, OpenFGA and Infisical metadata in infra/backup/
+- [x] T077 Automate backup verification for Neon, OpenFGA and Infisical metadata in infra/backup/
 - [ ] T078 Execute a restore and access-revocation recovery drill in specs/001-platform-foundation/evidence/disaster-recovery.md
 - [ ] T079 Execute every quickstart criterion and complete specs/001-platform-foundation/evidence/final.md
 - [ ] T080 Configure GitHub protections for main and dev after validating approver ownership in docs/governance/repository.md

@@ -32,6 +32,8 @@ Thumbs.db
 # Test and temporary artifacts
 playwright-report/
 test-results/
+*.kyabackup
+restore-isolated/
 apps/web/.impeccable/screenshots/
 tmp/
 temp/
