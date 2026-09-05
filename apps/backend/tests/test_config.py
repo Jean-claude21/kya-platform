@@ -26,7 +26,7 @@ def test_complete_infisical_configuration_is_accepted() -> None:
 @pytest.mark.unit
 def test_partial_infisical_configuration_is_rejected() -> None:
     with pytest.raises(ValidationError, match="must be complete"):
-        Settings(infisical_api_url="https://app.infisical.com")
+        Settings(_env_file=None, infisical_api_url="https://app.infisical.com")
 
 
 @pytest.mark.unit

@@ -12,6 +12,7 @@ import { PublicationWorkbench } from '../features/publication/publication-workbe
 import { SystemAuthorityWorkbench } from '../features/systems/system-authority-workbench';
 import { SecretAccessWorkbench } from '../features/secrets/secret-access-workbench';
 import { CatalogWorkbench } from '../features/catalog/catalog-workbench';
+import { AuditTimeline } from '../features/audit/audit-timeline';
 
 type Capability = {
   id: string;
@@ -257,6 +258,7 @@ const nav: Array<{ label: string; icon: IconName }> = [
   { label: 'Déploiements', icon: 'deploy' },
   { label: 'Espaces', icon: 'people' },
   { label: 'Gouvernance', icon: 'governance' },
+  { label: 'Audit', icon: 'shield' },
 ];
 
 const decisions = [
@@ -317,7 +319,7 @@ export function PlatformShell() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mobileLayerIndex, setMobileLayerIndex] = useState(0);
   const [activeModule, setActiveModule] = useState<
-    'Catalogue' | 'Réseau' | 'Systèmes' | 'Accès' | 'Espaces' | 'Gouvernance'
+    'Catalogue' | 'Réseau' | 'Systèmes' | 'Accès' | 'Espaces' | 'Gouvernance' | 'Audit'
   >('Réseau');
   const [activeWorkspaceKey, setActiveWorkspaceKey] = useState('platform');
   const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
@@ -423,7 +425,8 @@ export function PlatformShell() {
               item.label !== 'Systèmes' &&
               item.label !== 'Accès' &&
               item.label !== 'Espaces' &&
-              item.label !== 'Gouvernance'
+              item.label !== 'Gouvernance' &&
+              item.label !== 'Audit'
             }
             key={item.label}
             title={
@@ -432,7 +435,8 @@ export function PlatformShell() {
               item.label === 'Systèmes' ||
               item.label === 'Accès' ||
               item.label === 'Espaces' ||
-              item.label === 'Gouvernance'
+              item.label === 'Gouvernance' ||
+              item.label === 'Audit'
                 ? `Ouvrir ${item.label}`
                 : 'Disponible dans un prochain incrément'
             }
@@ -444,7 +448,8 @@ export function PlatformShell() {
                 item.label === 'Systèmes' ||
                 item.label === 'Accès' ||
                 item.label === 'Espaces' ||
-                item.label === 'Gouvernance'
+                item.label === 'Gouvernance' ||
+                item.label === 'Audit'
               )
                 setActiveModule(item.label);
             }}
@@ -469,6 +474,8 @@ export function PlatformShell() {
         />
       ) : activeModule === 'Gouvernance' ? (
         <PublicationWorkbench />
+      ) : activeModule === 'Audit' ? (
+        <AuditTimeline workspaceKey={activeWorkspaceKey} />
       ) : (
         <main>
           <section className="network-panel" aria-labelledby="network-title">

@@ -93,11 +93,11 @@
 
 ## Phase 9 — US7: audit et administration (P3)
 
-- [ ] T065 [P] [US7] Write audit immutability, redaction and scoped-query tests in apps/backend/tests/domain/test_audit.py
-- [ ] T066 [US7] Implement append-only audit writer and query service in apps/backend/src/kya_platform/application/audit/
-- [ ] T067 [US7] Add auditor API with content separation in apps/backend/src/kya_platform/api/routes/audit.py
-- [ ] T068 [US7] Build scoped audit timeline in apps/web/src/features/audit/
-- [ ] T069 [US7] Reconstruct a complete artifact history in specs/001-platform-foundation/evidence/us7.md
+- [x] T065 [P] [US7] Write audit immutability, redaction and scoped-query tests in apps/backend/tests/domain/test_audit.py
+- [x] T066 [US7] Implement append-only audit writer and query service in apps/backend/src/kya_platform/application/audit/
+- [x] T067 [US7] Add auditor API with content separation in apps/backend/src/kya_platform/api/routes/audit.py
+- [x] T068 [US7] Build scoped audit timeline in apps/web/src/features/audit/
+- [x] T069 [US7] Reconstruct a complete artifact history in specs/001-platform-foundation/evidence/us7.md
 
 ## Phase 10 — Hardening and release
 
