@@ -34,6 +34,20 @@ class Settings(BaseSettings):
     infisical_secret_path: str = "/"  # noqa: S105 -- path, not credential material
     infisical_organization_slug: str | None = None
     infisical_maximum_token_ttl_seconds: int = 900
+    deployment_provider: Literal["mock", "dokploy", "coolify"] = "mock"
+    neon_project_id: str | None = None
+    neon_api_key: SecretStr | None = None
+    dokploy_api_url: str | None = None
+    dokploy_api_token: SecretStr | None = None
+    dokploy_project_id: str | None = None
+    dokploy_preview_app_id: str | None = None
+    dokploy_staging_app_id: str | None = None
+    dokploy_production_app_id: str | None = None
+    coolify_api_url: str | None = None
+    coolify_api_token: SecretStr | None = None
+    coolify_preview_app_uuid: str | None = None
+    coolify_staging_app_uuid: str | None = None
+    coolify_production_app_uuid: str | None = None
 
     @model_validator(mode="after")
     def validate_infisical_configuration(self) -> Settings:

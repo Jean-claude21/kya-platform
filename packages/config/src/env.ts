@@ -16,7 +16,20 @@ export const serverEnvironmentSchema = z.object({
   KYA_INFISICAL_PROJECT_ID: required,
   KYA_INFISICAL_ENVIRONMENT: z.enum(['dev', 'staging', 'prod']),
   KYA_INFISICAL_SECRET_PATH: z.string().startsWith('/'),
-  DEPLOYMENT_PROVIDER: z.enum(['mock', 'dokploy', 'coolify']),
+  KYA_DEPLOYMENT_PROVIDER: z.enum(['mock', 'dokploy', 'coolify']),
+  KYA_NEON_PROJECT_ID: required.optional(),
+  KYA_NEON_API_KEY: required.optional(),
+  KYA_DOKPLOY_API_URL: z.url().optional(),
+  KYA_DOKPLOY_API_TOKEN: required.optional(),
+  KYA_DOKPLOY_PROJECT_ID: required.optional(),
+  KYA_DOKPLOY_PREVIEW_APP_ID: required.optional(),
+  KYA_DOKPLOY_STAGING_APP_ID: required.optional(),
+  KYA_DOKPLOY_PRODUCTION_APP_ID: required.optional(),
+  KYA_COOLIFY_API_URL: z.url().optional(),
+  KYA_COOLIFY_API_TOKEN: required.optional(),
+  KYA_COOLIFY_PREVIEW_APP_UUID: required.optional(),
+  KYA_COOLIFY_STAGING_APP_UUID: required.optional(),
+  KYA_COOLIFY_PRODUCTION_APP_UUID: required.optional(),
 });
 
 export type ServerEnvironment = z.infer<typeof serverEnvironmentSchema>;

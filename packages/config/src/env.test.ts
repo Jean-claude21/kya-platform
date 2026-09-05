@@ -17,7 +17,20 @@ const valid = {
   KYA_INFISICAL_PROJECT_ID: 'project',
   KYA_INFISICAL_ENVIRONMENT: 'staging',
   KYA_INFISICAL_SECRET_PATH: '/',
-  DEPLOYMENT_PROVIDER: 'mock',
+  KYA_DEPLOYMENT_PROVIDER: 'mock',
+  KYA_NEON_PROJECT_ID: 'neon-project',
+  KYA_NEON_API_KEY: 'neon-api-key',
+  KYA_DOKPLOY_API_URL: 'https://dokploy.example.com',
+  KYA_DOKPLOY_API_TOKEN: 'dokploy-token',
+  KYA_DOKPLOY_PROJECT_ID: 'dokploy-project',
+  KYA_DOKPLOY_PREVIEW_APP_ID: 'dokploy-preview',
+  KYA_DOKPLOY_STAGING_APP_ID: 'dokploy-staging',
+  KYA_DOKPLOY_PRODUCTION_APP_ID: 'dokploy-production',
+  KYA_COOLIFY_API_URL: 'https://coolify.example.com',
+  KYA_COOLIFY_API_TOKEN: 'coolify-token',
+  KYA_COOLIFY_PREVIEW_APP_UUID: 'coolify-preview',
+  KYA_COOLIFY_STAGING_APP_UUID: 'coolify-staging',
+  KYA_COOLIFY_PRODUCTION_APP_UUID: 'coolify-production',
 } as const;
 
 describe('serverEnvironmentSchema', () => {
