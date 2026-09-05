@@ -122,9 +122,7 @@ async def test_claim_cannot_move_to_another_principal() -> None:
 
 @pytest.mark.unit
 async def test_completed_claim_is_idempotent_for_same_owner() -> None:
-    completed = BootstrapClaim(
-        OWNER_ID, owner_fingerprint("owner@kya-energy.com"), "complete"
-    )
+    completed = BootstrapClaim(OWNER_ID, owner_fingerprint("owner@kya-energy.com"), "complete")
     grant = RecordingGrant()
     result = await service(MemoryClaims(completed), grant).claim(
         principal_id=OWNER_ID,
