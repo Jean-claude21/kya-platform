@@ -46,6 +46,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         transport_security=TransportSecuritySettings(
             enable_dns_rebinding_protection=True,
             allowed_hosts=list(resolved_settings.mcp_allowed_hosts),
+            allowed_origins=list(resolved_settings.mcp_allowed_origins),
         ),
     )
 
