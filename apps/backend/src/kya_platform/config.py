@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     environment: Literal["local", "preview", "test", "production"] = "local"
     version: str = "0.0.1"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
+    otel_exporter_otlp_endpoint: str | None = None
+    otel_exporter_otlp_headers: SecretStr | None = None
+    otel_metric_export_interval_millis: int = 60_000
     database_url: SecretStr | None = None
     database_migration_url: SecretStr | None = None
     neon_auth_issuer: str | None = None
@@ -67,6 +70,13 @@ class Settings(BaseSettings):
             raise ValueError("Infisical secret path must start with /")
         if not 1 <= self.infisical_maximum_token_ttl_seconds <= 7_200:
             raise ValueError("Infisical maximum token TTL must be between 1 and 7200 seconds")
+        if self.otel_exporter_otlp_endpoint is not None:
+            endpoint = self.otel_exporter_otlp_endpoint.rstrip("/")
+            if not endpoint.startswith(("http://", "https://")):
+                raise ValueError("OTLP endpoint must be an absolute HTTP URL")
+            self.otel_exporter_otlp_endpoint = endpoint
+        if not 1_000 <= self.otel_metric_export_interval_millis <= 3_600_000:
+            raise ValueError("OTLP metric export interval must be between 1000 and 3600000 ms")
         return self
 
     @property

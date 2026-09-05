@@ -24,6 +24,7 @@ from kya_platform.observability import (
     configure_logging,
     install_error_handlers,
 )
+from kya_platform.observability.telemetry import TelemetryRuntime
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -31,6 +32,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     resolved_settings = settings or get_settings()
     configure_logging(resolved_settings.log_level)
+    telemetry = TelemetryRuntime.create(resolved_settings)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -75,6 +77,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 await infisical_http_client.aclose()
             if database_engine is not None:
                 await database_engine.dispose()
+            telemetry.shutdown()
 
     application = FastAPI(
         title=resolved_settings.app_name,
@@ -89,7 +92,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.state.audit_queries = None
     application.state.audit_writer = None
     configure_security_runtime(application.state, resolved_settings)
-    application.add_middleware(CorrelationMiddleware)
+    application.add_middleware(
+        CorrelationMiddleware,
+        tracer=telemetry.tracer,
+        meter=telemetry.meter,
+    )
     install_error_handlers(application)
     application.include_router(api_router, prefix="/api/v1")
     return application

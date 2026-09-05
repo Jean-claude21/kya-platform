@@ -44,3 +44,16 @@ def test_fastapi_lifecycle_wires_configured_infisical_resolver() -> None:
         assert app.state.infisical_secret_resolver is not None
 
     assert not app.state.is_ready
+
+
+@pytest.mark.unit
+def test_settings_normalize_otlp_endpoint() -> None:
+    settings = Settings(_env_file=None, otel_exporter_otlp_endpoint="https://collector.example/")
+
+    assert settings.otel_exporter_otlp_endpoint == "https://collector.example"
+
+
+@pytest.mark.unit
+def test_settings_reject_non_http_otlp_endpoint() -> None:
+    with pytest.raises(ValidationError, match="absolute HTTP URL"):
+        Settings(_env_file=None, otel_exporter_otlp_endpoint="collector.internal:4318")
