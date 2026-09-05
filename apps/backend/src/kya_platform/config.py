@@ -7,7 +7,6 @@ from typing import Literal
 from pydantic import SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
 _BACKEND_ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
 
 
