@@ -265,6 +265,9 @@ la décision et le résultat de chaque opération sensible.
   aux équipes de créer chaque type d'artefact avec les métadonnées et contrôles obligatoires.
 - **FR-039**: Une capacité structurante NE DOIT PAS être déclarée opérationnelle avant une mise en
   application factuelle documentant le cas réel, les résultats, les limites et les preuves obtenues.
+- **FR-040**: Le premier propriétaire de la plateforme DOIT pouvoir établir lui-même son rôle après
+  authentification, au moyen d'une adresse préconfigurée et d'un code à usage unique ; l'opération
+  DOIT être atomique, reprenable, auditée et définitivement fermée pour toute autre identité.
 
 ### Key Entities
 

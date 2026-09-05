@@ -39,6 +39,8 @@ class Settings(BaseSettings):
     openfga_api_token: SecretStr | None = None
     openfga_store_id: str | None = None
     openfga_model_id: str | None = None
+    bootstrap_owner_email: str | None = None
+    bootstrap_claim_code_hash: SecretStr | None = None
     infisical_api_url: str | None = None
     infisical_client_id: str | None = None
     infisical_client_secret: SecretStr | None = None
@@ -94,7 +96,24 @@ class Settings(BaseSettings):
             raise ValueError("OpenFGA configuration must be complete")
         if self.openfga_api_url is not None:
             self.openfga_api_url = self.openfga_api_url.rstrip("/")
+        bootstrap = (self.bootstrap_owner_email, self.bootstrap_claim_code_hash)
+        if any(item is not None for item in bootstrap) and not all(bootstrap):
+            raise ValueError("Bootstrap owner configuration must be complete")
+        if self.bootstrap_owner_email is not None:
+            self.bootstrap_owner_email = self.bootstrap_owner_email.strip().casefold()
+            if "@" not in self.bootstrap_owner_email:
+                raise ValueError("Bootstrap owner email must be valid")
+        if self.bootstrap_claim_code_hash is not None:
+            digest = self.bootstrap_claim_code_hash.get_secret_value()
+            if len(digest) != 64 or any(
+                character not in "0123456789abcdef" for character in digest
+            ):
+                raise ValueError("Bootstrap claim code hash must be a SHA-256 hex digest")
         return self
+
+    @property
+    def has_bootstrap_configuration(self) -> bool:
+        return self.bootstrap_owner_email is not None
 
     @property
     def has_infisical_configuration(self) -> bool:

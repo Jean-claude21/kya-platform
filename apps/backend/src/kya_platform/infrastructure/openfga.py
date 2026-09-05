@@ -1,6 +1,7 @@
 """OpenFGA HTTP adapter with pinned model decisions and redacted failures."""
 
 from collections.abc import Mapping
+from uuid import UUID
 
 import httpx
 from pydantic import SecretStr
@@ -78,6 +79,25 @@ class OpenFgaHttpAdapter:
         if not isinstance(objects, list) or any(not isinstance(item, str) for item in objects):
             raise OpenFgaUnavailableError("OpenFGA returned an invalid list response")
         return tuple(objects)
+
+    async def grant_platform_owner(self, principal_id: UUID) -> None:
+        """Idempotently grant Group administration without storing personal data."""
+
+        await self._post(
+            "write",
+            {
+                "authorization_model_id": self._model_id,
+                "writes": {
+                    "tuple_keys": [
+                        {
+                            "user": f"user:{principal_id}",
+                            "relation": "base_administrator",
+                            "object": "org_unit:group",
+                        }
+                    ]
+                },
+            },
+        )
 
     async def _post(self, operation: str, payload: Mapping[str, object]) -> dict[str, object]:
         try:

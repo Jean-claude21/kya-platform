@@ -1,13 +1,17 @@
 """Database foundation tests that do not require external infrastructure."""
 
+from uuid import UUID
+
 import pytest
 
 from kya_platform.infrastructure.database.base import Base, new_id
+from kya_platform.infrastructure.database.bootstrap import _domain
 from kya_platform.infrastructure.database.models import (
     AuditEvent,
     ExternalIdentity,
     IdempotencyRecord,
     OutboxEvent,
+    PlatformBootstrapClaim,
 )
 from kya_platform.infrastructure.database.session import normalize_asyncpg_url
 
@@ -30,9 +34,27 @@ def test_reliability_models_have_explicit_schema_ownership() -> None:
     assert set(Base.metadata.tables) == {
         "audit.event",
         "identity.external_identity",
+        "identity.platform_bootstrap_claim",
         "reliability.idempotency_record",
         "reliability.outbox_event",
     }
+
+
+@pytest.mark.unit
+def test_bootstrap_claim_row_maps_to_secret_free_domain_state() -> None:
+    principal_id = UUID("01991fb0-6c00-7000-8000-000000000030")
+    row = PlatformBootstrapClaim(
+        key="platform-owner",
+        principal_id=principal_id,
+        owner_fingerprint="a" * 64,
+        state="reserved",
+    )
+
+    claim = _domain(row)
+
+    assert claim.principal_id == principal_id
+    assert claim.owner_fingerprint == "a" * 64
+    assert claim.state == "reserved"
 
 
 @pytest.mark.unit

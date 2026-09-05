@@ -5,6 +5,7 @@ import { KyaMark } from '@kya/design-system';
 import { authClient, getAccessToken } from './client';
 
 type Mode = 'sign-in' | 'sign-up';
+type BootstrapStatus = { state: 'pending' | 'reserved' | 'complete'; eligible: boolean };
 
 function messageOf(error: unknown): string {
   if (error instanceof Error && error.message) return error.message;
@@ -18,11 +19,15 @@ export function AuthGate({ children }: Readonly<{ children: ReactNode }>) {
   const [error, setError] = useState('');
   const [accountLinked, setAccountLinked] = useState(false);
   const [linkError, setLinkError] = useState('');
+  const [bootstrap, setBootstrap] = useState<BootstrapStatus | null>(null);
+  const [claimPending, setClaimPending] = useState(false);
+  const [claimError, setClaimError] = useState('');
 
   useEffect(() => {
     if (!session.data?.user) {
       setAccountLinked(false);
       setLinkError('');
+      setBootstrap(null);
       return;
     }
 
@@ -38,6 +43,17 @@ export function AuthGate({ children }: Readonly<{ children: ReactNode }>) {
           signal: controller.signal,
         });
         if (!response.ok) throw new Error('Votre identité KYA n’a pas pu être initialisée.');
+        const bootstrapResponse = await fetch(
+          `${apiUrl.replace(/\/$/, '')}/api/v1/bootstrap/status`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            signal: controller.signal,
+          },
+        );
+        if (!bootstrapResponse.ok) {
+          throw new Error('L’état d’initialisation de KYA Platform est indisponible.');
+        }
+        setBootstrap((await bootstrapResponse.json()) as BootstrapStatus);
         setAccountLinked(true);
         setLinkError('');
       } catch (failure) {
@@ -50,6 +66,39 @@ export function AuthGate({ children }: Readonly<{ children: ReactNode }>) {
       controller.abort();
     };
   }, [session.data?.user]);
+
+  async function claimOwnership(event: SyntheticEvent<HTMLFormElement, SubmitEvent>) {
+    event.preventDefault();
+    setClaimPending(true);
+    setClaimError('');
+    const data = new FormData(event.currentTarget);
+    const codeValue = data.get('claim-code');
+    const claimCode = typeof codeValue === 'string' ? codeValue.trim() : '';
+
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error('Jeton de session indisponible.');
+      const apiUrl = import.meta.env.VITE_KYA_API_URL;
+      if (!apiUrl) throw new Error('API KYA non configurée.');
+      const response = await fetch(`${apiUrl.replace(/\/$/, '')}/api/v1/bootstrap/claim`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ claim_code: claimCode }),
+      });
+      if (!response.ok) {
+        const problem = (await response.json().catch(() => null)) as { detail?: string } | null;
+        throw new Error(problem?.detail ?? 'L’initialisation n’a pas pu être validée.');
+      }
+      setBootstrap({ state: 'complete', eligible: true });
+    } catch (failure) {
+      setClaimError(messageOf(failure));
+    } finally {
+      setClaimPending(false);
+    }
+  }
 
   async function submit(event: SyntheticEvent<HTMLFormElement, SubmitEvent>) {
     event.preventDefault();
@@ -87,7 +136,86 @@ export function AuthGate({ children }: Readonly<{ children: ReactNode }>) {
     );
   }
 
-  if (session.data?.user && accountLinked) return children;
+  if (session.data?.user && accountLinked && bootstrap?.state === 'complete') return children;
+
+  if (session.data?.user && accountLinked && bootstrap && bootstrap.state !== 'complete') {
+    return (
+      <main className="bootstrap-page">
+        <section className="bootstrap-story" aria-labelledby="bootstrap-title">
+          <KyaMark />
+          <div>
+            <h1 id="bootstrap-title">Établir le premier propriétaire de KYA Platform.</h1>
+            <p>
+              Cette opération relie votre identité au rôle d’administration Groupe, une seule fois,
+              puis ferme définitivement l’initialisation.
+            </p>
+          </div>
+          <dl>
+            <div>
+              <dt>Identité</dt>
+              <dd>{session.data.user.email}</dd>
+            </div>
+            <div>
+              <dt>Périmètre initial</dt>
+              <dd>Groupe KYA</dd>
+            </div>
+            <div>
+              <dt>Traçabilité</dt>
+              <dd>Décision enregistrée</dd>
+            </div>
+          </dl>
+        </section>
+        <section className="bootstrap-panel" aria-labelledby="bootstrap-form-title">
+          {bootstrap.eligible ? (
+            <>
+              <div>
+                <h2 id="bootstrap-form-title">Valider la prise de propriété</h2>
+                <p>
+                  Saisissez le code à usage unique conservé dans le coffre KYA Platform Secrets.
+                </p>
+              </div>
+              <form
+                onSubmit={(event) => {
+                  void claimOwnership(event);
+                }}
+              >
+                <label>
+                  Code d’initialisation
+                  <input
+                    name="claim-code"
+                    type="password"
+                    autoComplete="one-time-code"
+                    required
+                  />
+                </label>
+                {claimError && (
+                  <p className="auth-error" role="alert">
+                    {claimError}
+                  </p>
+                )}
+                <button className="auth-submit" type="submit" disabled={claimPending}>
+                  {claimPending ? 'Validation en cours…' : 'Devenir propriétaire de la plateforme'}
+                </button>
+              </form>
+              <p className="bootstrap-boundary">
+                Le code n’est ni conservé dans le navigateur ni renvoyé par l’API. En cas
+                d’interruption, la même identité peut reprendre l’opération sans créer un second
+                propriétaire.
+              </p>
+            </>
+          ) : (
+            <div className="bootstrap-ineligible" role="status">
+              <h2 id="bootstrap-form-title">Adresse non prévue pour l’initialisation</h2>
+              <p>
+                Connectez-vous avec l’adresse propriétaire définie au déploiement. Aucun droit
+                administratif n’a été accordé à ce compte.
+              </p>
+            </div>
+          )}
+        </section>
+      </main>
+    );
+  }
 
   if (session.data?.user && linkError) {
     return (
