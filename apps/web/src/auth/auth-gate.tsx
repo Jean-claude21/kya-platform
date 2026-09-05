@@ -92,7 +92,12 @@ export function AuthGate({ children }: Readonly<{ children: ReactNode }>) {
       <main className="auth-loading" role="alert">
         <KyaMark />
         <p>{linkError}</p>
-        <button type="button" onClick={() => window.location.reload()}>
+        <button
+          type="button"
+          onClick={() => {
+            window.location.reload();
+          }}
+        >
           Réessayer
         </button>
       </main>
