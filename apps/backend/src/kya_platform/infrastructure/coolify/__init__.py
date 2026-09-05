@@ -30,6 +30,12 @@ class CoolifyCloudAdapter:
 
     async def deploy(self, request: DeploymentRequest) -> DeploymentRecord:
         application_uuid = await self._resolve_application(request.application, request.environment)
+        await self._request(
+            "PATCH",
+            f"/applications/{quote(application_uuid)}",
+            operation="pin deployment commit",
+            json={"git_commit_sha": request.commit_sha},
+        )
         payload = await self._request(
             "POST",
             "/deploy",
