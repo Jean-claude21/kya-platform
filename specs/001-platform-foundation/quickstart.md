@@ -8,7 +8,8 @@ l'implémentation sans affaiblir les résultats.
 1. Créer Direction A, équipe A1, projet transversal P et espace de stagiaires expirant.
 2. Affecter Alice à A1, Bob à une autre Direction, Chloé à P et Sam comme stagiaire temporaire.
 3. Publier un Skill de référence depuis A1 avec le template officiel et deux approbateurs.
-4. Enregistrer Frappe comme système et le déclarer autoritaire pour une catégorie pilote.
+4. Enregistrer KYA Platform comme premier système réel et autorité de ses métadonnées d'artefacts.
+   Enregistrer Frappe ultérieurement dans un pilote métier séparé.
 5. Vérifier qu'Alice et Chloé découvrent le Skill selon le partage, que Bob ne peut ni le voir ni
    l'énumérer, et que Sam perd son accès à l'expiration.
 6. Installer le Skill via l'interface puis demander son état via le Registry MCP.
