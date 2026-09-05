@@ -19,8 +19,20 @@
 - Applications Web et Backend provisionnées dans les trois environnements, sans lancement
   prématuré avant publication du code et configuration des secrets.
 
+## Validation du déploiement `dev` du 5 septembre 2026
+
+- Le commit `54aaa3163cb238d64958d4460818a9a10bff8b5b` est validé par toutes les CI puis
+  publié avec le tag annoté `v0.1.0-dev.6`.
+- Les migrations de la branche Neon `dev` atteignent la révision `20260904_0003`.
+- La migration pré-déploiement Coolify est rejouée avec succès après amorçage.
+- Les applications Backend et Web terminent leur déploiement sur le même SHA et sont
+  `running:healthy`.
+- Les vérifications HTTP renvoient 200 pour l'API de disponibilité et la page Web.
+- Les URL Neon sont normalisées pour `asyncpg` et l'adaptateur Coolify épingle désormais le SHA
+  demandé avant chaque promotion.
+
 ## Limite du benchmark
 
-Le scénario Coolify réel est prêt. Le benchmark identique avec Dokploy reste ouvert tant que
+Le scénario Coolify réel est validé. Le benchmark identique avec Dokploy reste ouvert tant que
 les paramètres d'une instance Dokploy ne sont pas fournis. Aucun choix définitif entre les deux
 fournisseurs n'est déclaré avant cette mesure.

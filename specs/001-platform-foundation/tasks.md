@@ -101,7 +101,7 @@
 
 ## Phase 10 — Hardening and release
 
-- [ ] T070 [P] Run dependency, secret, container and SBOM controls from .github/workflows/security.yml
+- [x] T070 [P] Run dependency, secret, container and SBOM controls from .github/workflows/security.yml
 - [ ] T071 [P] Validate accessibility and low-bandwidth journeys in tests/e2e/
 - [ ] T072 [P] Add OpenTelemetry traces, metrics and health checks in apps/backend/src/kya_platform/observability/
 - [ ] T073 [P] Implement notification preferences, deduplication and delivery workers in apps/backend/src/kya_platform/workers/
@@ -112,7 +112,7 @@
 - [ ] T078 Execute a restore and access-revocation recovery drill in specs/001-platform-foundation/evidence/disaster-recovery.md
 - [ ] T079 Execute every quickstart criterion and complete specs/001-platform-foundation/evidence/final.md
 - [ ] T080 Configure GitHub protections for main and dev after validating approver ownership in docs/governance/repository.md
-- [ ] T081 Merge feat-platform-foundation to dev, create dev prerelease tag, and validate test deployment
+- [x] T081 Merge feat-platform-foundation to dev, create dev prerelease tag, and validate test deployment
 - [ ] T082 Promote dev to main through PR and create the mandatory annotated SemVer release tag
 
 ## Dependencies and parallelism
