@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     neon_auth_jwks_url: str | None = None
     neon_auth_audience: str | None = None
     cors_allowed_origins: tuple[str, ...] = ()
+    mcp_allowed_hosts: tuple[str, ...] = ("127.0.0.1:*", "localhost:*")
     openfga_api_url: str | None = None
     openfga_api_token: SecretStr | None = None
     openfga_store_id: str | None = None

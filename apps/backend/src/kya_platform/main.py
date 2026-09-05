@@ -7,6 +7,7 @@ import httpx
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from mcp.server.transport_security import TransportSecuritySettings
 from pydantic import SecretStr
 
 from kya_platform.api.router import api_router
@@ -42,6 +43,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         streamable_http_path="/",
         json_response=True,
         stateless_http=True,
+        transport_security=TransportSecuritySettings(
+            enable_dns_rebinding_protection=True,
+            allowed_hosts=list(resolved_settings.mcp_allowed_hosts),
+        ),
     )
 
     @asynccontextmanager
