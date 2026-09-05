@@ -80,7 +80,9 @@ export function AuthGate({ children }: Readonly<{ children: ReactNode }>) {
     return (
       <main className="auth-loading" aria-live="polite">
         <KyaMark />
-        <p>{session.isPending ? 'Ouverture de votre espace KYA…' : 'Liaison de votre identité KYA…'}</p>
+        <p>
+          {session.isPending ? 'Ouverture de votre espace KYA…' : 'Liaison de votre identité KYA…'}
+        </p>
       </main>
     );
   }
