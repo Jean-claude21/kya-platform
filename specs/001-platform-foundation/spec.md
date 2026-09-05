@@ -334,7 +334,8 @@ la décision et le résultat de chaque opération sensible.
   seulement les métadonnées, références et copies explicitement justifiées.
 - Les secrets sont conservés par un service spécialisé distinct du catalogue.
 - Les opérations destructrices ou à impact externe exigent une confirmation adaptée au risque.
-- La première livraison valide un Skill, un serveur MCP en lecture seule, Frappe comme système
-  enregistré et une application pilote avant l'ouverture à davantage d'équipes.
+- La première livraison valide un Skill, un serveur MCP en lecture seule, KYA Platform comme
+  premier système réellement enregistré et une application pilote avant l'ouverture à davantage
+  d'équipes. Frappe fera l'objet d'un pilote séparé après confirmation de son périmètre métier.
 - La conservation des journaux et données sensibles sera fixée par une politique Groupe avant la
   mise en production, avec une valeur par défaut prudente et révisable.

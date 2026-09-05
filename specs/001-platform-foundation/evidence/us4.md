@@ -1,8 +1,19 @@
 # US4 — Systèmes et autorités de données
 
-Date de contrôle : 2026-09-04
-État : implémentation T048–T051 terminée ; enregistrement pilote factuel T052 en attente de
-validation métier et de configuration.
+Date de contrôle : 2026-09-05
+État : T048–T052 terminées avec KYA Platform comme premier système factuel. Le pilote Frappe est
+explicitement reporté après la fondation.
+
+## Premier système réel
+
+KYA Platform est retenue parce que son backend et son interface sont déjà déployés en preview et
+vérifiables. L'enregistrement déclare le CVSI comme propriétaire métier, l'Équipe Informatique et
+Logiciels comme responsable technique, la Business API comme interface approuvée et KYA Platform
+comme autorité exclusive des métadonnées d'artefacts du Groupe à compter du 5 septembre 2026.
+
+Cette autorité ne couvre ni les clients ni une autre donnée métier. Le test
+`test_kya_platform_pilot.py` vérifie cette limite. L'écran Systèmes reprend les mêmes faits et ne
+présente plus Frappe comme déjà connecté.
 
 ## Garanties implémentées
 
@@ -26,9 +37,10 @@ explicite des champs et pagination. Référence :
 ## Résultats automatisés ciblés
 
 ```text
-Backend complet : 147 tests réussis — couverture 91,86 % (seuil 90 %)
-Modèle d'autorité + adaptateur + API : 11 tests ciblés réussis
-Interface web : 8 tests composants réussis
+Backend complet : 210 tests réussis — couverture 90,76 % (seuil 90 %)
+Pilote KYA Platform : test d'autorité ciblé réussi
+Interface web : 11 tests composants réussis
+Parcours Playwright : 3 tests réussis
 TypeScript : réussi
 Build client et SSR : réussi
 Ruff et mypy ciblés : réussis
@@ -43,18 +55,17 @@ déploiement doivent respecter la version déclarée par le projet.
 
 ## Contrôle visuel
 
-L'écran « Systèmes » a été ouvert dans le navigateur local. La vue affiche distinctement :
+La vue Systèmes affiche distinctement :
 
-- Frappe / ERPNext comme système métier externe ;
+- KYA Platform comme système de gouvernance numérique actif en preview ;
 - les responsables métier et technique ;
 - l'interface approuvée ;
 - la catégorie, le périmètre, la source qui fait foi, la date et la sensibilité ;
-- le principe « la plateforme conserve la règle, pas les fiches clients ».
+- la limite explicite aux données du Hub.
 
-La vue porte explicitement la mention « données de démonstration » et l'écriture non connectée est
-désactivée.
+L'écriture non connectée reste désactivée et annoncée comme indisponible.
 
-## Condition de clôture T052
+## Conditions du futur pilote Frappe
 
 Les valeurs suivantes ne sont pas inventées et doivent être confirmées avant l'enregistrement réel :
 
@@ -65,5 +76,5 @@ Les valeurs suivantes ne sont pas inventées et doivent être confirmées avant 
 5. DocType et champs de lecture approuvés ;
 6. identité technique Frappe et référence du secret dans Infisical.
 
-La clé ou le secret Frappe ne doit pas être communiqué tant que l'adaptateur Infisical de l'US5
-n'est pas actif. Seule une référence opaque sera ensuite enregistrée.
+Seule une référence Infisical opaque sera enregistrée ; aucune valeur de secret ne devra entrer
+dans le catalogue.

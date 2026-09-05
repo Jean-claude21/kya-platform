@@ -2,11 +2,11 @@ import { Icon, StatusBadge } from '@kya/design-system';
 
 const authorities = [
   {
-    category: 'Clients',
+    category: 'Métadonnées des artefacts',
     scope: 'Groupe KYA',
-    system: 'Frappe / ERPNext',
-    since: '1 sept. 2026',
-    sensitivity: 'Confidentiel',
+    system: 'KYA Platform',
+    since: '5 sept. 2026',
+    sensitivity: 'Interne',
   },
 ] as const;
 
@@ -15,14 +15,13 @@ export function SystemAuthorityWorkbench() {
     <main className="systems-page">
       <section className="systems-intro" aria-labelledby="systems-title">
         <div>
-          <span>Registre des systèmes · données de démonstration</span>
           <h1 id="systems-title">Où se trouve la donnée qui fait foi ?</h1>
           <p>
             Chaque domaine partagé possède une autorité explicite, une période, un périmètre et des
             interfaces approuvées.
           </p>
         </div>
-        <StatusBadge tone="healthy">1 autorité pilote sans conflit</StatusBadge>
+        <StatusBadge tone="healthy">1 autorité vérifiée</StatusBadge>
       </section>
 
       <aside className="system-list" aria-labelledby="system-list-title">
@@ -33,8 +32,8 @@ export function SystemAuthorityWorkbench() {
         <button aria-current="true" type="button">
           <Icon name="database" />
           <span>
-            <strong>Frappe / ERPNext</strong>
-            <small>Externe · production</small>
+            <strong>KYA Platform</strong>
+            <small>Interne · preview</small>
           </span>
           <StatusBadge tone="healthy">Actif</StatusBadge>
         </button>
@@ -43,13 +42,14 @@ export function SystemAuthorityWorkbench() {
       <section className="system-detail" aria-labelledby="system-detail-title">
         <header>
           <div>
-            <span>Système métier externe</span>
-            <h2 id="system-detail-title">Frappe / ERPNext</h2>
+            <span>Système de gouvernance numérique</span>
+            <h2 id="system-detail-title">KYA Platform</h2>
             <p>
-              Socle opérationnel actuel, référencé par la plateforme sans duplication par défaut.
+              Premier système enregistré avec une responsabilité volontairement limitée à ses
+              propres données.
             </p>
           </div>
-          <StatusBadge tone="healthy">Heures ouvrées</StatusBadge>
+          <StatusBadge tone="healthy">Disponible en continu</StatusBadge>
         </header>
 
         <div className="system-facts">
@@ -57,21 +57,21 @@ export function SystemAuthorityWorkbench() {
             <Icon name="people" />
             <span>
               <small>Propriétaire métier</small>
-              <strong>Direction Services Conseils</strong>
+              <strong>CVSI</strong>
             </span>
           </article>
           <article>
             <Icon name="governance" />
             <span>
               <small>Responsable technique</small>
-              <strong>CVSI</strong>
+              <strong>Équipe Informatique et Logiciels</strong>
             </span>
           </article>
           <article>
             <Icon name="network" />
             <span>
               <small>Interface approuvée</small>
-              <strong>REST API Frappe · lecture ciblée</strong>
+              <strong>Business API · contrat OpenAPI</strong>
             </span>
           </article>
         </div>
@@ -81,8 +81,8 @@ export function SystemAuthorityWorkbench() {
             <h3>Autorités de données actives</h3>
             <p>Une deuxième source exclusive sur la même période bloquerait la publication.</p>
           </div>
-          <button disabled title="Disponible après connexion de l’écriture à Neon" type="button">
-            Déclarer une autorité · bientôt
+          <button disabled title="Disponible après connexion du formulaire à l’API" type="button">
+            Ajouter un système · bientôt
           </button>
         </div>
 
@@ -114,10 +114,10 @@ export function SystemAuthorityWorkbench() {
         <aside className="no-copy-proof">
           <Icon name="shield" />
           <div>
-            <strong>La plateforme conserve la règle, pas les fiches clients.</strong>
+            <strong>Une autorité limitée aux données du Hub.</strong>
             <p>
-              Elle référence Frappe, le contrat d’accès approuvé et la période d’autorité. Les
-              données restent interrogées à la source selon les droits de l’appelant.
+              KYA Platform fait foi pour le catalogue, ses versions et ses politiques de
+              distribution. Frappe et les données métiers seront référencés dans un pilote séparé.
             </p>
           </div>
         </aside>

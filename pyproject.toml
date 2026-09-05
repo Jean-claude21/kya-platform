@@ -32,6 +32,7 @@ markers = [
   "integration: tests using controlled infrastructure",
   "contract: public contract tests",
   "security: security and authorization tests",
+  "performance: bounded load and latency tests",
 ]
 
 [tool.ruff]

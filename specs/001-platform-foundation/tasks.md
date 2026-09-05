@@ -71,7 +71,7 @@
 - [x] T049 [US4] Implement systems, capabilities and temporal DataAuthority in apps/backend/src/kya_platform/domain/systems/
 - [x] T050 [US4] Implement Frappe registry adapter without data copying in apps/backend/src/kya_platform/infrastructure/frappe/
 - [x] T051 [US4] Add system and authority API/UI in apps/backend/src/kya_platform/api/routes/systems.py and apps/web/src/features/systems/
-- [ ] T052 [US4] Register Frappe pilot authority and record evidence in specs/001-platform-foundation/evidence/us4.md
+- [x] T052 [US4] Register KYA Platform as the first factual authority and record evidence in specs/001-platform-foundation/evidence/us4.md; defer Frappe to its own validated pilot
 
 ## Phase 7 — US5: identités techniques et secrets (P2)
 
@@ -102,12 +102,12 @@
 ## Phase 10 — Hardening and release
 
 - [x] T070 [P] Run dependency, secret, container and SBOM controls from .github/workflows/security.yml
-- [ ] T071 [P] Validate accessibility and low-bandwidth journeys in tests/e2e/
+- [x] T071 [P] Validate accessibility and low-bandwidth journeys in tests/e2e/
 - [x] T072 [P] Add OpenTelemetry traces, metrics and health checks in apps/backend/src/kya_platform/observability/
-- [ ] T073 [P] Implement notification preferences, deduplication and delivery workers in apps/backend/src/kya_platform/workers/
-- [ ] T074 [P] Prove identity deprovisioning revokes sessions and tokens in apps/backend/tests/security/test_deprovisioning.py
-- [ ] T075 [P] Implement artifact signing, verification and compromise revocation in apps/backend/src/kya_platform/application/publication/integrity/
-- [ ] T076 [P] Run catalog, authorization, API and MCP load tests from tests/performance/
+- [x] T073 [P] Implement notification preferences, deduplication and delivery workers in apps/backend/src/kya_platform/workers/
+- [x] T074 [P] Prove identity deprovisioning revokes sessions and tokens in apps/backend/tests/security/test_deprovisioning.py
+- [x] T075 [P] Implement artifact signing, verification and compromise revocation in apps/backend/src/kya_platform/application/publication/integrity/
+- [x] T076 [P] Run catalog, authorization, API and MCP load tests from tests/performance/
 - [ ] T077 Automate backup verification for Neon, OpenFGA and Infisical metadata in infra/backup/
 - [ ] T078 Execute a restore and access-revocation recovery drill in specs/001-platform-foundation/evidence/disaster-recovery.md
 - [ ] T079 Execute every quickstart criterion and complete specs/001-platform-foundation/evidence/final.md

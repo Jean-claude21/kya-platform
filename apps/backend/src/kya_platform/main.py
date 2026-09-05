@@ -13,6 +13,7 @@ from kya_platform.api.security import configure_security_runtime
 from kya_platform.application.audit import AuditQueryService, AuditWriter
 from kya_platform.config import Settings, get_settings
 from kya_platform.infrastructure.database.audit import SqlAlchemyAuditRepository
+from kya_platform.infrastructure.database.identity import SqlAlchemyIdentityMapping
 from kya_platform.infrastructure.database.session import create_engine, create_session_factory
 from kya_platform.infrastructure.infisical import (
     HttpxInfisicalTransport,
@@ -40,9 +41,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         database_engine = None
         if resolved_settings.database_url is not None:
             database_engine = create_engine(resolved_settings.database_url)
-            audit_repository = SqlAlchemyAuditRepository(create_session_factory(database_engine))
+            session_factory = create_session_factory(database_engine)
+            audit_repository = SqlAlchemyAuditRepository(session_factory)
             app.state.audit_queries = AuditQueryService(audit_repository)
             app.state.audit_writer = AuditWriter(audit_repository)
+            app.state.identity_mapping = SqlAlchemyIdentityMapping(session_factory)
         app.state.infisical_secret_resolver = None
         if resolved_settings.has_infisical_configuration:
             api_url = resolved_settings.infisical_api_url
