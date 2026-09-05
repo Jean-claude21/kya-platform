@@ -84,9 +84,7 @@ class FakeUnitOfWork:
 @pytest.mark.unit
 async def test_full_publication_keeps_one_digest_and_emits_transactional_events() -> None:
     unit_of_work = FakeUnitOfWork()
-    service = PublicationService(
-        cast(PublicationUnitOfWorkFactory, lambda: unit_of_work)
-    )
+    service = PublicationService(cast(PublicationUnitOfWorkFactory, lambda: unit_of_work))
 
     await service.submit(
         request_id=REQUEST,
@@ -145,9 +143,7 @@ async def test_publish_rejects_a_digest_substitution_without_commit_or_event() -
         .review(REVIEWER, ReviewDecision.ACCEPTED, at=NOW)
         .approve(APPROVER, ApprovalDecision.APPROVED, at=NOW)
     )
-    service = PublicationService(
-        cast(PublicationUnitOfWorkFactory, lambda: unit_of_work)
-    )
+    service = PublicationService(cast(PublicationUnitOfWorkFactory, lambda: unit_of_work))
 
     with pytest.raises(ValueError, match="digest differs"):
         await service.publish(
@@ -165,9 +161,7 @@ async def test_publish_rejects_a_digest_substitution_without_commit_or_event() -
 @pytest.mark.asyncio
 @pytest.mark.unit
 async def test_unknown_publication_request_fails_closed() -> None:
-    service = PublicationService(
-        cast(PublicationUnitOfWorkFactory, lambda: FakeUnitOfWork())
-    )
+    service = PublicationService(cast(PublicationUnitOfWorkFactory, lambda: FakeUnitOfWork()))
 
     with pytest.raises(PublicationNotFoundError):
         await service.review(

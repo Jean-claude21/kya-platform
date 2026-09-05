@@ -26,9 +26,7 @@ class AuthorizationService:
     def __init__(self, policy: AuthorizationPort) -> None:
         self._policy = policy
 
-    async def explain(
-        self, request: CheckRequest, *, correlation_id: UUID
-    ) -> DecisionEvidence:
+    async def explain(self, request: CheckRequest, *, correlation_id: UUID) -> DecisionEvidence:
         """Return attributable evidence without copying sensitive context values."""
 
         decision = await self._policy.check(request)

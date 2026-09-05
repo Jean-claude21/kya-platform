@@ -7,9 +7,7 @@ from enum import StrEnum
 from uuid import UUID
 
 _SLUG = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
-_SEMVER = re.compile(
-    r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$"
-)
+_SEMVER = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$")
 _SHA1 = re.compile(r"^[a-fA-F0-9]{40}$")
 _SHA256 = re.compile(r"^[a-fA-F0-9]{64}$")
 

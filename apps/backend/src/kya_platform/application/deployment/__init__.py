@@ -1,7 +1,5 @@
 """Provider-neutral promotion and rollback orchestration."""
 
-from uuid import UUID
-
 from kya_platform.infrastructure.deployment import (
     DeploymentProvider,
     DeploymentRecord,
@@ -19,7 +17,7 @@ class PromotionService:
             raise ValueError(f"unknown deployment provider: {provider}")
         return await adapter.deploy(request)
 
-    async def rollback(self, provider: str, deployment_id: UUID) -> DeploymentRecord:
+    async def rollback(self, provider: str, deployment_id: str) -> DeploymentRecord:
         adapter = self._providers.get(provider)
         if adapter is None:
             raise ValueError(f"unknown deployment provider: {provider}")

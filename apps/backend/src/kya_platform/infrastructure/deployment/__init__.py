@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from typing import Protocol
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 
 class DeploymentError(RuntimeError):
@@ -15,6 +15,7 @@ class DeploymentRequest:
     commit_sha: str
     environment: str
     image_digest: str | None = None
+    previous_commit_sha: str | None = None
 
     def __post_init__(self) -> None:
         if not self.application or not self.commit_sha:
@@ -25,7 +26,7 @@ class DeploymentRequest:
 
 @dataclass(frozen=True, slots=True)
 class DeploymentRecord:
-    id: UUID
+    id: str
     provider: str
     request: DeploymentRequest
     status: str
@@ -37,7 +38,7 @@ class DeploymentProvider(Protocol):
 
     async def deploy(self, request: DeploymentRequest) -> DeploymentRecord: ...
 
-    async def rollback(self, deployment_id: UUID) -> DeploymentRecord: ...
+    async def rollback(self, deployment_id: str) -> DeploymentRecord: ...
 
 
 @dataclass(slots=True)
@@ -46,7 +47,7 @@ class InMemoryDeploymentProvider:
 
     name: str
     base_url: str = "http://localhost"
-    records: dict[UUID, DeploymentRecord] | None = None
+    records: dict[str, DeploymentRecord] | None = None
 
     def __post_init__(self) -> None:
         if self.records is None:
@@ -54,7 +55,7 @@ class InMemoryDeploymentProvider:
 
     async def deploy(self, request: DeploymentRequest) -> DeploymentRecord:
         record = DeploymentRecord(
-            id=uuid4(),
+            id=str(uuid4()),
             provider=self.name,
             request=request,
             status="deployed",
@@ -64,7 +65,7 @@ class InMemoryDeploymentProvider:
         self.records[record.id] = record
         return record
 
-    async def rollback(self, deployment_id: UUID) -> DeploymentRecord:
+    async def rollback(self, deployment_id: str) -> DeploymentRecord:
         assert self.records is not None
         current = self.records.get(deployment_id)
         if current is None:

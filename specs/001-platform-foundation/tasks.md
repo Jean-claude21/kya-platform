@@ -87,8 +87,8 @@
 - [x] T059 [P] [US6] Implement Dokploy adapter in apps/backend/src/kya_platform/infrastructure/dokploy/
 - [x] T060 [P] [US6] Implement Coolify adapter in apps/backend/src/kya_platform/infrastructure/coolify/
 - [x] T061 [US6] Implement provider-neutral promotion and rollback service in apps/backend/src/kya_platform/application/deployment/
-- [ ] T062 [US6] Automate Neon preview branch create/cleanup in infra/neon/
-- [ ] T063 [US6] Add preview, test and production workflows in .github/workflows/deploy.yml
+- [x] T062 [US6] Automate Neon preview branch create/cleanup in infra/neon/
+- [x] T063 [US6] Add preview, test and production workflows in .github/workflows/deploy.yml
 - [ ] T064 [US6] Run identical provider benchmark and record decision in specs/001-platform-foundation/evidence/deployment-benchmark.md
 
 ## Phase 9 — US7: audit et administration (P3)

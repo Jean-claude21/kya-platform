@@ -125,9 +125,7 @@ class PublicationService:
     ) -> PublicationRequest:
         async with self._unit_of_work_factory() as unit_of_work:
             current = await self._required(unit_of_work.publications, request_id)
-            updated = current.mark_published(
-                actor_id, content_digest=content_digest, at=at
-            )
+            updated = current.mark_published(actor_id, content_digest=content_digest, at=at)
             await unit_of_work.publications.save(updated)
             await unit_of_work.outbox.add(
                 self._event("artifact.published", updated, correlation_id)
@@ -136,18 +134,14 @@ class PublicationService:
         return updated
 
     @staticmethod
-    async def _required(
-        repository: PublicationRepository, request_id: UUID
-    ) -> PublicationRequest:
+    async def _required(repository: PublicationRepository, request_id: UUID) -> PublicationRequest:
         request = await repository.get(request_id)
         if request is None:
             raise PublicationNotFoundError("publication request not found")
         return request
 
     @staticmethod
-    def _event(
-        topic: str, request: PublicationRequest, correlation_id: UUID
-    ) -> OutboxMessage:
+    def _event(topic: str, request: PublicationRequest, correlation_id: UUID) -> OutboxMessage:
         return OutboxMessage(
             topic=topic,
             aggregate_type="publication_request",

@@ -128,9 +128,7 @@ def test_temporal_and_reference_invariants_fail_early() -> None:
         OrganizationGraph(
             units=(unit,),
             relations=(
-                OrganizationalUnitRelation(
-                    GROUP, TOGO, RelationKind.TRANSVERSAL, DateRange(at(1))
-                ),
+                OrganizationalUnitRelation(GROUP, TOGO, RelationKind.TRANSVERSAL, DateRange(at(1))),
             ),
         )
 
