@@ -40,7 +40,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     telemetry = TelemetryRuntime.create(resolved_settings)
     bootstrap_mcp = create_bootstrap_server(environment=resolved_settings.environment)
     bootstrap_mcp_app = bootstrap_mcp.streamable_http_app(
-        streamable_http_path="/",
+        streamable_http_path="/mcp",
         json_response=True,
         stateless_http=True,
         transport_security=TransportSecuritySettings(
@@ -155,7 +155,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     install_error_handlers(application)
     application.include_router(api_router, prefix="/api/v1")
-    application.mount("/mcp", bootstrap_mcp_app)
+    application.mount("/", bootstrap_mcp_app)
     return application
 
 
