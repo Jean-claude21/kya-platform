@@ -9,12 +9,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from mcp.server.transport_security import TransportSecuritySettings
 from pydantic import SecretStr
+from starlette.routing import Route
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from kya_platform.api.router import api_router
 from kya_platform.api.security import configure_security_runtime
 from kya_platform.application.audit import AuditQueryService, AuditWriter
+from kya_platform.bootstrap import BootstrapService
 from kya_platform.config import Settings, get_settings
 from kya_platform.infrastructure.database.audit import SqlAlchemyAuditRepository
+from kya_platform.infrastructure.database.bootstrap import SqlAlchemyBootstrapClaimRepository
 from kya_platform.infrastructure.database.identity import SqlAlchemyIdentityMapping
 from kya_platform.infrastructure.database.session import create_engine, create_session_factory
 from kya_platform.infrastructure.infisical import (
@@ -30,6 +34,20 @@ from kya_platform.observability import (
     install_error_handlers,
 )
 from kya_platform.observability.telemetry import TelemetryRuntime
+
+
+class CanonicalMcpEndpoint:
+    """Serve the exact connector URL without relying on redirect support."""
+
+    def __init__(self, app: ASGIApp) -> None:
+        self._app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        inner_scope = dict(scope)
+        inner_scope["root_path"] = f"{scope.get('root_path', '')}/mcp"
+        inner_scope["path"] = "/"
+        inner_scope["raw_path"] = b"/"
+        await self._app(inner_scope, receive, send)
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -62,6 +80,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             app.state.audit_queries = AuditQueryService(audit_repository)
             app.state.audit_writer = AuditWriter(audit_repository)
             app.state.identity_mapping = SqlAlchemyIdentityMapping(session_factory)
+            app.state.bootstrap_claims = SqlAlchemyBootstrapClaimRepository(session_factory)
         app.state.infisical_secret_resolver = None
         if resolved_settings.has_infisical_configuration:
             api_url = resolved_settings.infisical_api_url
@@ -101,6 +120,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 store_id=store_id,
                 model_id=model_id,
             )
+        if resolved_settings.has_bootstrap_configuration:
+            owner_email = resolved_settings.bootstrap_owner_email
+            claim_hash = resolved_settings.bootstrap_claim_code_hash
+            if owner_email is None or claim_hash is None:
+                raise RuntimeError("validated bootstrap configuration is incomplete")
+            claims = app.state.bootstrap_claims
+            authorization = app.state.authorization
+            if claims is None or authorization is None:
+                raise RuntimeError("bootstrap requires database and OpenFGA configuration")
+            app.state.bootstrap_service = BootstrapService(
+                repository=claims,
+                grant=authorization,
+                owner_email=owner_email,
+                claim_code_hash=claim_hash,
+            )
 
         # The MCP SDK's HTTP manager is deliberately single-start. Unit/integration
         # tests reuse one FastAPI instance across several TestClient lifespans, so
@@ -139,13 +173,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.state.is_ready = False
     application.state.audit_queries = None
     application.state.audit_writer = None
+    application.state.bootstrap_claims = None
+    application.state.bootstrap_service = None
     configure_security_runtime(application.state, resolved_settings)
     if resolved_settings.cors_allowed_origins:
         application.add_middleware(
             CORSMiddleware,
             allow_origins=list(resolved_settings.cors_allowed_origins),
             allow_credentials=False,
-            allow_methods=["GET", "OPTIONS"],
+            allow_methods=["GET", "POST", "OPTIONS"],
             allow_headers=["Authorization", "Content-Type", "X-KYA-Unit-ID"],
         )
     application.add_middleware(
@@ -155,6 +191,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     install_error_handlers(application)
     application.include_router(api_router, prefix="/api/v1")
+    application.router.routes.append(
+        Route("/mcp", CanonicalMcpEndpoint(bootstrap_mcp_app), include_in_schema=False)
+    )
     application.mount("/mcp", bootstrap_mcp_app)
     return application
 

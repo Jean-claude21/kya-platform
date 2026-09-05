@@ -1,5 +1,7 @@
 """OpenFGA adapter contract tests."""
 
+from uuid import UUID
+
 import httpx
 import pytest
 from pydantic import SecretStr
@@ -65,6 +67,32 @@ async def test_list_objects_returns_only_provider_identifiers() -> None:
             ListObjectsRequest(user="user:1", relation="can_view", object_type="artifact")
         )
     assert objects == ("artifact:one", "artifact:two")
+
+
+@pytest.mark.anyio
+async def test_platform_owner_grant_writes_pinned_non_pii_tuple() -> None:
+    principal_id = UUID("01991fb0-6c00-7000-8000-000000000020")
+
+    async def handle(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/stores/store-1/write"
+        body = __import__("json").loads(request.content)
+        assert body == {
+            "authorization_model_id": "model-1",
+            "writes": {
+                "tuple_keys": [
+                    {
+                        "user": f"user:{principal_id}",
+                        "relation": "base_administrator",
+                        "object": "org_unit:group",
+                    }
+                ]
+            },
+        }
+        return httpx.Response(200, json={})
+
+    policy, client = adapter(httpx.MockTransport(handle))
+    async with client:
+        await policy.grant_platform_owner(principal_id)
 
 
 @pytest.mark.anyio

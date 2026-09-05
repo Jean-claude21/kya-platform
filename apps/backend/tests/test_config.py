@@ -57,3 +57,28 @@ def test_settings_normalize_otlp_endpoint() -> None:
 def test_settings_reject_non_http_otlp_endpoint() -> None:
     with pytest.raises(ValidationError, match="absolute HTTP URL"):
         Settings(_env_file=None, otel_exporter_otlp_endpoint="collector.internal:4318")
+
+
+@pytest.mark.unit
+def test_bootstrap_configuration_requires_owner_and_sha256_hash() -> None:
+    with pytest.raises(ValidationError, match="must be complete"):
+        Settings(_env_file=None, bootstrap_owner_email="owner@kya-energy.com")
+
+    with pytest.raises(ValidationError, match="SHA-256"):
+        Settings(
+            _env_file=None,
+            bootstrap_owner_email="owner@kya-energy.com",
+            bootstrap_claim_code_hash=SecretStr("not-a-digest"),
+        )
+
+
+@pytest.mark.unit
+def test_complete_bootstrap_configuration_is_enabled_and_normalized() -> None:
+    settings = Settings(
+        _env_file=None,
+        bootstrap_owner_email=" Owner@KYA-Energy.com ",
+        bootstrap_claim_code_hash=SecretStr("a" * 64),
+    )
+
+    assert settings.has_bootstrap_configuration
+    assert settings.bootstrap_owner_email == "owner@kya-energy.com"
