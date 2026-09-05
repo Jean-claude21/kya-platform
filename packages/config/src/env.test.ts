@@ -28,9 +28,10 @@ const valid = {
   KYA_DOKPLOY_PRODUCTION_APP_ID: 'dokploy-production',
   KYA_COOLIFY_API_URL: 'https://coolify.example.com',
   KYA_COOLIFY_API_TOKEN: 'coolify-token',
-  KYA_COOLIFY_PREVIEW_APP_UUID: 'coolify-preview',
-  KYA_COOLIFY_STAGING_APP_UUID: 'coolify-staging',
-  KYA_COOLIFY_PRODUCTION_APP_UUID: 'coolify-production',
+  KYA_COOLIFY_PROJECT_UUID: 'coolify-project',
+  KYA_COOLIFY_SERVER_UUID: 'coolify-server',
+  KYA_COOLIFY_WEB_APPLICATION_NAME: 'kya-platform-web',
+  KYA_COOLIFY_BACKEND_APPLICATION_NAME: 'kya-platform-backend',
 } as const;
 
 describe('serverEnvironmentSchema', () => {

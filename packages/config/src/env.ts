@@ -27,9 +27,10 @@ export const serverEnvironmentSchema = z.object({
   KYA_DOKPLOY_PRODUCTION_APP_ID: required.optional(),
   KYA_COOLIFY_API_URL: z.url().optional(),
   KYA_COOLIFY_API_TOKEN: required.optional(),
-  KYA_COOLIFY_PREVIEW_APP_UUID: required.optional(),
-  KYA_COOLIFY_STAGING_APP_UUID: required.optional(),
-  KYA_COOLIFY_PRODUCTION_APP_UUID: required.optional(),
+  KYA_COOLIFY_PROJECT_UUID: required.optional(),
+  KYA_COOLIFY_SERVER_UUID: required.optional(),
+  KYA_COOLIFY_WEB_APPLICATION_NAME: required.optional(),
+  KYA_COOLIFY_BACKEND_APPLICATION_NAME: required.optional(),
 });
 
 export type ServerEnvironment = z.infer<typeof serverEnvironmentSchema>;

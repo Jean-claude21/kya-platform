@@ -1,10 +1,14 @@
 """Validated, secret-safe application configuration."""
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+_BACKEND_ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
 
 
 class Settings(BaseSettings):
@@ -45,9 +49,10 @@ class Settings(BaseSettings):
     dokploy_production_app_id: str | None = None
     coolify_api_url: str | None = None
     coolify_api_token: SecretStr | None = None
-    coolify_preview_app_uuid: str | None = None
-    coolify_staging_app_uuid: str | None = None
-    coolify_production_app_uuid: str | None = None
+    coolify_project_uuid: str | None = None
+    coolify_server_uuid: str | None = None
+    coolify_web_application_name: str = "kya-platform-web"
+    coolify_backend_application_name: str = "kya-platform-backend"
 
     @model_validator(mode="after")
     def validate_infisical_configuration(self) -> Settings:
@@ -74,4 +79,4 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     """Return one immutable configuration view per process."""
 
-    return Settings()
+    return Settings(_env_file=_BACKEND_ENV_FILE)
