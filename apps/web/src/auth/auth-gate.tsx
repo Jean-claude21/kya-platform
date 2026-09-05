@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { useState, type ReactNode, type SyntheticEvent } from 'react';
 
 import { KyaMark } from '@kya/design-system';
 
@@ -17,14 +17,17 @@ export function AuthGate({ children }: Readonly<{ children: ReactNode }>) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: SyntheticEvent<HTMLFormElement, SubmitEvent>) {
     event.preventDefault();
     setPending(true);
     setError('');
     const data = new FormData(event.currentTarget);
-    const email = String(data.get('email') ?? '').trim();
-    const password = String(data.get('password') ?? '');
-    const name = String(data.get('name') ?? '').trim();
+    const emailValue = data.get('email');
+    const passwordValue = data.get('password');
+    const nameValue = data.get('name');
+    const email = typeof emailValue === 'string' ? emailValue.trim() : '';
+    const password = typeof passwordValue === 'string' ? passwordValue : '';
+    const name = typeof nameValue === 'string' ? nameValue.trim() : '';
 
     try {
       const result =
@@ -57,14 +60,23 @@ export function AuthGate({ children }: Readonly<{ children: ReactNode }>) {
         <div>
           <h1 id="auth-title">Le patrimoine numérique KYA, accessible au bon rôle.</h1>
           <p>
-            Retrouvez les Skills, MCP, applications et modèles validés pour votre Direction et
-            votre contexte de travail.
+            Retrouvez les Skills, MCP, applications et modèles validés pour votre Direction et votre
+            contexte de travail.
           </p>
         </div>
         <ol aria-label="Fonctionnement de la plateforme">
-          <li><strong>Découvrez</strong><span>les capacités autorisées pour vous</span></li>
-          <li><strong>Comprenez</strong><span>leur provenance et leurs conditions d’usage</span></li>
-          <li><strong>Utilisez</strong><span>depuis KYA Platform ou votre environnement IA</span></li>
+          <li>
+            <strong>Découvrez</strong>
+            <span>les capacités autorisées pour vous</span>
+          </li>
+          <li>
+            <strong>Comprenez</strong>
+            <span>leur provenance et leurs conditions d’usage</span>
+          </li>
+          <li>
+            <strong>Utilisez</strong>
+            <span>depuis KYA Platform ou votre environnement IA</span>
+          </li>
         </ol>
       </section>
 
@@ -74,7 +86,9 @@ export function AuthGate({ children }: Readonly<{ children: ReactNode }>) {
             aria-selected={mode === 'sign-in'}
             role="tab"
             type="button"
-            onClick={() => setMode('sign-in')}
+            onClick={() => {
+              setMode('sign-in');
+            }}
           >
             Se connecter
           </button>
@@ -82,7 +96,9 @@ export function AuthGate({ children }: Readonly<{ children: ReactNode }>) {
             aria-selected={mode === 'sign-up'}
             role="tab"
             type="button"
-            onClick={() => setMode('sign-up')}
+            onClick={() => {
+              setMode('sign-up');
+            }}
           >
             Créer mon compte
           </button>
@@ -97,7 +113,11 @@ export function AuthGate({ children }: Readonly<{ children: ReactNode }>) {
               : 'Connectez-vous pour retrouver votre contexte, vos capacités et vos validations.'}
           </p>
         </div>
-        <form onSubmit={submit}>
+        <form
+          onSubmit={(event) => {
+            void submit(event);
+          }}
+        >
           {mode === 'sign-up' && (
             <label>
               Nom complet
@@ -118,7 +138,11 @@ export function AuthGate({ children }: Readonly<{ children: ReactNode }>) {
               minLength={8}
             />
           </label>
-          {error && <p className="auth-error" role="alert">{error}</p>}
+          {error && (
+            <p className="auth-error" role="alert">
+              {error}
+            </p>
+          )}
           <button className="auth-submit" type="submit" disabled={pending}>
             {pending
               ? 'Traitement en cours…'
