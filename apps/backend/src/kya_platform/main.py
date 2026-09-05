@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 import httpx
 import uvicorn
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import SecretStr
 
 from kya_platform.api.router import api_router
@@ -21,6 +22,7 @@ from kya_platform.infrastructure.infisical import (
     InfisicalSecretResolver,
 )
 from kya_platform.infrastructure.openfga import OpenFgaHttpAdapter
+from kya_platform.mcp.bootstrap import create_bootstrap_server
 from kya_platform.observability import (
     CorrelationMiddleware,
     configure_logging,
@@ -35,6 +37,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     resolved_settings = settings or get_settings()
     configure_logging(resolved_settings.log_level)
     telemetry = TelemetryRuntime.create(resolved_settings)
+    bootstrap_mcp = create_bootstrap_server(environment=resolved_settings.environment)
+    bootstrap_mcp_app = bootstrap_mcp.streamable_http_app(
+        streamable_http_path="/",
+        json_response=True,
+        stateless_http=True,
+    )
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -87,18 +95,31 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 store_id=store_id,
                 model_id=model_id,
             )
-        app.state.is_ready = True
-        try:
-            yield
-        finally:
-            app.state.is_ready = False
-            if infisical_http_client is not None:
-                await infisical_http_client.aclose()
-            if openfga_http_client is not None:
-                await openfga_http_client.aclose()
-            if database_engine is not None:
-                await database_engine.dispose()
-            telemetry.shutdown()
+
+        # The MCP SDK's HTTP manager is deliberately single-start. Unit/integration
+        # tests reuse one FastAPI instance across several TestClient lifespans, so
+        # they exercise the server in-process instead of starting that manager.
+        @asynccontextmanager
+        async def mcp_lifespan() -> AsyncIterator[None]:
+            if resolved_settings.environment == "test":
+                yield
+                return
+            async with bootstrap_mcp_app.router.lifespan_context(bootstrap_mcp_app):
+                yield
+
+        async with mcp_lifespan():
+            app.state.is_ready = True
+            try:
+                yield
+            finally:
+                app.state.is_ready = False
+                if infisical_http_client is not None:
+                    await infisical_http_client.aclose()
+                if openfga_http_client is not None:
+                    await openfga_http_client.aclose()
+                if database_engine is not None:
+                    await database_engine.dispose()
+                telemetry.shutdown()
 
     application = FastAPI(
         title=resolved_settings.app_name,
@@ -113,6 +134,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.state.audit_queries = None
     application.state.audit_writer = None
     configure_security_runtime(application.state, resolved_settings)
+    if resolved_settings.cors_allowed_origins:
+        application.add_middleware(
+            CORSMiddleware,
+            allow_origins=list(resolved_settings.cors_allowed_origins),
+            allow_credentials=False,
+            allow_methods=["GET", "OPTIONS"],
+            allow_headers=["Authorization", "Content-Type", "X-KYA-Unit-ID"],
+        )
     application.add_middleware(
         CorrelationMiddleware,
         tracer=telemetry.tracer,
@@ -120,6 +149,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     install_error_handlers(application)
     application.include_router(api_router, prefix="/api/v1")
+    application.mount("/mcp", bootstrap_mcp_app)
     return application
 
 
