@@ -66,8 +66,7 @@ def test_neon_connection_url_is_normalized_for_asyncpg() -> None:
     )
 
     assert normalized == (
-        "postgresql+asyncpg://user:p%40ss@db.example/neondb"
-        "?application_name=kya&ssl=require"
+        "postgresql+asyncpg://user:p%40ss@db.example/neondb?application_name=kya&ssl=require"
     )
     assert "channel_binding" not in normalized
     assert "sslmode" not in normalized
@@ -76,8 +75,7 @@ def test_neon_connection_url_is_normalized_for_asyncpg() -> None:
 @pytest.mark.unit
 def test_asyncpg_connection_url_preserves_existing_ssl_setting() -> None:
     normalized = normalize_asyncpg_url(
-        "postgresql+asyncpg://user:password@db.example/neondb"
-        "?ssl=verify-full&sslmode=require"
+        "postgresql+asyncpg://user:password@db.example/neondb?ssl=verify-full&sslmode=require"
     )
 
     assert normalized.endswith("?ssl=verify-full")
