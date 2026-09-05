@@ -181,12 +181,7 @@ export function AuthGate({ children }: Readonly<{ children: ReactNode }>) {
               >
                 <label>
                   Code d’initialisation
-                  <input
-                    name="claim-code"
-                    type="password"
-                    autoComplete="one-time-code"
-                    required
-                  />
+                  <input name="claim-code" type="password" autoComplete="one-time-code" required />
                 </label>
                 {claimError && (
                   <p className="auth-error" role="alert">

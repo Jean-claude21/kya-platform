@@ -26,7 +26,9 @@ def upgrade() -> None:
             "reserved_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
         ),
         sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
-        sa.CheckConstraint("state IN ('reserved', 'complete')", name="ck_platform_bootstrap_claim_valid_state"),
+        sa.CheckConstraint(
+            "state IN ('reserved', 'complete')", name="ck_platform_bootstrap_claim_valid_state"
+        ),
         sa.PrimaryKeyConstraint("key", name="pk_platform_bootstrap_claim"),
         schema="identity",
     )

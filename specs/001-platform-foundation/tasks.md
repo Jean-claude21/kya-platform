@@ -115,7 +115,7 @@
 - [x] T081 Merge feat-platform-foundation to dev, create dev prerelease tag, and validate test deployment
 - [ ] T082 Promote dev to main through PR and create the mandatory annotated SemVer release tag
 - [x] T083 [US7] Implement and test autonomous one-time platform-owner initialization and canonical
-  MCP URLs in apps/backend/ and apps/web/
+      MCP URLs in apps/backend/ and apps/web/
 
 ## Dependencies and parallelism
 
