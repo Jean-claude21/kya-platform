@@ -62,6 +62,22 @@ async def test_accepts_a_strictly_valid_token(rsa_keys: tuple[Any, PyJWK]) -> No
 
 
 @pytest.mark.security
+async def test_accepts_neon_token_without_audience_when_not_configured(
+    rsa_keys: tuple[Any, PyJWK],
+) -> None:
+    private_key, public_key = rsa_keys
+    verifier = NeonJwtVerifier(
+        issuer=ISSUER,
+        audience=None,
+        signing_keys=StaticSigningKeys(public_key),
+    )
+
+    identity = await verifier.verify(make_token(private_key, aud=None))
+
+    assert identity.subject == "neon-user-123"
+
+
+@pytest.mark.security
 @pytest.mark.parametrize(
     "claim_overrides",
     [

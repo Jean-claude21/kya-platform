@@ -20,6 +20,7 @@ from kya_platform.infrastructure.infisical import (
     InfisicalMachineIdentityAdapter,
     InfisicalSecretResolver,
 )
+from kya_platform.infrastructure.openfga import OpenFgaHttpAdapter
 from kya_platform.observability import (
     CorrelationMiddleware,
     configure_logging,
@@ -38,6 +39,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         infisical_http_client: httpx.AsyncClient | None = None
+        openfga_http_client: httpx.AsyncClient | None = None
         database_engine = None
         if resolved_settings.database_url is not None:
             database_engine = create_engine(resolved_settings.database_url)
@@ -71,6 +73,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 resolved_settings.infisical_environment,
                 resolved_settings.infisical_secret_path,
             )
+        if resolved_settings.openfga_api_url is not None:
+            api_token = resolved_settings.openfga_api_token
+            store_id = resolved_settings.openfga_store_id
+            model_id = resolved_settings.openfga_model_id
+            if api_token is None or store_id is None or model_id is None:
+                raise RuntimeError("validated OpenFGA configuration is incomplete")
+            openfga_http_client = httpx.AsyncClient(timeout=5.0)
+            app.state.authorization = OpenFgaHttpAdapter(
+                openfga_http_client,
+                api_url=resolved_settings.openfga_api_url,
+                api_token=api_token,
+                store_id=store_id,
+                model_id=model_id,
+            )
         app.state.is_ready = True
         try:
             yield
@@ -78,6 +94,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             app.state.is_ready = False
             if infisical_http_client is not None:
                 await infisical_http_client.aclose()
+            if openfga_http_client is not None:
+                await openfga_http_client.aclose()
             if database_engine is not None:
                 await database_engine.dispose()
             telemetry.shutdown()

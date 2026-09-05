@@ -32,19 +32,19 @@ class PyJwkClientResolver:
 class NeonJwtVerifier:
     """Verify identity claims only; OpenFGA remains responsible for authorization."""
 
-    _required_claims = ("exp", "iat", "iss", "sub", "aud")
+    _required_claims = ("exp", "iat", "iss", "sub")
 
     def __init__(
         self,
         *,
         issuer: str,
-        audience: str,
+        audience: str | None,
         signing_keys: SigningKeyResolver,
         algorithms: Sequence[str] = ("RS256", "ES256", "EdDSA"),
         leeway_seconds: int = 30,
     ) -> None:
-        if not issuer or not audience or not algorithms:
-            raise ValueError("issuer, audience and algorithms are required")
+        if not issuer or not algorithms:
+            raise ValueError("issuer and algorithms are required")
         self._issuer = issuer
         self._audience = audience
         self._signing_keys = signing_keys
@@ -64,7 +64,10 @@ class NeonJwtVerifier:
                 audience=self._audience,
                 issuer=self._issuer,
                 leeway=self._leeway_seconds,
-                options={"require": list(self._required_claims)},
+                options={
+                    "require": list(self._required_claims),
+                    "verify_aud": self._audience is not None,
+                },
             )
             return AuthenticatedIdentity(
                 issuer=str(claims["iss"]),

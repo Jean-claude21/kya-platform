@@ -31,7 +31,11 @@ class Settings(BaseSettings):
     database_migration_url: SecretStr | None = None
     neon_auth_issuer: str | None = None
     neon_auth_jwks_url: str | None = None
-    neon_auth_audience: str = "kya-platform"
+    neon_auth_audience: str | None = None
+    openfga_api_url: str | None = None
+    openfga_api_token: SecretStr | None = None
+    openfga_store_id: str | None = None
+    openfga_model_id: str | None = None
     infisical_api_url: str | None = None
     infisical_client_id: str | None = None
     infisical_client_secret: SecretStr | None = None
@@ -77,6 +81,16 @@ class Settings(BaseSettings):
             self.otel_exporter_otlp_endpoint = endpoint
         if not 1_000 <= self.otel_metric_export_interval_millis <= 3_600_000:
             raise ValueError("OTLP metric export interval must be between 1000 and 3600000 ms")
+        openfga = (
+            self.openfga_api_url,
+            self.openfga_api_token,
+            self.openfga_store_id,
+            self.openfga_model_id,
+        )
+        if any(item is not None for item in openfga) and not all(openfga):
+            raise ValueError("OpenFGA configuration must be complete")
+        if self.openfga_api_url is not None:
+            self.openfga_api_url = self.openfga_api_url.rstrip("/")
         return self
 
     @property
