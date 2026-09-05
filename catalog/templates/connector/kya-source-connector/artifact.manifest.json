@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "1",
+  "id": "kya:connector:kya-source-connector",
+  "type": "connector",
+  "name": "KYA Source Connector",
+  "version": "0.1.0",
+  "summary": "Template for ingesting or querying one governed external source.",
+  "owners": {
+    "business": "replace-with-data-owner",
+    "technical": "cvsi-platform",
+    "workspace": "replace-with-workspace"
+  },
+  "source": {
+    "repository": "https://github.com/kya-energy/replace-me",
+    "commit": "0000000000000000000000000000000000000000",
+    "path": "connectors/kya-source-connector"
+  },
+  "integrity": {
+    "algorithm": "sha256",
+    "digest": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "compatibility": {
+    "python": ">=3.14,<3.15",
+    "business-api": ">=1,<2"
+  },
+  "dependencies": [],
+  "scopes": ["source.read"],
+  "risk": "read"
+}

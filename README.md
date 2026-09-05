@@ -16,6 +16,9 @@ tâches, des contrôles de cohérence et des preuves de validation avant sa mise
   Request vers `dev` ;
 - la promotion de `dev` vers `main` passe par une Pull Request et les validations de livraison.
 
+Chaque commit accepté sur `main` reçoit un tag SemVer annoté et immuable. Sur `dev`, les tags de
+préversion `vX.Y.Z-dev.N` sont réservés aux jalons réellement déployables.
+
 Les commits directs sur `main` et `dev` seront interdits dès que les protections du dépôt seront
 configurées.
 

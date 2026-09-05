@@ -1,0 +1,137 @@
+# Preuves — Fondation KYA Platform
+
+**Date**: 2026-09-03
+
+**Branche**: `feat-platform-foundation`
+
+**Statut**: preuves partielles ; T024 reste ouvert jusqu'à validation de tous les bloqueurs
+
+## Persistance et migrations — T014
+
+- PostgreSQL 17.6 local éphémère ;
+- `alembic upgrade head` atteint `20260903_0002` ;
+- `downgrade base` puis `upgrade head` réussis ;
+- schémas observés : `audit`, `reliability`, `identity` ;
+- une tentative de modification de `audit.event` échoue avec
+  `audit events are append-only` ;
+- une tentative de rattacher une identité externe à un autre principal échoue avec
+  `external identities cannot be rebound` ;
+- les deux transactions de test sont annulées et ne laissent aucune ligne.
+
+## Neon Auth JWT/JWKS — T017
+
+- signature vérifiée par une clé issue du JWKS ;
+- algorithmes asymétriques limités par une liste serveur ;
+- `issuer`, `audience`, `expiration`, `issued-at` et `subject` obligatoires ;
+- accès réseau JWKS déplacé hors de la boucle asynchrone ;
+- rejet testé pour audience, issuer, expiration, sujet vide, claim absent et jeton vide ;
+- l'identité authentifiée est immuable ; l'autorisation reste hors du JWT et relève d'OpenFGA.
+
+## Observabilité et erreurs — T015
+
+- chaque requête reçoit un UUID de corrélation dans le contexte, la réponse et les journaux ;
+- un UUID fourni par le client est conservé seulement s'il est valide ;
+- les erreurs attendues, HTTP, de validation et internes utilisent un contrat Problem Details ;
+- les erreurs internes ne sont jamais renvoyées au client ;
+- messages, champs imbriqués, `SecretStr`, Bearer tokens et identifiants de connexion sont masqués
+  avant sérialisation JSON ;
+- les journaux d'accès ne contiennent ni query string ni corps de requête.
+
+## Transactions, idempotence et outbox — T016
+
+- les ports `UnitOfWork`, `IdempotencyPort` et `OutboxPort` sont indépendants de SQLAlchemy ;
+- le résultat et les effets externes sont enregistrés dans la transaction métier avant commit ;
+- un appel identique rejoue le résultat sans rappeler le traitement ;
+- une clé réutilisée avec un autre hash est rejetée ;
+- une erreur métier provoque un rollback sans résultat d'idempotence ;
+- le hash SHA-256 repose sur une sérialisation JSON canonique.
+
+## Autorisation KYA — T018–T019
+
+- modèle OpenFGA 1.1 versionné dans Git et validé par le CLI officiel 0.7.15 ;
+- 9 scénarios et 31 décisions réussis ;
+- hiérarchie Groupe → pays → Direction, équipes, rôles personnalisables et espaces couverts ;
+- contexte organisationnel actif obligatoire pour les droits hiérarchiques ;
+- stagiaire limité à la lecture, délégation temporelle et expiration vérifiées ;
+- l'interdiction explicite prime sur les droits hérités ;
+- découverte d'un outil MCP et droit de l'invoquer sont séparés ;
+- le port applicatif exige un identifiant de modèle immuable et échoue fermé.
+
+## Références de secrets — T020
+
+- le contrat contient uniquement fournisseur, localisateur opaque, propriétaire, usage et cycle de
+  vie ;
+- le modèle est immuable et refuse tout champ supplémentaire ;
+- les champs `value`, `secret`, `plaintext` et `credential` sont explicitement rejetés ;
+- le port permet catalogage et révocation sans méthode de lecture de valeur.
+
+## Barrière de sécurité FastAPI — T021
+
+- jeton Bearer obligatoire et validé par le vérificateur Neon Auth ;
+- le couple issuer/subject est résolu vers un identifiant interne KYA avant toute décision ;
+- l'unité active doit être fournie explicitement et devient un tuple contextuel non persistant ;
+- chaque route protégée demande une permission et un objet précis à OpenFGA ;
+- identité non liée, configuration absente et décision négative échouent toutes fermées ;
+- les raisons cryptographiques internes ne sont jamais retournées au client.
+
+## Shell TanStack et Design System KYA — T022
+
+- shell TanStack Start rendu côté serveur et routage de fichiers validés par un build de production ;
+- tokens, icônes SVG et primitives partagés dans `@kya/design-system` ;
+- réseau typé de 13 capacités et 15 dépendances, avec chemins restreints et mise en évidence des
+  relations ;
+- recherche transversale, raccourci `Ctrl/Cmd+K`, effacement par `Échap` et résumé textuel des
+  dépendances ;
+- contexte Groupe/pays visible à tous les breakpoints et navigation mobile des six couches ;
+- aucune action non connectée ne simule une mutation ou une navigation réelle ;
+- contrôles réels à 1 440 × 1 000 et 390 × 844 : aucun débordement de page, cibles tactiles de 44 px ;
+- revue visuelle indépendante : défauts matériels résolus, documentation du système produite avant
+  clôture.
+
+## Worker, baux et reprises — T023
+
+- acquisition concurrente fondée sur `FOR UPDATE SKIP LOCKED`, sans transaction ouverte pendant les
+  appels externes ;
+- bail nominatif et limité dans le temps, avec reprise possible après expiration ;
+- compteur de tentative incrémenté à l'acquisition, backoff exponentiel borné et date de prochaine
+  disponibilité persistée ;
+- mise en quarantaine après cinq tentatives et conservation d'un code d'erreur sans message
+  potentiellement sensible ;
+- acquittement, reprogrammation et quarantaine échouent si le worker ne possède plus le bail ;
+- huit tests couvrent succès, reprise, plafond, sujet inconnu, configuration invalide et arrêt de la
+  boucle inactive.
+
+## Preuve intégrée des fondations — T024
+
+- migration complète `20260903_0001 → 20260904_0003` exécutée sur PostgreSQL 17.6 éphémère ;
+- présence vérifiée des colonnes `lease_owner`, `lease_expires_at`, `last_error` et
+  `dead_lettered_at` ;
+- conteneur de preuve supprimé après validation ;
+- frontend, backend, modèle d'autorisation et image de conteneur ont chacun une preuve locale
+  reproductible consignée dans ce document.
+
+## Contrôles exécutés
+
+| Contrôle                        | Résultat                             |
+| ------------------------------- | ------------------------------------ |
+| Ruff                            | réussi                               |
+| mypy strict                     | réussi sur 20 fichiers source        |
+| pytest                          | 71 tests réussis, couverture 90,54 % |
+| pnpm lint/typecheck/test/format | réussi, 2 tests TypeScript           |
+| Build TanStack Start            | réussi, client et SSR                |
+| Rendu responsive                | réussi à 1 440 px et 390 px          |
+| Migration worker PostgreSQL     | 3 révisions appliquées               |
+| Modèle OpenFGA                  | 9 scénarios, 31 checks réussis       |
+| Image backend Python 3.14       | construite                           |
+| Santé du conteneur              | `ready`, environnement `test`        |
+| Utilisateur du conteneur        | non-root, UID 10001                  |
+
+## Limites restant à lever
+
+- aucun projet Neon réel n'est encore provisionné ; les issuer, audience et URL JWKS restent donc
+  des paramètres sans valeur réelle dans le dépôt ;
+- l'environnement local exécute Node.js 22 alors que la cible CI et production est Node.js 24 ;
+- les identifiants d'organisation et de rôles visibles dans le shell restent illustratifs jusqu'au
+  branchement sur la Business API et OpenFGA ;
+- le logo vectoriel officiel et l'éventuelle police institutionnelle restent à fournir avant la
+  diffusion finale.

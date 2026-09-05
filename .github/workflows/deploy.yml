@@ -1,0 +1,109 @@
+name: Preview and promotion
+
+on:
+  pull_request:
+    branches: [dev]
+    types: [opened, synchronize, reopened, closed]
+  push:
+    branches: [dev]
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+  workflow_dispatch:
+    inputs:
+      provider:
+        description: Deployment provider
+        required: true
+        type: choice
+        options: [dokploy, coolify]
+      image_digest:
+        description: Immutable OCI image digest (sha256:...)
+        required: true
+        type: string
+      environment:
+        description: Target environment
+        required: true
+        type: choice
+        options: [preview, staging, production]
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: deploy-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  preview-data:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    environment: preview
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          python-version: '3.14'
+      - run: uv sync --locked --all-packages
+      - name: Create or clean Neon preview branch
+        env:
+          NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          ACTION: ${{ github.event.action == 'closed' && 'cleanup' || 'ensure' }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
+        run: >-
+          uv run --package kya-platform-backend python infra/neon/preview_branch.py
+          "$ACTION" --pull-request "$PR_NUMBER" --commit "$COMMIT_SHA"
+
+  validate:
+    if: github.event_name != 'pull_request' || github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          python-version: '3.14'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - run: uv sync --locked --all-packages
+      - run: uv run pytest
+
+  guard:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Guard production promotion
+        if: inputs.environment == 'production'
+        env:
+          REF: ${{ github.ref_name }}
+        run: test "$REF" = "main"
+      - name: Validate digest
+        env:
+          DIGEST: ${{ inputs.image_digest }}
+        run: echo "$DIGEST" | grep -Eq '^sha256:[0-9a-f]{64}$'
+
+  promote:
+    if: github.event_name == 'workflow_dispatch'
+    needs: guard
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Submit provider-neutral promotion
+        env:
+          PROVIDER: ${{ inputs.provider }}
+          TARGET_ENV: ${{ inputs.environment }}
+          IMAGE_DIGEST: ${{ inputs.image_digest }}
+        run: |
+          echo "Promotion request: provider=$PROVIDER environment=$TARGET_ENV image=$IMAGE_DIGEST"
+          echo "The provider adapter resolves the target resource and records the deployment reference."

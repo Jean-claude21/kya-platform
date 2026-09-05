@@ -1,0 +1,18 @@
+{
+  "status": "published",
+  "channel": "pilot",
+  "candidateDigest": "094762a78dd0a27b71a86ba791941c210256b705ef426504251c41cb7060bb74",
+  "sourceCommit": "ddbb9c688e83d5d1016c691a6673a00b7f8ab5ae",
+  "executionPersonas": {
+    "submittedBy": "diana",
+    "reviewedBy": "chloe",
+    "approvedBy": "alice",
+    "publishedBy": "cvsi-release-service"
+  },
+  "checks": {
+    "manifestContract": "passed",
+    "skillValidator": "passed",
+    "separationOfDuties": "passed",
+    "sourceDigest": "passed"
+  }
+}

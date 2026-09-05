@@ -1,0 +1,22 @@
+# syntax=docker/dockerfile:1.7
+FROM node:24.8.0-alpine AS build
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
+RUN corepack enable
+WORKDIR /workspace
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps ./apps
+COPY packages ./packages
+COPY tsconfig.json turbo.json ./
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @kya/web build
+
+FROM node:24.8.0-alpine AS runtime
+ENV NODE_ENV=production
+ENV PORT=3000
+WORKDIR /app
+COPY --from=build --chown=node:node /workspace/apps/web/dist ./dist
+USER node
+EXPOSE 3000
+CMD ["node", "dist/server/server.js"]

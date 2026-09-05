@@ -1,0 +1,27 @@
+# syntax=docker/dockerfile:1.7
+FROM ghcr.io/astral-sh/uv:0.11.28 AS uv
+
+FROM python:3.14-slim AS runtime
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy
+WORKDIR /app
+
+COPY --from=uv /uv /uvx /bin/
+COPY pyproject.toml uv.lock ./
+COPY apps/backend/pyproject.toml apps/backend/pyproject.toml
+RUN uv sync \
+    --locked \
+    --no-dev \
+    --package kya-platform-backend \
+    --no-install-package kya-platform-backend
+
+COPY apps/backend apps/backend
+RUN uv sync --locked --no-dev --package kya-platform-backend
+
+RUN useradd --no-log-init --create-home --uid 10001 kya
+USER kya
+EXPOSE 8000
+
+CMD ["/app/.venv/bin/uvicorn", "kya_platform.main:app", "--host", "0.0.0.0", "--port", "8000"]
