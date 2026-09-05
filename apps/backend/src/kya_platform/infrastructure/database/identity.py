@@ -36,5 +36,27 @@ class SqlAlchemyIdentityMapping:
             )
             return result.rowcount  # type: ignore[attr-defined, no-any-return]
 
+    async def provision_identity(self, identity: AuthenticatedIdentity, principal_id: UUID) -> UUID:
+        """Create the immutable first binding, or return the existing active binding."""
+
+        async with self._session_factory.begin() as session:
+            statement = select(ExternalIdentity).where(
+                ExternalIdentity.issuer == identity.issuer,
+                ExternalIdentity.subject == identity.subject,
+            )
+            existing = await session.scalar(statement)
+            if existing is not None:
+                if existing.disabled_at is not None:
+                    raise PermissionError("identity is deprovisioned")
+                return existing.principal_id
+            session.add(
+                ExternalIdentity(
+                    issuer=identity.issuer,
+                    subject=identity.subject,
+                    principal_id=principal_id,
+                )
+            )
+        return principal_id
+
 
 __all__ = ["SqlAlchemyIdentityMapping"]
