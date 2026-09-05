@@ -1,8 +1,8 @@
-import { useState, type ReactNode, type SyntheticEvent } from 'react';
+import { useEffect, useState, type ReactNode, type SyntheticEvent } from 'react';
 
 import { KyaMark } from '@kya/design-system';
 
-import { authClient } from './client';
+import { authClient, getAccessToken } from './client';
 
 type Mode = 'sign-in' | 'sign-up';
 
@@ -16,6 +16,40 @@ export function AuthGate({ children }: Readonly<{ children: ReactNode }>) {
   const [mode, setMode] = useState<Mode>('sign-in');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
+  const [accountLinked, setAccountLinked] = useState(false);
+  const [linkError, setLinkError] = useState('');
+
+  useEffect(() => {
+    if (!session.data?.user) {
+      setAccountLinked(false);
+      setLinkError('');
+      return;
+    }
+
+    const controller = new AbortController();
+    async function linkAccount() {
+      try {
+        const token = await getAccessToken();
+        if (!token) throw new Error('Jeton de session indisponible.');
+        const apiUrl = import.meta.env.VITE_KYA_API_URL;
+        if (!apiUrl) throw new Error('API KYA non configurée.');
+        const response = await fetch(`${apiUrl.replace(/\/$/, '')}/api/v1/account/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error('Votre identité KYA n’a pas pu être initialisée.');
+        setAccountLinked(true);
+        setLinkError('');
+      } catch (failure) {
+        if (!controller.signal.aborted) setLinkError(messageOf(failure));
+      }
+    }
+
+    void linkAccount();
+    return () => {
+      controller.abort();
+    };
+  }, [session.data?.user]);
 
   async function submit(event: SyntheticEvent<HTMLFormElement, SubmitEvent>) {
     event.preventDefault();
@@ -42,16 +76,28 @@ export function AuthGate({ children }: Readonly<{ children: ReactNode }>) {
     }
   }
 
-  if (session.isPending) {
+  if (session.isPending || (session.data?.user && !accountLinked && !linkError)) {
     return (
       <main className="auth-loading" aria-live="polite">
         <KyaMark />
-        <p>Ouverture de votre espace KYA…</p>
+        <p>{session.isPending ? 'Ouverture de votre espace KYA…' : 'Liaison de votre identité KYA…'}</p>
       </main>
     );
   }
 
-  if (session.data?.user) return children;
+  if (session.data?.user && accountLinked) return children;
+
+  if (session.data?.user && linkError) {
+    return (
+      <main className="auth-loading" role="alert">
+        <KyaMark />
+        <p>{linkError}</p>
+        <button type="button" onClick={() => window.location.reload()}>
+          Réessayer
+        </button>
+      </main>
+    );
+  }
 
   return (
     <main className="auth-page">
