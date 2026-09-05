@@ -7,10 +7,14 @@ from uuid import UUID
 import pytest
 from fastapi import FastAPI, Query
 from fastapi.testclient import TestClient
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from pydantic import SecretStr
 
 from kya_platform.observability import ApiError, current_correlation_id
 from kya_platform.observability.logging import REDACTED, SafeJsonFormatter, redact
+from kya_platform.observability.middleware import CorrelationMiddleware
 
 
 @pytest.mark.contract
@@ -150,3 +154,54 @@ def test_correlation_context_is_cleared_after_request(client: TestClient) -> Non
     client.get("/api/v1/health/live")
 
     assert current_correlation_id() is None
+
+
+@pytest.mark.unit
+def test_http_request_emits_a_correlated_server_span() -> None:
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    application = FastAPI()
+
+    @application.get("/workspaces")
+    async def workspaces() -> dict[str, bool]:
+        return {"ok": True}
+
+    application.add_middleware(
+        CorrelationMiddleware,
+        tracer=provider.get_tracer("test"),
+    )
+    supplied = "019914b2-1a40-7000-8000-000000000021"
+
+    with TestClient(application) as instrumented_client:
+        response = instrumented_client.get("/workspaces", headers={"X-Correlation-ID": supplied})
+
+    spans = exporter.get_finished_spans()
+    assert response.status_code == 200
+    assert len(spans) == 1
+    assert spans[0].kind.name == "SERVER"
+    assert spans[0].attributes["kya.correlation_id"] == supplied
+    assert spans[0].attributes["http.response.status_code"] == 200
+
+
+@pytest.mark.unit
+def test_health_probe_is_not_traced() -> None:
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    application = FastAPI()
+
+    @application.get("/api/v1/health/live")
+    async def live() -> dict[str, str]:
+        return {"status": "ok"}
+
+    application.add_middleware(
+        CorrelationMiddleware,
+        tracer=provider.get_tracer("test"),
+    )
+
+    with TestClient(application) as instrumented_client:
+        response = instrumented_client.get("/api/v1/health/live")
+
+    assert response.status_code == 200
+    assert exporter.get_finished_spans() == ()

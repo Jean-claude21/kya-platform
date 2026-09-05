@@ -7,6 +7,7 @@ from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from typing import Any
 
+from opentelemetry import trace
 from pydantic import SecretStr
 
 from kya_platform.observability.context import current_correlation_id
@@ -62,6 +63,10 @@ class SafeJsonFormatter(logging.Formatter):
         correlation_id = current_correlation_id()
         if correlation_id is not None:
             payload["correlation_id"] = correlation_id
+        span_context = trace.get_current_span().get_span_context()
+        if span_context.is_valid:
+            payload["trace_id"] = format(span_context.trace_id, "032x")
+            payload["span_id"] = format(span_context.span_id, "016x")
         for key, value in record.__dict__.items():
             if key not in _STANDARD_LOG_FIELDS and key not in {"message", "asctime"}:
                 payload[key] = redact(value, key=key)

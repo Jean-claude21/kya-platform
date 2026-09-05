@@ -1,9 +1,12 @@
 """Pure ASGI middleware for safe request correlation and access logs."""
 
 import logging
+from contextlib import nullcontext
 from time import perf_counter
 from uuid import UUID, uuid7
 
+from opentelemetry.metrics import Meter
+from opentelemetry.trace import SpanKind, Status, StatusCode, Tracer
 from starlette.datastructures import Headers, MutableHeaders
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
@@ -25,8 +28,29 @@ def _validated_correlation_id(candidate: str | None) -> str:
 class CorrelationMiddleware:
     """Attach one safe correlation ID to context, state, response and logs."""
 
-    def __init__(self, app: ASGIApp) -> None:
+    def __init__(
+        self, app: ASGIApp, *, tracer: Tracer | None = None, meter: Meter | None = None
+    ) -> None:
         self.app = app
+        self.tracer = tracer
+        self.request_counter = (
+            meter.create_counter(
+                "kya.http.server.requests",
+                unit="{request}",
+                description="Completed KYA Platform HTTP requests",
+            )
+            if meter is not None
+            else None
+        )
+        self.duration_histogram = (
+            meter.create_histogram(
+                "kya.http.server.duration",
+                unit="ms",
+                description="KYA Platform HTTP request duration",
+            )
+            if meter is not None
+            else None
+        )
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
@@ -47,10 +71,39 @@ class CorrelationMiddleware:
                 MutableHeaders(scope=message).append(CORRELATION_HEADER, correlation_id)
             await send(message)
 
+        is_health_probe = scope["path"].startswith("/api/v1/health/")
+        span_context = (
+            self.tracer.start_as_current_span(
+                f"{scope['method']} {scope['path']}",
+                kind=SpanKind.SERVER,
+                attributes={
+                    "http.request.method": scope["method"],
+                    "url.path": scope["path"],
+                    "kya.correlation_id": correlation_id,
+                },
+            )
+            if self.tracer is not None and not is_health_probe
+            else nullcontext(None)
+        )
         try:
-            await self.app(scope, receive, send_with_correlation)
+            with span_context as span:
+                try:
+                    await self.app(scope, receive, send_with_correlation)
+                finally:
+                    if span is not None:
+                        span.set_attribute("http.response.status_code", response_status)
+                        if response_status >= 500:
+                            span.set_status(Status(StatusCode.ERROR))
         finally:
             duration_ms = round((perf_counter() - started_at) * 1000, 2)
+            metric_attributes = {
+                "http.request.method": scope["method"],
+                "http.response.status_code": response_status,
+            }
+            if self.request_counter is not None:
+                self.request_counter.add(1, metric_attributes)
+            if self.duration_histogram is not None:
+                self.duration_histogram.record(duration_ms, metric_attributes)
             LOGGER.info(
                 "request.completed",
                 extra={

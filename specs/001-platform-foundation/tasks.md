@@ -103,7 +103,7 @@
 
 - [x] T070 [P] Run dependency, secret, container and SBOM controls from .github/workflows/security.yml
 - [ ] T071 [P] Validate accessibility and low-bandwidth journeys in tests/e2e/
-- [ ] T072 [P] Add OpenTelemetry traces, metrics and health checks in apps/backend/src/kya_platform/observability/
+- [x] T072 [P] Add OpenTelemetry traces, metrics and health checks in apps/backend/src/kya_platform/observability/
 - [ ] T073 [P] Implement notification preferences, deduplication and delivery workers in apps/backend/src/kya_platform/workers/
 - [ ] T074 [P] Prove identity deprovisioning revokes sessions and tokens in apps/backend/tests/security/test_deprovisioning.py
 - [ ] T075 [P] Implement artifact signing, verification and compromise revocation in apps/backend/src/kya_platform/application/publication/integrity/
