@@ -8,9 +8,10 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from kya_platform.config import Settings
+from kya_platform.config import get_settings
 from kya_platform.infrastructure.database import models  # noqa: F401
 from kya_platform.infrastructure.database.base import Base
+from kya_platform.infrastructure.database.session import normalize_asyncpg_url
 
 config = context.config
 if config.config_file_name is not None:
@@ -20,11 +21,11 @@ target_metadata = Base.metadata
 
 
 def migration_url() -> str:
-    settings = Settings()
+    settings = get_settings()
     selected_url = settings.database_migration_url or settings.database_url
     if selected_url is None:
         raise RuntimeError("KYA_DATABASE_MIGRATION_URL is required for migrations")
-    return selected_url.get_secret_value().replace("%", "%%")
+    return normalize_asyncpg_url(selected_url.get_secret_value())
 
 
 def run_migrations_offline() -> None:

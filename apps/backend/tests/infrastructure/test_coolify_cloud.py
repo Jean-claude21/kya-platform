@@ -1,3 +1,5 @@
+import json
+
 import httpx
 import pytest
 from pydantic import SecretStr
@@ -8,14 +10,22 @@ from kya_platform.infrastructure.deployment import DeploymentError, DeploymentRe
 
 @pytest.mark.asyncio
 async def test_coolify_deploy_status_and_rollback() -> None:
+    requests: list[tuple[str, str, dict[str, object] | None]] = []
+
     def handler(request: httpx.Request) -> httpx.Response:
         path = request.url.path
+        payload = None
+        if request.content:
+            payload = json.loads(request.content)
+        requests.append((request.method, path, payload))
         if path.endswith("/environments"):
             return httpx.Response(200, json=[{"id": 2, "name": "dev"}])
         if path.endswith("/applications"):
             return httpx.Response(
                 200, json=[{"uuid": "app-1", "name": "kya-platform-backend", "environment_id": 2}]
             )
+        if path.endswith("/applications/app-1"):
+            return httpx.Response(200, json={"uuid": "app-1"})
         if path.endswith("/deploy"):
             return httpx.Response(200, json={"deployments": [{"deployment_uuid": "dep-1"}]})
         if path.endswith("/deployments/dep-1"):
@@ -33,6 +43,7 @@ async def test_coolify_deploy_status_and_rollback() -> None:
         )
         deployed = await adapter.deploy(request)
         assert deployed.status == "queued"
+        assert ("PATCH", "/api/v1/applications/app-1", {"git_commit_sha": "b" * 40}) in requests
         assert await adapter.status(deployed.id) == "healthy"
         assert (await adapter.rollback(deployed.id)).status == "rolling_back"
 

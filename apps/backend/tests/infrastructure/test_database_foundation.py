@@ -9,6 +9,7 @@ from kya_platform.infrastructure.database.models import (
     IdempotencyRecord,
     OutboxEvent,
 )
+from kya_platform.infrastructure.database.session import normalize_asyncpg_url
 
 
 @pytest.mark.unit
@@ -55,3 +56,26 @@ def test_external_identity_is_unique_by_issuer_and_subject() -> None:
 
     assert ExternalIdentity.__table__.schema == "identity"
     assert ("issuer", "subject") in constraint_columns
+
+
+@pytest.mark.unit
+def test_neon_connection_url_is_normalized_for_asyncpg() -> None:
+    normalized = normalize_asyncpg_url(
+        "postgresql://user:p%40ss@db.example/neondb"
+        "?sslmode=require&channel_binding=require&application_name=kya"
+    )
+
+    assert normalized == (
+        "postgresql+asyncpg://user:p%40ss@db.example/neondb?application_name=kya&ssl=require"
+    )
+    assert "channel_binding" not in normalized
+    assert "sslmode" not in normalized
+
+
+@pytest.mark.unit
+def test_asyncpg_connection_url_preserves_existing_ssl_setting() -> None:
+    normalized = normalize_asyncpg_url(
+        "postgresql+asyncpg://user:password@db.example/neondb?ssl=verify-full&sslmode=require"
+    )
+
+    assert normalized.endswith("?ssl=verify-full")
