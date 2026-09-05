@@ -101,7 +101,7 @@
 
 ## Phase 10 — Hardening and release
 
-- [ ] T070 [P] Run dependency, secret, container and SBOM controls from .github/workflows/security.yml
+- [x] T070 [P] Run dependency, secret, container and SBOM controls from .github/workflows/security.yml
 - [ ] T071 [P] Validate accessibility and low-bandwidth journeys in tests/e2e/
 - [ ] T072 [P] Add OpenTelemetry traces, metrics and health checks in apps/backend/src/kya_platform/observability/
 - [ ] T073 [P] Implement notification preferences, deduplication and delivery workers in apps/backend/src/kya_platform/workers/
