@@ -120,20 +120,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 store_id=store_id,
                 model_id=model_id,
             )
-        if resolved_settings.has_bootstrap_configuration:
-            owner_email = resolved_settings.bootstrap_owner_email
-            claim_hash = resolved_settings.bootstrap_claim_code_hash
-            if owner_email is None or claim_hash is None:
-                raise RuntimeError("validated bootstrap configuration is incomplete")
-            claims = app.state.bootstrap_claims
-            authorization = app.state.authorization
-            if claims is None or authorization is None:
-                raise RuntimeError("bootstrap requires database and OpenFGA configuration")
+        claims = app.state.bootstrap_claims
+        authorization = app.state.authorization
+        if resolved_settings.has_bootstrap_configuration and (
+            claims is None or authorization is None
+        ):
+            raise RuntimeError("bootstrap requires database and OpenFGA configuration")
+        if claims is not None:
             app.state.bootstrap_service = BootstrapService(
                 repository=claims,
                 grant=authorization,
-                owner_email=owner_email,
-                claim_code_hash=claim_hash,
+                owner_email=resolved_settings.bootstrap_owner_email,
+                claim_code_hash=resolved_settings.bootstrap_claim_code_hash,
             )
 
         # The MCP SDK's HTTP manager is deliberately single-start. Unit/integration

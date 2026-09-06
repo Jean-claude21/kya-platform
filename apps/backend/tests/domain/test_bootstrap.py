@@ -10,6 +10,7 @@ from kya_platform.bootstrap import (
     BootstrapClaim,
     BootstrapRejectedError,
     BootstrapService,
+    BootstrapUnavailableError,
     owner_fingerprint,
 )
 
@@ -55,6 +56,23 @@ def service(repository: MemoryClaims, grant: RecordingGrant) -> BootstrapService
         owner_email="owner@kya-energy.com",
         claim_code_hash=SecretStr(CODE_HASH),
     )
+
+
+@pytest.mark.unit
+def test_active_bootstrap_requires_paired_secrets_and_authorization() -> None:
+    with pytest.raises(ValueError, match="configured together"):
+        BootstrapService(
+            repository=MemoryClaims(),
+            grant=RecordingGrant(),
+            owner_email="owner@kya-energy.com",
+        )
+    with pytest.raises(ValueError, match="authorization grant"):
+        BootstrapService(
+            repository=MemoryClaims(),
+            grant=None,
+            owner_email="owner@kya-energy.com",
+            claim_code_hash=SecretStr(CODE_HASH),
+        )
 
 
 @pytest.mark.unit
@@ -132,3 +150,31 @@ async def test_completed_claim_is_idempotent_for_same_owner() -> None:
 
     assert result is completed
     assert grant.grants == []
+
+
+@pytest.mark.unit
+async def test_sealed_bootstrap_reports_durable_completion_without_secrets() -> None:
+    completed = BootstrapClaim(OWNER_ID, owner_fingerprint("owner@kya-energy.com"), "complete")
+    sealed = BootstrapService(repository=MemoryClaims(completed), grant=None)
+
+    assert await sealed.status(email="anyone@kya-energy.com") == ("complete", False)
+    with pytest.raises(BootstrapAlreadyClaimedError):
+        await sealed.claim(
+            principal_id=OWNER_ID,
+            email="owner@kya-energy.com",
+            claim_code=SecretStr("one-time-code"),
+        )
+
+
+@pytest.mark.unit
+async def test_sealed_bootstrap_fails_closed_without_completed_claim() -> None:
+    sealed = BootstrapService(repository=MemoryClaims(), grant=None)
+
+    with pytest.raises(BootstrapUnavailableError):
+        await sealed.status(email="owner@kya-energy.com")
+    with pytest.raises(BootstrapUnavailableError):
+        await sealed.claim(
+            principal_id=OWNER_ID,
+            email="owner@kya-energy.com",
+            claim_code=SecretStr("one-time-code"),
+        )

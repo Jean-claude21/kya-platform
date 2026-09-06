@@ -116,6 +116,8 @@
 - [ ] T082 Promote dev to main through PR and create the mandatory annotated SemVer release tag
 - [x] T083 [US7] Implement and test autonomous one-time platform-owner initialization and canonical
       MCP URLs in apps/backend/ and apps/web/
+- [ ] T084 [US7] Seal completed platform-owner initialization, remove bootstrap secrets and record
+      production evidence in specs/001-platform-foundation/evidence/bootstrap-sealing.md
 
 ## Dependencies and parallelism
 

@@ -38,6 +38,10 @@ class BootstrapAlreadyClaimedError(RuntimeError):
     """Another principal already owns the platform."""
 
 
+class BootstrapUnavailableError(RuntimeError):
+    """The bootstrap is neither active nor durably completed."""
+
+
 def owner_fingerprint(email: str) -> str:
     return sha256(email.strip().casefold().encode()).hexdigest()
 
@@ -49,23 +53,40 @@ class BootstrapService:
         self,
         *,
         repository: BootstrapClaimRepository,
-        grant: PlatformOwnerGrant,
-        owner_email: str,
-        claim_code_hash: SecretStr,
+        grant: PlatformOwnerGrant | None,
+        owner_email: str | None = None,
+        claim_code_hash: SecretStr | None = None,
     ) -> None:
+        if (owner_email is None) != (claim_code_hash is None):
+            raise ValueError("bootstrap owner and claim code must be configured together")
+        if owner_email is not None and grant is None:
+            raise ValueError("an authorization grant is required while bootstrap is active")
         self._repository = repository
         self._grant = grant
-        self._owner_fingerprint = owner_fingerprint(owner_email)
+        self._owner_fingerprint = owner_fingerprint(owner_email) if owner_email else None
         self._claim_code_hash = claim_code_hash
 
     async def status(self, *, email: str | None) -> tuple[BootstrapState, bool]:
         existing = await self._repository.get()
+        if existing is not None and existing.state == "complete":
+            return "complete", False
+        if self._owner_fingerprint is None or self._claim_code_hash is None:
+            raise BootstrapUnavailableError("bootstrap is sealed without a completed claim")
         state: BootstrapState = existing.state if existing is not None else "pending"
         return state, email is not None and owner_fingerprint(email) == self._owner_fingerprint
 
     async def claim(
         self, *, principal_id: UUID, email: str | None, claim_code: SecretStr
     ) -> BootstrapClaim:
+        existing = await self._repository.get()
+        if (
+            existing is not None
+            and existing.state == "complete"
+            and (self._owner_fingerprint is None or self._claim_code_hash is None)
+        ):
+            raise BootstrapAlreadyClaimedError("platform owner already claimed")
+        if self._owner_fingerprint is None or self._claim_code_hash is None or self._grant is None:
+            raise BootstrapUnavailableError("bootstrap is sealed without a completed claim")
         supplied_hash = sha256(claim_code.get_secret_value().encode()).hexdigest()
         expected_hash = self._claim_code_hash.get_secret_value()
         email_matches = email is not None and compare_digest(
@@ -93,6 +114,7 @@ __all__ = [
     "BootstrapRejectedError",
     "BootstrapService",
     "BootstrapState",
+    "BootstrapUnavailableError",
     "PlatformOwnerGrant",
     "owner_fingerprint",
 ]

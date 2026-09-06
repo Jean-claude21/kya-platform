@@ -14,6 +14,7 @@ from kya_platform.bootstrap import (
     BootstrapAlreadyClaimedError,
     BootstrapRejectedError,
     BootstrapService,
+    BootstrapUnavailableError,
 )
 from kya_platform.observability import ApiError
 
@@ -76,7 +77,15 @@ async def bootstrap_status(
     request: Request,
     identity: Annotated[AuthenticatedIdentity, Depends(authenticated_identity)],
 ) -> BootstrapStatusView:
-    state, eligible = await _service(request).status(email=_email(identity))
+    try:
+        state, eligible = await _service(request).status(email=_email(identity))
+    except BootstrapUnavailableError as error:
+        raise ApiError(
+            503,
+            "bootstrap_unavailable",
+            "Initialisation indisponible",
+            "Le parcours d'initialisation sécurisé n'est pas configuré.",
+        ) from error
     return BootstrapStatusView(state=state, eligible=eligible)
 
 
@@ -106,6 +115,13 @@ async def claim_platform_owner(
             "bootstrap_already_claimed",
             "Initialisation déjà terminée",
             "Un propriétaire de la plateforme a déjà été établi.",
+        ) from error
+    except BootstrapUnavailableError as error:
+        raise ApiError(
+            503,
+            "bootstrap_unavailable",
+            "Initialisation indisponible",
+            "Le parcours d'initialisation sécurisé n'est pas configuré.",
         ) from error
 
     audit_writer = cast(AuditWriter | None, request.app.state.audit_writer)
