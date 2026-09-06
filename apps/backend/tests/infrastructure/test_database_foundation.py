@@ -8,6 +8,10 @@ from kya_platform.infrastructure.database.base import Base, new_id
 from kya_platform.infrastructure.database.bootstrap import _domain
 from kya_platform.infrastructure.database.models import (
     AuditEvent,
+    CatalogArtifact,
+    CatalogArtifactVersion,
+    CatalogCapabilityManifest,
+    CatalogPackageFile,
     ExternalIdentity,
     IdempotencyRecord,
     OutboxEvent,
@@ -33,11 +37,36 @@ def test_reliability_models_have_explicit_schema_ownership() -> None:
     assert IdempotencyRecord.__table__.schema == "reliability"
     assert set(Base.metadata.tables) == {
         "audit.event",
+        "catalog.artifact",
+        "catalog.artifact_version",
+        "catalog.capability_manifest",
+        "catalog.package_file",
         "identity.external_identity",
         "identity.platform_bootstrap_claim",
         "reliability.idempotency_record",
         "reliability.outbox_event",
     }
+
+
+@pytest.mark.unit
+def test_catalog_models_have_constraints_and_explicit_schema_ownership() -> None:
+    assert CatalogArtifact.__table__.schema == "catalog"
+    assert CatalogArtifactVersion.__table__.schema == "catalog"
+    assert CatalogPackageFile.__table__.schema == "catalog"
+    assert CatalogCapabilityManifest.__table__.schema == "catalog"
+
+    artifact_unique = {
+        tuple(column.name for column in constraint.columns)
+        for constraint in CatalogArtifact.__table__.constraints
+        if hasattr(constraint, "columns")
+    }
+    version_unique = {
+        tuple(column.name for column in constraint.columns)
+        for constraint in CatalogArtifactVersion.__table__.constraints
+        if hasattr(constraint, "columns")
+    }
+    assert ("registry_id", "slug") in artifact_unique
+    assert ("artifact_id", "version") in version_unique
 
 
 @pytest.mark.unit
