@@ -1,10 +1,11 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from mcp import Client
 from mcp.server.auth.provider import AccessToken
+from mcp.server.mcpserver.exceptions import ToolError
 from pydantic import ValidationError
 
 from kya_platform.authorization import AuthorizationDecision, CheckRequest, ListObjectsRequest
@@ -20,20 +21,24 @@ from kya_platform.mcp.registry import (
     ToolAuthorizer,
 )
 from kya_platform.mcp.registry.contracts import REGISTRY_TOOLS
-from kya_platform.mcp.registry.server import create_registry_server
+from kya_platform.mcp.registry.server import RegistryGuard, create_registry_server
 
 
 @dataclass
 class RecordingPolicy:
     allowed: bool
     checks: list[CheckRequest]
+    lists: list[ListObjectsRequest] = field(default_factory=list)
 
     async def check(self, request: CheckRequest) -> AuthorizationDecision:
         self.checks.append(request)
         return AuthorizationDecision(allowed=self.allowed, model_id="test-model")
 
     async def list_objects(self, request: ListObjectsRequest) -> tuple[str, ...]:
-        return ()
+        self.lists.append(request)
+        if not self.allowed:
+            return ()
+        return ("artifact:11111111-1111-4111-8111-111111111111",)
 
 
 def tool(name: str) -> Any:
@@ -96,6 +101,29 @@ async def test_oauth_scope_is_required_before_policy_check() -> None:
 
 
 @pytest.mark.asyncio
+async def test_registry_guard_rejects_missing_token_scope_and_active_unit() -> None:
+    authorization = AuthorizationService(RecordingPolicy(allowed=True, checks=[]))
+    with pytest.raises(ToolError, match="authentication_required"):
+        await RegistryGuard(authorization, lambda: None).allowed_artifact_ids("search_catalog")
+
+    missing_scope = AccessToken(
+        token="token", client_id="client", subject="alice", scopes=[], claims={"active_unit": "dss"}
+    )
+    with pytest.raises(ToolError, match="scope_required"):
+        await RegistryGuard(authorization, lambda: missing_scope).allowed_artifact_ids(
+            "search_catalog"
+        )
+
+    missing_unit = AccessToken(
+        token="token", client_id="client", subject="alice", scopes=["catalog:read"], claims={}
+    )
+    with pytest.raises(ToolError, match="active_unit_required"):
+        await RegistryGuard(authorization, lambda: missing_unit).allowed_artifact_ids(
+            "search_catalog"
+        )
+
+
+@pytest.mark.asyncio
 async def test_kya_permission_remains_required_when_scope_is_present() -> None:
     policy = RecordingPolicy(allowed=False, checks=[])
     authorizer = ToolAuthorizer(AuthorizationService(policy))
@@ -138,7 +166,12 @@ class NoopTokenVerifier:
 
 
 class SearchBackend:
-    async def search_catalog(self, request: SearchCatalogInput) -> SearchCatalogOutput:
+    async def search_catalog(
+        self, request: SearchCatalogInput, *, allowed_ids: tuple[str, ...]
+    ) -> SearchCatalogOutput:
+        if not allowed_ids:
+            return SearchCatalogOutput(items=())
+        assert allowed_ids == ("11111111-1111-4111-8111-111111111111",)
         return SearchCatalogOutput(
             items=(
                 ArtifactSummary(
@@ -149,6 +182,9 @@ class SearchBackend:
                 ),
             )
         )
+
+    async def resolve_artifact_id(self, public_id: str) -> UUID | None:
+        return UUID("11111111-1111-4111-8111-111111111111")
 
     async def get_artifact(self, request: Any) -> ArtifactDetail:
         raise AssertionError("not called")
@@ -198,7 +234,7 @@ async def test_registry_server_executes_authorized_search_in_memory() -> None:
     assert "search_catalog" in {item.name for item in listed.tools}
     assert result.is_error is False
     assert result.structured_content["items"][0]["artifact_id"] == ("kya:skill:business-method")
-    assert policy.checks[0].user == "user:alice"
+    assert policy.lists[0].user == "user:alice"
 
 
 @pytest.mark.asyncio
@@ -215,5 +251,5 @@ async def test_registry_server_returns_stable_authorization_error() -> None:
     async with Client(server) as client:
         result = await client.call_tool("search_catalog", {"query": "méthode"})
 
-    assert result.is_error is True
-    assert "not_authorized" in str(result.content)
+    assert result.is_error is False
+    assert result.structured_content["items"] == []

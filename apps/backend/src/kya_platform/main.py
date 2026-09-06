@@ -22,6 +22,7 @@ from kya_platform.infrastructure.database.artifact_registry import SqlAlchemyArt
 from kya_platform.infrastructure.database.audit import SqlAlchemyAuditRepository
 from kya_platform.infrastructure.database.bootstrap import SqlAlchemyBootstrapClaimRepository
 from kya_platform.infrastructure.database.identity import SqlAlchemyIdentityMapping
+from kya_platform.infrastructure.database.registry_mcp import SqlAlchemyRegistryMcpBackend
 from kya_platform.infrastructure.database.session import create_engine, create_session_factory
 from kya_platform.infrastructure.infisical import (
     HttpxInfisicalTransport,
@@ -86,6 +87,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             app.state.artifact_registry = ArtifactRegistryService(
                 SqlAlchemyArtifactRegistry(session_factory)
             )
+            app.state.registry_mcp_backend = SqlAlchemyRegistryMcpBackend(session_factory)
         app.state.infisical_secret_resolver = None
         if resolved_settings.has_infisical_configuration:
             api_url = resolved_settings.infisical_api_url
@@ -179,6 +181,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.state.bootstrap_claims = None
     application.state.bootstrap_service = None
     application.state.artifact_registry = None
+    application.state.registry_mcp_backend = None
     configure_security_runtime(application.state, resolved_settings)
     if resolved_settings.cors_allowed_origins:
         application.add_middleware(

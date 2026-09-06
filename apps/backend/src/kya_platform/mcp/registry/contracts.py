@@ -9,7 +9,12 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from kya_platform.application.reliability import JsonValue
-from kya_platform.authorization import AuthorizationService, CheckRequest
+from kya_platform.authorization import (
+    AuthorizationService,
+    CheckRequest,
+    ContextualTuple,
+    ListObjectsRequest,
+)
 from kya_platform.contracts.artifact_manifest import ArtifactType
 
 NonEmpty = Annotated[str, Field(min_length=1)]
@@ -174,6 +179,7 @@ class ToolAccessContext:
     oauth_scopes: frozenset[str]
     resource: str
     authorization_context: Mapping[str, JsonValue]
+    contextual_tuples: tuple[ContextualTuple, ...] = ()
 
 
 class ToolAuthorizer:
@@ -191,10 +197,24 @@ class ToolAuthorizer:
                 relation=tool.permission,
                 object=f"{tool.object_type}:{context.resource}",
                 context=context.authorization_context,
+                contextual_tuples=context.contextual_tuples,
             ),
             correlation_id=UUID(int=0),
         )
         return evidence.allowed
+
+    async def allowed_artifact_ids(self, context: ToolAccessContext) -> tuple[str, ...]:
+        if "catalog:read" not in context.oauth_scopes:
+            return ()
+        return await self._authorization.list_authorized_objects(
+            ListObjectsRequest(
+                user=context.principal,
+                relation="can_view",
+                object_type="artifact",
+                context=context.authorization_context,
+                contextual_tuples=context.contextual_tuples,
+            )
+        )
 
     async def visible_tools(self, context: ToolAccessContext) -> tuple[RegistryTool, ...]:
         visible: list[RegistryTool] = []

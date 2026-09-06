@@ -1,6 +1,7 @@
 """OAuth-protected Registry MCP server over Streamable HTTP."""
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
+from datetime import UTC, datetime
 from typing import Protocol
 from uuid import UUID
 
@@ -10,7 +11,9 @@ from mcp.server.auth.settings import AuthSettings
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 
-from kya_platform.authorization import AuthorizationService
+from kya_platform.application.reliability import JsonValue
+from kya_platform.authorization import AuthorizationService, ContextualTuple
+from kya_platform.authorization.model import active_unit_context
 from kya_platform.contracts.artifact_manifest import ArtifactType
 from kya_platform.mcp.registry.contracts import (
     REGISTRY_TOOLS,
@@ -36,7 +39,11 @@ type AccessTokenProvider = Callable[[], AccessToken | None]
 
 
 class RegistryBackend(Protocol):
-    async def search_catalog(self, request: SearchCatalogInput) -> SearchCatalogOutput: ...
+    async def search_catalog(
+        self, request: SearchCatalogInput, *, allowed_ids: tuple[str, ...]
+    ) -> SearchCatalogOutput: ...
+
+    async def resolve_artifact_id(self, public_id: str) -> UUID | None: ...
 
     async def get_artifact(self, request: GetArtifactInput) -> ArtifactDetail: ...
 
@@ -64,21 +71,62 @@ class RegistryGuard:
         self._authorizer = ToolAuthorizer(authorization)
         self._access_token_provider = access_token_provider
 
-    async def require(self, name: str, resource: str) -> None:
+    def _token(self, name: str) -> AccessToken:
         token = self._access_token_provider()
         if token is None:
             raise ToolError("authentication_required")
+        if _tool(name).oauth_scope not in token.scopes:
+            raise ToolError("scope_required")
+        return token
+
+    @staticmethod
+    def _principal(token: AccessToken) -> str:
         subject = token.subject or token.client_id
-        principal = subject if subject.startswith("user:") else f"user:{subject}"
+        return subject if subject.startswith("user:") else f"user:{subject}"
+
+    @staticmethod
+    def _active_context(
+        token: AccessToken,
+    ) -> tuple[Mapping[str, JsonValue], tuple[ContextualTuple, ...]]:
         claims = token.claims or {}
         active_unit = claims.get("active_unit")
-        context = {"active_unit": active_unit} if isinstance(active_unit, str) else {}
+        if not isinstance(active_unit, str) or not active_unit:
+            raise ToolError("active_unit_required")
+        principal = RegistryGuard._principal(token).removeprefix("user:")
+        return active_unit_context(
+            user_id=principal,
+            unit_id=active_unit,
+            current_time=datetime.now(UTC),
+        )
+
+    async def require(self, name: str, resource: str) -> None:
+        token = self._token(name)
+        context, contextual_tuples = self._active_context(token)
         allowed = await self._authorizer.is_allowed(
             _tool(name),
-            ToolAccessContext(principal, frozenset(token.scopes), resource, context),
+            ToolAccessContext(
+                self._principal(token),
+                frozenset(token.scopes),
+                resource,
+                context,
+                contextual_tuples,
+            ),
         )
         if not allowed:
             raise ToolError("not_authorized")
+
+    async def allowed_artifact_ids(self, name: str) -> tuple[str, ...]:
+        token = self._token(name)
+        context, contextual_tuples = self._active_context(token)
+        return await self._authorizer.allowed_artifact_ids(
+            ToolAccessContext(
+                self._principal(token),
+                frozenset(token.scopes),
+                "catalog",
+                context,
+                contextual_tuples,
+            )
+        )
 
 
 def create_registry_server(
@@ -114,21 +162,24 @@ def create_registry_server(
         cursor: str | None = None,
     ) -> SearchCatalogOutput:
         """Rechercher uniquement les artefacts que l'appelant peut découvrir."""
-        resource = workspace or "global"
-        await guard.require("search_catalog", resource)
+        allowed_ids = await guard.allowed_artifact_ids("search_catalog")
         return await backend.search_catalog(
             SearchCatalogInput(
                 query=query,
                 types=tuple(types or ()),
                 workspace=workspace,
                 cursor=cursor,
-            )
+            ),
+            allowed_ids=allowed_ids,
         )
 
     @server.tool(name="get_artifact", structured_output=True)
     async def get_artifact(artifact_id: str, version: str | None = None) -> ArtifactDetail:
         """Lire les métadonnées visibles d'un artefact, sans secret."""
-        await guard.require("get_artifact", artifact_id)
+        internal_id = await backend.resolve_artifact_id(artifact_id)
+        if internal_id is None:
+            raise ToolError("artifact_not_found")
+        await guard.require("get_artifact", str(internal_id))
         return await backend.get_artifact(
             GetArtifactInput(artifact_id=artifact_id, version=version)
         )
