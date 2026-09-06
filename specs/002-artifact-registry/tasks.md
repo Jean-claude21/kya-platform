@@ -21,7 +21,7 @@
 
 ## Phase 4 — Registry MCP
 
-- [ ] T011 Raccorder le backend de registre à Neon.
+- [x] T011 Raccorder le backend de registre à Neon.
 - [ ] T012 Monter le Registry MCP OAuth séparément du MCP public de diagnostic.
 - [ ] T013 Filtrer outils et résultats avant divulgation selon OAuth + OpenFGA.
 - [ ] T014 Tester Claude/ChatGPT avec recherche et détail d'un Skill autorisé.

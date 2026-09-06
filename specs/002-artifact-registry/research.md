@@ -48,6 +48,13 @@ chemins canoniques, absence de fichiers spéciaux, décompression bornée et cal
 Le Registry MCP expose découverte et demandes contrôlées. Il ne regroupe pas les outils métier des
 autres MCP. Les APIs et le MCP appellent les mêmes services applicatifs.
 
+### R-007 — Autoriser avant de rechercher
+
+Une recherche MCP commence par `ListObjects` dans OpenFGA avec l'unité active explicite. Neon ne
+reçoit ensuite que les identifiants internes déjà autorisés. Une liste vide renvoie un résultat vide
+sans interroger le catalogue ; la résolution d'un identifiant public précède un contrôle frais sur
+l'identifiant interne et ne divulgue jamais l'existence d'un artefact refusé.
+
 ## Références primaires
 
 - OpenAI Academy, « Using skills » : https://openai.com/academy/skills/
