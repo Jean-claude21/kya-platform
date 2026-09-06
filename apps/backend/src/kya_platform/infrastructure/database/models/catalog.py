@@ -78,6 +78,7 @@ class CatalogArtifactVersion(Base):
     source_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
     content_digest: Mapped[str] = mapped_column(String(64), nullable=False)
     manifest_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    manifest: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     inventory_digest: Mapped[str] = mapped_column(String(64), nullable=False)
     package_size: Mapped[int] = mapped_column(Integer, nullable=False)
     file_count: Mapped[int] = mapped_column(Integer, nullable=False)
