@@ -9,14 +9,14 @@
 ## Phase 2 — Persistance Neon
 
 - [x] T004 Ajouter les modèles SQLAlchemy catalogue et la migration Alembic immuable.
-- [ ] T005 Implémenter repository et unit of work catalogue.
+- [x] T005 Implémenter repository et transaction catalogue.
 - [ ] T006 Tester contraintes, concurrence et immutabilité d'une version publiée.
 
 ## Phase 3 — Première tranche verticale Skill
 
-- [ ] T007 Ajouter création et lecture d'artefact par API avec OpenFGA.
-- [ ] T008 Valider sans exécution un Skill multi-fichiers réel.
-- [ ] T009 Persister artefact, version, inventaire et événement outbox atomiquement.
+- [x] T007 Ajouter création et lecture d'artefact par API avec OpenFGA.
+- [x] T008 Valider sans exécution un Skill multi-fichiers réel.
+- [x] T009 Persister artefact, version, inventaire et événement outbox atomiquement.
 - [ ] T010 Prouver refus des traversées, archives ambiguës, secrets et limites dépassées.
 
 ## Phase 4 — Registry MCP

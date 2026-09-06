@@ -14,9 +14,11 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 
 from kya_platform.api.router import api_router
 from kya_platform.api.security import configure_security_runtime
+from kya_platform.application.artifact_registry import ArtifactRegistryService
 from kya_platform.application.audit import AuditQueryService, AuditWriter
 from kya_platform.bootstrap import BootstrapService
 from kya_platform.config import Settings, get_settings
+from kya_platform.infrastructure.database.artifact_registry import SqlAlchemyArtifactRegistry
 from kya_platform.infrastructure.database.audit import SqlAlchemyAuditRepository
 from kya_platform.infrastructure.database.bootstrap import SqlAlchemyBootstrapClaimRepository
 from kya_platform.infrastructure.database.identity import SqlAlchemyIdentityMapping
@@ -81,6 +83,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             app.state.audit_writer = AuditWriter(audit_repository)
             app.state.identity_mapping = SqlAlchemyIdentityMapping(session_factory)
             app.state.bootstrap_claims = SqlAlchemyBootstrapClaimRepository(session_factory)
+            app.state.artifact_registry = ArtifactRegistryService(
+                SqlAlchemyArtifactRegistry(session_factory)
+            )
         app.state.infisical_secret_resolver = None
         if resolved_settings.has_infisical_configuration:
             api_url = resolved_settings.infisical_api_url
@@ -173,6 +178,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.state.audit_writer = None
     application.state.bootstrap_claims = None
     application.state.bootstrap_service = None
+    application.state.artifact_registry = None
     configure_security_runtime(application.state, resolved_settings)
     if resolved_settings.cors_allowed_origins:
         application.add_middleware(
