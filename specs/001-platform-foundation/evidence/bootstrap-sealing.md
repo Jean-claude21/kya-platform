@@ -26,7 +26,10 @@ l'opération.
 6. Le secret `KYA_PLATFORM_BOOTSTRAP_CLAIM_CODE` a été supprimé du projet Infisical
    `KYA Platform Secrets`, environnement `staging`, chemin `/`.
 7. Une lecture Infisical ultérieure du même secret a renvoyé `404`.
-8. Après le scellage, l'application Web et les routes `/api/v1/health/live` et
+8. L'identité machine Infisical `kya-platform-preview` a été ramenée du rôle `Admin` au rôle
+   permanent `Viewer` après la suppression, puis son rôle a été relu par l'API.
+9. Après le scellage et cette réduction de privilèges, l'application Web et les routes
+   `/api/v1/health/live` et
    `/api/v1/health/ready` ont toutes répondu `200`.
 
 ## Contrôles de qualité associés
@@ -45,5 +48,5 @@ l'opération.
 - Sans enregistrement durable `complete`, une plateforme dépourvue de configuration
   d'amorçage échoue fermée avec un état indisponible ; elle ne rouvre jamais automatiquement
   l'initialisation.
-- Les identifiants techniques d'intégration doivent maintenant être ramenés au moindre privilège
-  et les clés exposées pendant la mise en place doivent être renouvelées séparément.
+- L'identité machine Infisical utilisée pour la validation est limitée à la lecture ; les clés
+  exposées pendant la mise en place doivent être renouvelées séparément.
