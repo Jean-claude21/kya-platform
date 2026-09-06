@@ -31,7 +31,8 @@ class Mapping:
 
 
 class Claims:
-    claim: BootstrapClaim | None = None
+    def __init__(self, claim: BootstrapClaim | None = None) -> None:
+        self.claim = claim
 
     async def get(self) -> BootstrapClaim | None:
         return self.claim
@@ -113,3 +114,26 @@ def test_status_fails_closed_when_bootstrap_is_not_configured(app: FastAPI) -> N
 
     assert response.status_code == 503
     assert response.json()["code"] == "bootstrap_unavailable"
+
+
+def test_completed_status_survives_bootstrap_secret_removal(app: FastAPI) -> None:
+    app.state.token_verifier = Verifier()
+    app.state.bootstrap_service = BootstrapService(
+        repository=Claims(
+            BootstrapClaim(
+                OWNER_ID,
+                owner_fingerprint("owner@kya-energy.com"),
+                "complete",
+            )
+        ),
+        grant=None,
+    )
+
+    with TestClient(app) as client:
+        response = client.get(
+            "/api/v1/bootstrap/status",
+            headers={"Authorization": "Bearer valid-token"},
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {"state": "complete", "eligible": False}
