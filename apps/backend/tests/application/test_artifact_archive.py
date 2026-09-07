@@ -24,9 +24,7 @@ def _digest(files: Mapping[str, bytes]) -> str:
     return hashlib.sha256(canonical.encode()).hexdigest()
 
 
-def _archive(
-    *, executable: bool = False, overrides: Mapping[str, bytes] | None = None
-) -> bytes:
+def _archive(*, executable: bool = False, overrides: Mapping[str, bytes] | None = None) -> bytes:
     files: dict[str, bytes] = {
         "SKILL.md": (
             b"---\nname: document-standard\n"
@@ -126,9 +124,10 @@ def test_rejects_manifest_digest_mismatch() -> None:
     archive = _archive()
     source = io.BytesIO(archive)
     output = io.BytesIO()
-    with zipfile.ZipFile(source) as original, zipfile.ZipFile(
-        output, "w", zipfile.ZIP_DEFLATED
-    ) as changed:
+    with (
+        zipfile.ZipFile(source) as original,
+        zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as changed,
+    ):
         for item in original.infolist():
             content = original.read(item)
             if item.filename == "references/charte.md":
@@ -201,11 +200,7 @@ def test_rejects_zip_without_files_or_manifest() -> None:
 def test_rejects_unclosed_or_incomplete_skill_frontmatter() -> None:
     with pytest.raises(ArchiveValidationError, match="not closed"):
         ArtifactArchiveValidator().validate(
-            _archive(
-                overrides={
-                    "SKILL.md": b"---\nname: incomplete\ndescription: present\nbody\n"
-                }
-            )
+            _archive(overrides={"SKILL.md": b"---\nname: incomplete\ndescription: present\nbody\n"})
         )
     with pytest.raises(ArchiveValidationError, match="requires name and description"):
         ArtifactArchiveValidator().validate(

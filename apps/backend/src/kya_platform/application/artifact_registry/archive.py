@@ -216,9 +216,7 @@ class ArtifactArchiveValidator:
         manifest = self._json_model(contents, "artifact.manifest.json", ArtifactManifest)
         capability = None
         if "capability.manifest.json" in contents:
-            capability = self._json_model(
-                contents, "capability.manifest.json", CapabilityManifest
-            )
+            capability = self._json_model(contents, "capability.manifest.json", CapabilityManifest)
         try:
             package = ArtifactPackage(
                 schema_version="1", artifact=manifest, files=files, capability=capability
@@ -251,9 +249,7 @@ class ArtifactArchiveValidator:
         return ValidatedArchive(package, hashlib.sha256(archive).hexdigest())
 
     @staticmethod
-    def _json_model(
-        contents: dict[str, bytes], path: str, model: type[_ContractT]
-    ) -> _ContractT:
+    def _json_model(contents: dict[str, bytes], path: str, model: type[_ContractT]) -> _ContractT:
         try:
             payload = contents[path].decode("utf-8")
             return model.model_validate_json(payload)
