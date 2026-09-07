@@ -6,6 +6,7 @@ from kya_platform.api.routes.account import router as account_router
 from kya_platform.api.routes.artifacts import router as artifacts_router
 from kya_platform.api.routes.audit import router as audit_router
 from kya_platform.api.routes.bootstrap import router as bootstrap_router
+from kya_platform.api.routes.core import router as core_router
 from kya_platform.api.routes.health import router as health_router
 from kya_platform.api.routes.oauth import router as oauth_router
 from kya_platform.api.routes.publications import attestation_router
@@ -18,6 +19,7 @@ api_router = APIRouter()
 api_router.include_router(account_router)
 api_router.include_router(artifacts_router)
 api_router.include_router(bootstrap_router)
+api_router.include_router(core_router)
 api_router.include_router(health_router)
 api_router.include_router(oauth_router)
 api_router.include_router(audit_router)

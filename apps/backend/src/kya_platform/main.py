@@ -21,6 +21,7 @@ from kya_platform.api.router import api_router
 from kya_platform.api.security import configure_security_runtime
 from kya_platform.application.artifact_registry import ArtifactRegistryService
 from kya_platform.application.audit import AuditQueryService, AuditWriter
+from kya_platform.application.core import CoreService
 from kya_platform.application.publication import (
     PublicationService,
     PublicationUnitOfWorkFactory,
@@ -36,6 +37,7 @@ from kya_platform.config import Settings, get_settings
 from kya_platform.infrastructure.database.artifact_registry import SqlAlchemyArtifactRegistry
 from kya_platform.infrastructure.database.audit import SqlAlchemyAuditRepository
 from kya_platform.infrastructure.database.bootstrap import SqlAlchemyBootstrapClaimRepository
+from kya_platform.infrastructure.database.core import SqlAlchemyCoreRepository
 from kya_platform.infrastructure.database.identity import SqlAlchemyIdentityMapping
 from kya_platform.infrastructure.database.oauth_broker import VALID_SCOPES, OAuthBroker
 from kya_platform.infrastructure.database.publication import (
@@ -127,6 +129,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             app.state.audit_writer = AuditWriter(audit_repository)
             app.state.identity_mapping = SqlAlchemyIdentityMapping(session_factory)
             app.state.bootstrap_claims = SqlAlchemyBootstrapClaimRepository(session_factory)
+            app.state.core_service = CoreService(SqlAlchemyCoreRepository(session_factory))
             app.state.artifact_registry = ArtifactRegistryService(
                 SqlAlchemyArtifactRegistry(session_factory)
             )
@@ -257,6 +260,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.state.audit_writer = None
     application.state.bootstrap_claims = None
     application.state.bootstrap_service = None
+    application.state.core_service = None
     application.state.artifact_registry = None
     application.state.publication_service = None
     application.state.attestation_repository = None

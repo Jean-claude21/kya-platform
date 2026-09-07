@@ -167,7 +167,7 @@ class AssignmentKind(StrEnum):
 @dataclass(frozen=True, slots=True)
 class PositionAssignment:
     id: UUID
-    principal_id: UUID
+    person_id: UUID
     position_id: UUID
     scope_unit_id: UUID
     kind: AssignmentKind
