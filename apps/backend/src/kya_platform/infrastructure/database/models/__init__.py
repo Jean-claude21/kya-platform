@@ -29,6 +29,16 @@ from kya_platform.infrastructure.database.models.core import (
     CoreSite,
     CoreWorkRelationship,
 )
+from kya_platform.infrastructure.database.models.data import (
+    DataAssetRow,
+    DataContractVersionRow,
+    DataIngestionRunRow,
+    DataLineageEdgeRow,
+    DataPipelineRow,
+    DataQualityResultRow,
+    DataSnapshotRow,
+    DataSourceRow,
+)
 from kya_platform.infrastructure.database.models.identity import ExternalIdentity
 from kya_platform.infrastructure.database.models.oauth import (
     OAuthClient,
@@ -67,6 +77,14 @@ __all__ = [
     "CoreProjectSite",
     "CoreSite",
     "CoreWorkRelationship",
+    "DataAssetRow",
+    "DataContractVersionRow",
+    "DataIngestionRunRow",
+    "DataLineageEdgeRow",
+    "DataPipelineRow",
+    "DataQualityResultRow",
+    "DataSnapshotRow",
+    "DataSourceRow",
     "ExternalIdentity",
     "IdempotencyRecord",
     "OAuthClient",
