@@ -221,11 +221,124 @@ class CatalogRelease(Base):
     reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
 
+class CatalogInstallation(Base):
+    __tablename__ = "installation"
+    __table_args__ = (
+        ForeignKeyConstraint(["artifact_id"], ["catalog.artifact.id"], ondelete="RESTRICT"),
+        ForeignKeyConstraint(["active_release_id"], ["catalog.release.id"], ondelete="RESTRICT"),
+        ForeignKeyConstraint(["rollback_release_id"], ["catalog.release.id"], ondelete="RESTRICT"),
+        UniqueConstraint(
+            "artifact_id",
+            "target",
+            "profile",
+            "scope",
+            name="uq_catalog_installation_target",
+        ),
+        CheckConstraint(
+            "profile IN ('codex', 'claude-code', 'portable-zip')", name="valid_profile"
+        ),
+        CheckConstraint("scope IN ('personal', 'project')", name="valid_scope"),
+        CheckConstraint("status IN ('active', 'suspended', 'revoked')", name="valid_status"),
+        CheckConstraint("revision > 0", name="positive_revision"),
+        Index("ix_catalog_installation_target", "target", "status"),
+        {"schema": "catalog"},
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=new_id)
+    artifact_id: Mapped[UUID] = mapped_column(nullable=False)
+    target: Mapped[str] = mapped_column(String(200), nullable=False)
+    profile: Mapped[str] = mapped_column(String(32), nullable=False)
+    scope: Mapped[str] = mapped_column(String(16), nullable=False)
+    client_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    active_release_id: Mapped[UUID] = mapped_column(nullable=False)
+    rollback_release_id: Mapped[UUID | None] = mapped_column(nullable=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="active")
+    installed_by: Mapped[UUID] = mapped_column(nullable=False)
+    installed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    last_checked_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+    revision: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+
+
+class CatalogInstallationHistory(Base):
+    __tablename__ = "installation_history"
+    __table_args__ = (
+        ForeignKeyConstraint(["installation_id"], ["catalog.installation.id"], ondelete="RESTRICT"),
+        ForeignKeyConstraint(["from_release_id"], ["catalog.release.id"], ondelete="RESTRICT"),
+        ForeignKeyConstraint(["to_release_id"], ["catalog.release.id"], ondelete="RESTRICT"),
+        UniqueConstraint(
+            "installation_id", "sequence", name="uq_catalog_installation_history_sequence"
+        ),
+        CheckConstraint(
+            "action IN ('install', 'update', 'rollback', 'suspend', 'resume', 'revoke')",
+            name="valid_action",
+        ),
+        Index("ix_catalog_installation_history", "installation_id", "sequence"),
+        {"schema": "catalog"},
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=new_id)
+    installation_id: Mapped[UUID] = mapped_column(nullable=False)
+    sequence: Mapped[int] = mapped_column(Integer, nullable=False)
+    action: Mapped[str] = mapped_column(String(32), nullable=False)
+    from_release_id: Mapped[UUID | None] = mapped_column(nullable=True)
+    to_release_id: Mapped[UUID] = mapped_column(nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    actor_id: Mapped[UUID] = mapped_column(nullable=False)
+    reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    occurred_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class CatalogDistributionOperation(Base):
+    __tablename__ = "distribution_operation"
+    __table_args__ = (
+        ForeignKeyConstraint(["installation_id"], ["catalog.installation.id"], ondelete="RESTRICT"),
+        ForeignKeyConstraint(["release_id"], ["catalog.release.id"], ondelete="RESTRICT"),
+        UniqueConstraint("actor_id", "idempotency_key", name="uq_catalog_operation_actor_key"),
+        CheckConstraint(
+            "kind IN ('install', 'update', 'rollback', 'suspend', 'resume', 'revoke')",
+            name="valid_kind",
+        ),
+        CheckConstraint(
+            "status IN ('accepted', 'pending', 'running', 'succeeded', 'failed', 'rolled-back')",
+            name="valid_status",
+        ),
+        Index("ix_catalog_operation_installation", "installation_id", "created_at"),
+        {"schema": "catalog"},
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=new_id)
+    installation_id: Mapped[UUID | None] = mapped_column(nullable=True)
+    release_id: Mapped[UUID | None] = mapped_column(nullable=True)
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="accepted")
+    actor_id: Mapped[UUID] = mapped_column(nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(200), nullable=False)
+    request_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    result: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    error_code: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 __all__ = [
     "CatalogArtifact",
     "CatalogArtifactVersion",
     "CatalogAttestation",
     "CatalogCapabilityManifest",
+    "CatalogDistributionOperation",
+    "CatalogInstallation",
+    "CatalogInstallationHistory",
     "CatalogPackageFile",
     "CatalogPublicationRequest",
     "CatalogRelease",

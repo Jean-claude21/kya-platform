@@ -14,6 +14,8 @@ from kya_platform.domain.distribution import (
     ChangeKind,
     DistributionRuleError,
     Installation,
+    InstallationStatus,
+    ReleaseAvailability,
     UpdatePolicy,
     ValidatedRelease,
 )
@@ -156,3 +158,55 @@ async def test_install_rejects_unverified_release_without_side_effect() -> None:
 
     assert repository.records == {}
     assert outbox.messages == []
+
+
+@pytest.mark.asyncio
+async def test_suspend_resume_and_revoke_are_audited_and_fail_closed() -> None:
+    repository = MemoryRepository()
+    outbox = MemoryOutbox()
+    service = DistributionService(
+        cast(DistributionUnitOfWorkFactory, lambda: MemoryUnitOfWork(repository, outbox))
+    )
+    installation_id = uuid4()
+    artifact_id = uuid4()
+    repository.records[installation_id] = Installation.install(
+        id=installation_id,
+        target="workspace:dss",
+        release=release(artifact_id, "1.0.0"),
+    )
+
+    suspended = await service.suspend(installation_id, correlation_id=uuid4())
+    resumed = await service.resume(installation_id, correlation_id=uuid4())
+    revoked = await service.revoke(installation_id, correlation_id=uuid4())
+
+    assert suspended.status is InstallationStatus.SUSPENDED
+    assert resumed.status is InstallationStatus.ACTIVE
+    assert revoked.status is InstallationStatus.REVOKED
+    assert revoked.revision == 4
+    assert [message.topic for message in outbox.messages] == [
+        "artifact.installation.suspended",
+        "artifact.installation.resumed",
+        "artifact.installation.revoked",
+    ]
+    with pytest.raises(DistributionRuleError, match="cannot be resumed"):
+        await service.resume(installation_id, correlation_id=uuid4())
+
+
+@pytest.mark.parametrize(
+    "availability",
+    [ReleaseAvailability.SUSPENDED, ReleaseAvailability.REVOKED],
+)
+def test_unavailable_release_cannot_be_installed(availability: ReleaseAvailability) -> None:
+    artifact_id = uuid4()
+    unavailable = ValidatedRelease(
+        id=uuid4(),
+        artifact_id=artifact_id,
+        version="1.0.0",
+        content_digest="a" * 64,
+        integrity_verified=True,
+        is_compatible=True,
+        availability=availability,
+    )
+
+    with pytest.raises(DistributionRuleError, match=availability.value):
+        Installation.install(id=uuid4(), target="workspace:dss", release=unavailable)
