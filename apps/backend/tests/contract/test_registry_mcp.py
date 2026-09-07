@@ -6,7 +6,9 @@ import pytest
 from mcp import Client
 from mcp.server.auth.provider import AccessToken
 from mcp.server.mcpserver.exceptions import ToolError
+from mcp.server.transport_security import TransportSecuritySettings
 from pydantic import ValidationError
+from starlette.testclient import TestClient
 
 from kya_platform.authorization import AuthorizationDecision, CheckRequest, ListObjectsRequest
 from kya_platform.authorization.service import AuthorizationService
@@ -253,3 +255,100 @@ async def test_registry_server_returns_stable_authorization_error() -> None:
 
     assert result.is_error is False
     assert result.structured_content["items"] == []
+
+
+@pytest.mark.asyncio
+async def test_registry_server_advertises_only_tools_in_token_scopes() -> None:
+    token = access_token()
+    server = create_registry_server(
+        backend=SearchBackend(),
+        authorization=AuthorizationService(RecordingPolicy(allowed=True, checks=[])),
+        token_verifier=NoopTokenVerifier(),
+        issuer_url="https://auth.example.test",
+        resource_url="https://registry.example.test/mcp",
+        access_token_provider=lambda: token,
+    )
+
+    async with Client(server) as client:
+        listed = await client.list_tools()
+
+    assert {item.name for item in listed.tools} == {
+        "search_catalog",
+        "get_artifact",
+        "list_updates",
+        "get_operation",
+    }
+
+
+class AcceptingMcpTokenVerifier:
+    async def verify_token(self, token: str) -> AccessToken | None:
+        return access_token() if token == "valid-token" else None
+
+
+def test_registry_http_uses_2026_stateless_request_metadata() -> None:
+    server = create_registry_server(
+        backend=SearchBackend(),
+        authorization=AuthorizationService(RecordingPolicy(allowed=True, checks=[])),
+        token_verifier=AcceptingMcpTokenVerifier(),
+        issuer_url="https://auth.example.test",
+        resource_url="https://registry.example.test/mcp",
+    )
+    transport = server.streamable_http_app(
+        streamable_http_path="/",
+        json_response=True,
+        stateless_http=True,
+        transport_security=TransportSecuritySettings(
+            enable_dns_rebinding_protection=True,
+            allowed_hosts=["testserver"],
+        ),
+    )
+    request = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/list",
+        "params": {
+            "_meta": {
+                "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+                "io.modelcontextprotocol/clientInfo": {
+                    "name": "kya-contract-test",
+                    "version": "1",
+                },
+                "io.modelcontextprotocol/clientCapabilities": {},
+            }
+        },
+    }
+
+    with TestClient(transport, follow_redirects=False) as client:
+        response = client.post(
+            "/",
+            headers={
+                "Authorization": "Bearer valid-token",
+                "Accept": "application/json, text/event-stream",
+                "MCP-Protocol-Version": "2026-07-28",
+                "Mcp-Method": "tools/list",
+            },
+            json=request,
+        )
+        unauthenticated = client.post(
+            "/",
+            headers={
+                "Accept": "application/json, text/event-stream",
+                "MCP-Protocol-Version": "2026-07-28",
+                "Mcp-Method": "tools/list",
+            },
+            json=request,
+        )
+        metadata = client.get("/.well-known/oauth-protected-resource/mcp")
+
+    assert response.status_code == 200
+    assert {item["name"] for item in response.json()["result"]["tools"]} == {
+        "search_catalog",
+        "get_artifact",
+        "list_updates",
+        "get_operation",
+    }
+    assert unauthenticated.status_code == 401
+    assert "resource_metadata=" in unauthenticated.headers["WWW-Authenticate"]
+    assert metadata.status_code == 200
+    assert metadata.json()["resource"] == "https://registry.example.test/mcp"
+    assert metadata.json()["scopes_supported"] == ["catalog:read"]
