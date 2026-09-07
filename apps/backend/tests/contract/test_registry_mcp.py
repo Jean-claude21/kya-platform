@@ -18,6 +18,8 @@ from kya_platform.mcp.registry import (
     ArtifactDetail,
     ArtifactSummary,
     Confirmation,
+    InstallationRecorded,
+    ListUpdatesOutput,
     RequestInstallInput,
     SearchCatalogInput,
     SearchCatalogOutput,
@@ -145,7 +147,7 @@ async def test_kya_permission_remains_required_when_scope_is_present() -> None:
 
     assert allowed is False
     assert policy.checks[0].object == "workspace:dss"
-    assert policy.checks[0].relation == "can_install"
+    assert policy.checks[0].relation == "can_edit"
 
 
 @pytest.mark.asyncio
@@ -194,16 +196,34 @@ class SearchBackend:
     async def resolve_artifact_id(self, public_id: str) -> UUID | None:
         return UUID("11111111-1111-4111-8111-111111111111")
 
+    async def resolve_installation_workspace(self, installation_id: UUID) -> str | None:
+        return "dss"
+
+    async def resolve_operation_workspace(self, operation_id: UUID) -> str | None:
+        return "dss"
+
     async def get_artifact(self, request: Any) -> ArtifactDetail:
         raise AssertionError("not called")
 
-    async def list_updates(self, request: Any) -> Any:
-        raise AssertionError("not called")
+    async def list_updates(self, request: Any) -> ListUpdatesOutput:
+        return ListUpdatesOutput(items=())
 
     async def request_install(self, request: Any) -> Any:
         raise AssertionError("not called")
 
+    async def confirm_installation(self, request: Any) -> InstallationRecorded:
+        return InstallationRecorded(
+            installation_id=UUID("01991e00-0000-7000-8000-000000000001"),
+            operation_id=UUID("01991e00-0000-7000-8000-000000000002"),
+        )
+
     async def request_update(self, request: Any) -> Any:
+        raise AssertionError("not called")
+
+    async def confirm_update(self, request: Any) -> Any:
+        raise AssertionError("not called")
+
+    async def manage_installation(self, request: Any) -> Any:
         raise AssertionError("not called")
 
     async def get_operation(self, request: Any) -> Any:
@@ -243,6 +263,26 @@ async def test_registry_server_executes_authorized_search_in_memory() -> None:
     assert result.is_error is False
     assert result.structured_content["items"][0]["artifact_id"] == ("kya:skill:business-method")
     assert policy.lists[0].user == "user:alice"
+
+
+@pytest.mark.asyncio
+async def test_registry_server_authorizes_installation_reads_through_workspace() -> None:
+    policy = RecordingPolicy(allowed=True, checks=[])
+    server = create_registry_server(
+        backend=SearchBackend(),
+        authorization=AuthorizationService(policy),
+        token_verifier=NoopTokenVerifier(),
+        issuer_url="https://auth.example.test",
+        resource_url="https://registry.example.test/mcp",
+        access_token_provider=access_token,
+    )
+
+    async with Client(server) as client:
+        result = await client.call_tool("list_updates", {"installation_id": str(uuid4())})
+
+    assert result.is_error is False
+    assert policy.checks[0].object == "workspace:dss"
+    assert policy.checks[0].relation == "can_view"
 
 
 @pytest.mark.asyncio
@@ -349,6 +389,45 @@ async def test_registry_server_returns_a_consent_bound_installation_plan() -> No
     assert result.structured_content["requires_client_confirmation"] is True
     assert result.structured_content["server_writes_local_files"] is False
     assert len(result.structured_content["steps"]) == 7
+
+
+@pytest.mark.asyncio
+async def test_registry_server_records_a_client_installation_receipt() -> None:
+    principal = "01991e00-0000-7000-8000-000000000003"
+    token = AccessToken(
+        token="opaque-install-token",
+        client_id="codex-test",
+        subject=principal,
+        scopes=["catalog:install"],
+        claims={"active_unit": "dss", "iss": "https://auth.example.test"},
+    )
+    server = create_registry_server(
+        backend=SearchBackend(),
+        authorization=AuthorizationService(RecordingPolicy(allowed=True, checks=[])),
+        token_verifier=NoopTokenVerifier(),
+        issuer_url="https://auth.example.test",
+        resource_url="https://registry.example.test/mcp",
+        access_token_provider=lambda: token,
+    )
+
+    async with Client(server) as client:
+        result = await client.call_tool(
+            "confirm_installation",
+            {
+                "plan_id": "01991e00-0000-7000-8000-000000000010",
+                "release_id": "01991e00-0000-7000-8000-000000000011",
+                "target": "workspace:dss",
+                "profile": "codex",
+                "scope": "personal",
+                "client_version": "2026-09",
+                "installed_digest": "b" * 64,
+                "idempotency_key": "confirm-installation-mcp-0001",
+                "confirmation": {"confirmed": True},
+            },
+        )
+
+    assert result.is_error is False
+    assert result.structured_content["status"] == "active"
 
 
 def test_registry_http_uses_2026_stateless_request_metadata() -> None:

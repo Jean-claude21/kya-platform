@@ -15,6 +15,7 @@ from kya_platform.application.publication.integrity import (
 from kya_platform.infrastructure.database.models import (
     CatalogArtifact,
     CatalogArtifactVersion,
+    CatalogInstallation,
     CatalogRelease,
 )
 from kya_platform.infrastructure.database.registry_mcp import SqlAlchemyRegistryMcpBackend
@@ -254,3 +255,55 @@ async def test_install_plan_rejects_an_incompatible_client() -> None:
 
     with pytest.raises(ToolError, match="target_profile_incompatible"):
         await backend.request_install(install_request())
+
+
+def installation() -> CatalogInstallation:
+    return CatalogInstallation(
+        id=UUID("01991c00-0000-7000-8000-000000000006"),
+        artifact_id=ALLOWED,
+        target="workspace:dss",
+        profile="codex",
+        scope="personal",
+        client_version="2026-09",
+        active_release_id=RELEASE,
+        status="active",
+        installed_by=OWNER,
+        revision=1,
+    )
+
+
+def candidate(version_number: str, release_suffix: int):
+    _artifact, version = rows(status="published")
+    version.id = UUID(f"01991c00-0000-7000-8000-{release_suffix:012d}")
+    version.version = version_number
+    release, _trust = signed_release()
+    release.id = UUID(f"01991c00-0000-7000-9000-{release_suffix:012d}")
+    release.artifact_version_id = version.id
+    return release, version
+
+
+def test_update_resolution_selects_latest_compatible_release_and_policy() -> None:
+    current = candidate("1.0.0", 10)[1]
+    patch = candidate("1.0.2", 11)
+    major = candidate("2.0.0", 12)
+
+    selected = SqlAlchemyRegistryMcpBackend._latest_compatible_candidate(
+        installation(), current, [patch, major]
+    )
+
+    assert selected is not None
+    assert selected[1].version == "2.0.0"
+    assert selected[2].value == "require-approval"
+
+
+def test_update_resolution_ignores_incompatible_or_invalid_versions() -> None:
+    current = candidate("1.0.0", 20)[1]
+    incompatible = candidate("1.1.0", 21)
+    incompatible[1].manifest["compatibility"]["codex"] = ">=2027"
+    invalid = candidate("not-semver", 22)
+
+    selected = SqlAlchemyRegistryMcpBackend._latest_compatible_candidate(
+        installation(), current, [incompatible, invalid]
+    )
+
+    assert selected is None
