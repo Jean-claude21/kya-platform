@@ -13,6 +13,11 @@ from kya_platform.application.artifact_registry import (
     ArtifactRecord,
     ArtifactRegistryService,
 )
+from kya_platform.application.artifact_registry.archive import (
+    MAX_ARCHIVE_BYTES,
+    ArchiveValidationError,
+    ArtifactArchiveValidator,
+)
 from kya_platform.contracts.artifact_package import ArtifactPackage
 from kya_platform.observability import ApiError
 
@@ -84,6 +89,74 @@ async def create_artifact_draft(
             actor_id=principal.principal_id,
             correlation_id=UUID(request.state.correlation_id),
         )
+    except ArtifactConflictError as error:
+        raise ApiError(
+            409,
+            "artifact_conflict",
+            "Artefact déjà existant",
+            "Cet identifiant ou cette version existe déjà.",
+        ) from error
+    except ValueError as error:
+        raise ApiError(
+            422,
+            "artifact_identity_invalid",
+            "Identité d'artefact incohérente",
+            "L'identifiant du manifeste doit correspondre au type et au slug.",
+        ) from error
+    return _response(record)
+
+
+@router.post(
+    "/imports",
+    response_model=ArtifactDraftResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def import_artifact_archive(
+    workspace_id: UUID,
+    slug: str,
+    business_owner_id: UUID,
+    technical_owner_id: UUID,
+    request: Request,
+    principal: Annotated[AuthorizedPrincipal, Depends(edit_workspace)],
+) -> ArtifactDraftResponse:
+    """Validate a real ZIP package without extraction or execution, then create its draft."""
+
+    content_type = request.headers.get("content-type", "").partition(";")[0].strip().casefold()
+    if content_type not in {"application/zip", "application/octet-stream"}:
+        raise ApiError(
+            415,
+            "artifact_archive_media_type_invalid",
+            "Format d'archive non pris en charge",
+            "Envoyez une archive ZIP avec le type application/zip.",
+        )
+    archive = bytearray()
+    async for chunk in request.stream():
+        archive.extend(chunk)
+        if len(archive) > MAX_ARCHIVE_BYTES:
+            raise ApiError(
+                413,
+                "artifact_archive_too_large",
+                "Archive trop volumineuse",
+                "L'archive compressée dépasse la limite autorisée.",
+            )
+    try:
+        validated = ArtifactArchiveValidator().validate(bytes(archive))
+        record = await _service(request).create_draft(
+            workspace_id=workspace_id,
+            slug=slug,
+            business_owner_id=business_owner_id,
+            technical_owner_id=technical_owner_id,
+            package=validated.package,
+            actor_id=principal.principal_id,
+            correlation_id=UUID(request.state.correlation_id),
+        )
+    except ArchiveValidationError as error:
+        raise ApiError(
+            422,
+            "artifact_archive_invalid",
+            "Paquet d'artefact refusé",
+            f"Le paquet ne respecte pas le contrat de sécurité : {error}",
+        ) from error
     except ArtifactConflictError as error:
         raise ApiError(
             409,

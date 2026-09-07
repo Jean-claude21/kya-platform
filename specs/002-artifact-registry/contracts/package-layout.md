@@ -31,3 +31,16 @@ sockets, chemins absolus et segments `..` sont interdits dans le profil portable
 Un paquet comportant `script`, macro, binaire natif ou commande reçoit
 `hasExecutableContent=true` et exige `capability.manifest.json`, analyse de dépendances, SBOM,
 tests en sandbox et approbation technique.
+
+## Intégrité et ingestion
+
+- L'import initial accepte une archive ZIP portable et bornée ; son contenu n'est jamais extrait
+  sur le serveur et aucun fichier n'est exécuté.
+- `artifact.integrity.digest` est le SHA-256 de l'inventaire canonique des contenus, hors
+  `artifact.manifest.json` afin d'éviter une référence circulaire. Chaque entrée contient le
+  chemin, la taille et le SHA-256 du fichier.
+- Le registre recalcule les digests depuis les octets reçus. Il ne fait pas confiance aux valeurs
+  déclarées par le client.
+- Les liens symboliques, entrées chiffrées, taux de compression suspects, binaires natifs,
+  secrets probables et chemins ambigus sont refusés avant toute persistance.
+- Un Skill exécutable exige un manifeste de capacité, au moins un test et une SBOM CycloneDX.
