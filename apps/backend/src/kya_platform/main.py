@@ -7,6 +7,9 @@ import httpx
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from mcp.server.auth.provider import ProviderTokenVerifier
+from mcp.server.auth.routes import create_auth_routes
+from mcp.server.auth.settings import AuthSettings, ClientRegistrationOptions, RevocationOptions
 from mcp.server.transport_security import TransportSecuritySettings
 from pydantic import SecretStr
 from starlette.routing import Route
@@ -23,6 +26,7 @@ from kya_platform.infrastructure.database.artifact_registry import SqlAlchemyArt
 from kya_platform.infrastructure.database.audit import SqlAlchemyAuditRepository
 from kya_platform.infrastructure.database.bootstrap import SqlAlchemyBootstrapClaimRepository
 from kya_platform.infrastructure.database.identity import SqlAlchemyIdentityMapping
+from kya_platform.infrastructure.database.oauth_broker import VALID_SCOPES, OAuthBroker
 from kya_platform.infrastructure.database.registry_mcp import SqlAlchemyRegistryMcpBackend
 from kya_platform.infrastructure.database.session import create_engine, create_session_factory
 from kya_platform.infrastructure.infisical import (
@@ -32,10 +36,8 @@ from kya_platform.infrastructure.infisical import (
 )
 from kya_platform.infrastructure.openfga import OpenFgaHttpAdapter
 from kya_platform.mcp.bootstrap import create_bootstrap_server
-from kya_platform.mcp.registry.oauth import NeonMcpTokenVerifier
 from kya_platform.mcp.registry.runtime import (
     StateAuthorizationPort,
-    StateIdentityMapping,
     StateRegistryBackend,
 )
 from kya_platform.mcp.registry.server import create_registry_server
@@ -80,15 +82,31 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         ),
     )
     registry_mcp_app: ASGIApp | None = None
+    database_engine = None
+    session_factory = None
+    oauth_broker: OAuthBroker | None = None
+    if resolved_settings.database_url is not None:
+        database_engine = create_engine(resolved_settings.database_url)
+        session_factory = create_session_factory(database_engine)
+        if resolved_settings.oauth_broker_enabled:
+            key = resolved_settings.oauth_client_secret_key
+            if key is None:
+                raise RuntimeError("validated OAuth broker key is missing")
+            oauth_broker = OAuthBroker(
+                session_factory,
+                issuer_url=resolved_settings.oauth_issuer_url,
+                resource_url=resolved_settings.registry_mcp_resource_url,
+                consent_url=resolved_settings.oauth_consent_url,
+                client_secret_key=key.get_secret_value(),
+                access_token_ttl_seconds=resolved_settings.oauth_access_token_ttl_seconds,
+                refresh_token_ttl_seconds=resolved_settings.oauth_refresh_token_ttl_seconds,
+            )
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         infisical_http_client: httpx.AsyncClient | None = None
         openfga_http_client: httpx.AsyncClient | None = None
-        database_engine = None
-        if resolved_settings.database_url is not None:
-            database_engine = create_engine(resolved_settings.database_url)
-            session_factory = create_session_factory(database_engine)
+        if session_factory is not None:
             audit_repository = SqlAlchemyAuditRepository(session_factory)
             app.state.audit_queries = AuditQueryService(audit_repository)
             app.state.audit_writer = AuditWriter(audit_repository)
@@ -199,19 +217,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.state.bootstrap_service = None
     application.state.artifact_registry = None
     application.state.registry_mcp_backend = None
+    application.state.oauth_broker = oauth_broker
     configure_security_runtime(application.state, resolved_settings)
     if resolved_settings.has_registry_mcp_configuration:
-        api_token_verifier = application.state.token_verifier
         authorization_server_url = resolved_settings.registry_mcp_authorization_server_url
-        if api_token_verifier is None or authorization_server_url is None:
+        if oauth_broker is None or authorization_server_url is None:
             raise RuntimeError("validated Registry MCP authentication is incomplete")
         registry_mcp = create_registry_server(
             backend=StateRegistryBackend(application.state),
             authorization=AuthorizationService(StateAuthorizationPort(application.state)),
-            token_verifier=NeonMcpTokenVerifier(
-                api_token_verifier,
-                StateIdentityMapping(application.state),
-            ),
+            token_verifier=ProviderTokenVerifier(oauth_broker),
             issuer_url=authorization_server_url,
             resource_url=resolved_settings.registry_mcp_resource_url,
         )
@@ -240,6 +255,24 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     install_error_handlers(application)
     application.include_router(api_router, prefix="/api/v1")
+    if oauth_broker is not None:
+        oauth_issuer = AuthSettings(
+            issuer_url=resolved_settings.oauth_issuer_url,
+            resource_server_url=None,
+        ).issuer_url
+        application.router.routes.extend(
+            create_auth_routes(
+                provider=oauth_broker,
+                issuer_url=oauth_issuer,
+                service_documentation_url=None,
+                client_registration_options=ClientRegistrationOptions(
+                    enabled=True,
+                    valid_scopes=sorted(VALID_SCOPES),
+                    default_scopes=["catalog:read"],
+                ),
+                revocation_options=RevocationOptions(enabled=True),
+            )
+        )
     application.router.routes.append(
         Route(
             "/mcp",

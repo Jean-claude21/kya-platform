@@ -14,6 +14,9 @@ from kya_platform.infrastructure.database.models import (
     CatalogPackageFile,
     ExternalIdentity,
     IdempotencyRecord,
+    OAuthClient,
+    OAuthGrant,
+    OAuthTokenRecord,
     OutboxEvent,
     PlatformBootstrapClaim,
 )
@@ -43,9 +46,15 @@ def test_reliability_models_have_explicit_schema_ownership() -> None:
         "catalog.package_file",
         "identity.external_identity",
         "identity.platform_bootstrap_claim",
+        "oauth.client",
+        "oauth.grant",
+        "oauth.token",
         "reliability.idempotency_record",
         "reliability.outbox_event",
     }
+    assert OAuthClient.__table__.schema == "oauth"
+    assert OAuthGrant.__table__.schema == "oauth"
+    assert OAuthTokenRecord.__table__.schema == "oauth"
 
 
 @pytest.mark.unit
