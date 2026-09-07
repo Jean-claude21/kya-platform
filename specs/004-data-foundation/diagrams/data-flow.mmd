@@ -1,0 +1,34 @@
+flowchart LR
+    subgraph Acquisition[Acquisition déterministe]
+        S[Source enregistrée]
+        C[Connecteur versionné]
+        R[Exécution tracée]
+        S --> R
+        C --> R
+    end
+
+    subgraph Control[Plan de contrôle · Neon PostgreSQL]
+        A[Actif de données]
+        K[Contrat versionné]
+        Q[Résultats qualité]
+        L[Lignée snapshot à snapshot]
+    end
+
+    subgraph Content[Plan de contenu]
+        O[(Neon Object Storage)]
+        P[Snapshot immuable]
+        O --> P
+    end
+
+    R --> P
+    A --> P
+    K --> P
+    P --> Q
+    P --> L
+    P --> B[Business API]
+    B --> M[MCP et applications]
+
+    classDef kya fill:#0B5D3B,color:#fff,stroke:#063D28,stroke-width:2px;
+    classDef data fill:#F6C344,color:#2C241B,stroke:#C57F17,stroke-width:2px;
+    class S,C,R,B,M kya;
+    class A,K,Q,L,O,P data;
