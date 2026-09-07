@@ -78,7 +78,7 @@ def test_multiple_dated_assignments_coexist_without_deriving_permissions() -> No
     )
     primary = PositionAssignment(
         id=UUID("019914b2-1a40-7000-8000-000000000061"),
-        principal_id=ALICE,
+        person_id=ALICE,
         position_id=position.id,
         scope_unit_id=CVSI,
         kind=AssignmentKind.PRIMARY,
@@ -86,7 +86,7 @@ def test_multiple_dated_assignments_coexist_without_deriving_permissions() -> No
     )
     delegated = PositionAssignment(
         id=UUID("019914b2-1a40-7000-8000-000000000062"),
-        principal_id=ALICE,
+        person_id=ALICE,
         position_id=position.id,
         scope_unit_id=TOGO,
         kind=AssignmentKind.DELEGATION,
@@ -138,7 +138,7 @@ def test_assignment_allocation_and_delegation_are_explicit() -> None:
     with pytest.raises(ValueError, match="between 1 and 100"):
         PositionAssignment(
             id=UUID("019914b2-1a40-7000-8000-000000000064"),
-            principal_id=ALICE,
+            person_id=ALICE,
             position_id=UUID("019914b2-1a40-7000-8000-000000000051"),
             scope_unit_id=CVSI,
             kind=AssignmentKind.SECONDARY,
@@ -148,7 +148,7 @@ def test_assignment_allocation_and_delegation_are_explicit() -> None:
     with pytest.raises(ValueError, match="delegating principal"):
         PositionAssignment(
             id=UUID("019914b2-1a40-7000-8000-000000000065"),
-            principal_id=ALICE,
+            person_id=ALICE,
             position_id=UUID("019914b2-1a40-7000-8000-000000000051"),
             scope_unit_id=CVSI,
             kind=AssignmentKind.DELEGATION,

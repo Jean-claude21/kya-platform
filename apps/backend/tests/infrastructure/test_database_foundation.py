@@ -15,6 +15,13 @@ from kya_platform.infrastructure.database.models import (
     CatalogPackageFile,
     CatalogPublicationRequest,
     CatalogRelease,
+    CoreClientAccount,
+    CoreExternalReference,
+    CoreOrganizationalUnit,
+    CoreOrganizationalUnitRelation,
+    CoreOrganizationalUnitType,
+    CoreParty,
+    CoreProject,
     ExternalIdentity,
     IdempotencyRecord,
     OAuthClient,
@@ -53,6 +60,20 @@ def test_reliability_models_have_explicit_schema_ownership() -> None:
         "catalog.package_file",
         "catalog.publication_request",
         "catalog.release",
+        "core.client_account",
+        "core.contact_point",
+        "core.external_reference",
+        "core.organizational_unit",
+        "core.organizational_unit_relation",
+        "core.organizational_unit_type",
+        "core.party",
+        "core.person_profile",
+        "core.position",
+        "core.position_assignment",
+        "core.project",
+        "core.project_site",
+        "core.site",
+        "core.work_relationship",
         "identity.external_identity",
         "identity.platform_bootstrap_claim",
         "oauth.client",
@@ -64,6 +85,30 @@ def test_reliability_models_have_explicit_schema_ownership() -> None:
     assert OAuthClient.__table__.schema == "oauth"
     assert OAuthGrant.__table__.schema == "oauth"
     assert OAuthTokenRecord.__table__.schema == "oauth"
+
+
+@pytest.mark.unit
+def test_kya_core_models_have_explicit_ownership_and_stable_keys() -> None:
+    assert CoreParty.__table__.schema == "core"
+    assert CoreOrganizationalUnitType.__table__.schema == "core"
+    assert CoreOrganizationalUnit.__table__.schema == "core"
+    assert CoreOrganizationalUnitRelation.__table__.schema == "core"
+    assert CoreClientAccount.__table__.schema == "core"
+    assert CoreProject.__table__.schema == "core"
+    assert CoreExternalReference.__table__.schema == "core"
+
+    unit_constraints = {
+        tuple(column.name for column in constraint.columns)
+        for constraint in CoreOrganizationalUnit.__table__.constraints
+        if hasattr(constraint, "columns")
+    }
+    external_constraints = {
+        tuple(column.name for column in constraint.columns)
+        for constraint in CoreExternalReference.__table__.constraints
+        if hasattr(constraint, "columns")
+    }
+    assert ("key",) in unit_constraints
+    assert ("system_key", "entity_type", "external_type", "external_id") in external_constraints
 
 
 @pytest.mark.unit
