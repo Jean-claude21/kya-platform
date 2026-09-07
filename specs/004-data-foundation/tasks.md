@@ -7,4 +7,4 @@
 - [x] Exposer la tranche verticale par la Business API.
 - [x] Ajouter les tests domaine, dépôt et intégration.
 - [x] Valider formatage, typage, sécurité, couverture et migration réelle.
-- [ ] Ouvrir la PR vers `dev` après passage de tous les contrôles.
+- [x] Ouvrir la PR vers `dev` après passage de tous les contrôles.

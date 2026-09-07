@@ -27,7 +27,7 @@ API/MCP sont lisibles et non chevauchants.
 
 ## Monorepo
 
-ESLint, TypeScript et Vitest passent (13 tests frontend). Le contrôle Prettier global reste rouge
-sur 130 fichiers préexistants hors de cette fonctionnalité. Les nouveaux documents Markdown de
-la fondation Data ont été formatés séparément. La machine locale signale aussi Node 22 alors que
-le dépôt exige Node 24 ; la CI utilise Node 24.
+La CI distante sous Node 24 confirme ESLint, TypeScript, Prettier et Vitest (13 tests frontend).
+La qualité backend, le modèle OpenFGA, la validation de preview, le scan des dépendances et le
+scan du conteneur sont également réussis sur la PR 30. La machine locale signale Node 22 alors
+que le dépôt exige Node 24 ; la CI exécute bien la version attendue.
