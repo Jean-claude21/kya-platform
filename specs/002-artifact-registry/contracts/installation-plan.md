@@ -33,11 +33,11 @@ par le serveur. À release, cible, profil, portée et version client identiques,
 
 ## Destinations symboliques
 
-| Profil | Personnel | Projet |
-|---|---|---|
-| Codex | `${CODEX_PERSONAL_SKILLS_DIR}/{slug}` | `.agents/skills/{slug}` |
-| Claude Code | `~/.claude/skills/{slug}` | `.claude/skills/{slug}` |
-| Zip portable | `${USER_SELECTED_DIRECTORY}/{slug}-{version}.zip` | identique |
+| Profil       | Personnel                                         | Projet                  |
+| ------------ | ------------------------------------------------- | ----------------------- |
+| Codex        | `${CODEX_PERSONAL_SKILLS_DIR}/{slug}`             | `.agents/skills/{slug}` |
+| Claude Code  | `~/.claude/skills/{slug}`                         | `.claude/skills/{slug}` |
+| Zip portable | `${USER_SELECTED_DIRECTORY}/{slug}-{version}.zip` | identique               |
 
 Codex et Claude Code n'acceptent ici que les artefacts `skill`. Les autres types passent par le zip
 portable jusqu'à l'existence d'un installateur spécifique, testé et gouverné.
