@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     cors_allowed_origins: tuple[str, ...] = ()
     mcp_allowed_hosts: tuple[str, ...] = ("127.0.0.1:*", "localhost:*")
     mcp_allowed_origins: tuple[str, ...] = ()
+    registry_mcp_enabled: bool = False
+    registry_mcp_authorization_server_url: str | None = None
+    registry_mcp_resource_url: str = "https://mcp.kya-platform.vttlife.com/registry/mcp"
     openfga_api_url: str | None = None
     openfga_api_token: SecretStr | None = None
     openfga_store_id: str | None = None
@@ -96,6 +99,33 @@ class Settings(BaseSettings):
             raise ValueError("OpenFGA configuration must be complete")
         if self.openfga_api_url is not None:
             self.openfga_api_url = self.openfga_api_url.rstrip("/")
+        self.registry_mcp_resource_url = self.registry_mcp_resource_url.rstrip("/")
+        if not self.registry_mcp_resource_url.startswith("https://"):
+            raise ValueError("Registry MCP resource URL must use HTTPS")
+        if self.registry_mcp_authorization_server_url is not None:
+            self.registry_mcp_authorization_server_url = (
+                self.registry_mcp_authorization_server_url.rstrip("/")
+            )
+            if not self.registry_mcp_authorization_server_url.startswith("https://"):
+                raise ValueError("Registry MCP authorization server URL must use HTTPS")
+        if self.registry_mcp_enabled:
+            registry_requirements = (
+                self.database_url,
+                self.registry_mcp_authorization_server_url,
+                self.neon_auth_issuer,
+                self.neon_auth_jwks_url,
+                self.neon_auth_audience,
+                self.openfga_api_url,
+                self.openfga_api_token,
+                self.openfga_store_id,
+                self.openfga_model_id,
+            )
+            if not all(registry_requirements):
+                raise ValueError("Enabled Registry MCP configuration must be complete")
+            if self.neon_auth_audience != self.registry_mcp_resource_url:
+                raise ValueError(
+                    "Registry MCP token audience must equal its canonical resource URL"
+                )
         bootstrap = (self.bootstrap_owner_email, self.bootstrap_claim_code_hash)
         if any(item is not None for item in bootstrap) and not all(bootstrap):
             raise ValueError("Bootstrap owner configuration must be complete")
@@ -118,6 +148,23 @@ class Settings(BaseSettings):
     @property
     def has_infisical_configuration(self) -> bool:
         return self.infisical_api_url is not None
+
+    @property
+    def has_registry_mcp_configuration(self) -> bool:
+        """Enable the protected Registry only when every fail-closed dependency exists."""
+
+        return self.registry_mcp_enabled and all(
+            (
+                self.database_url,
+                self.registry_mcp_authorization_server_url,
+                self.neon_auth_jwks_url,
+                self.neon_auth_audience,
+                self.openfga_api_url,
+                self.openfga_api_token,
+                self.openfga_store_id,
+                self.openfga_model_id,
+            )
+        )
 
 
 @lru_cache

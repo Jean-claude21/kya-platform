@@ -1,7 +1,7 @@
 """FastAPI application factory and process entry point."""
 
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 
 import httpx
 import uvicorn
@@ -16,6 +16,7 @@ from kya_platform.api.router import api_router
 from kya_platform.api.security import configure_security_runtime
 from kya_platform.application.artifact_registry import ArtifactRegistryService
 from kya_platform.application.audit import AuditQueryService, AuditWriter
+from kya_platform.authorization import AuthorizationService
 from kya_platform.bootstrap import BootstrapService
 from kya_platform.config import Settings, get_settings
 from kya_platform.infrastructure.database.artifact_registry import SqlAlchemyArtifactRegistry
@@ -31,6 +32,13 @@ from kya_platform.infrastructure.infisical import (
 )
 from kya_platform.infrastructure.openfga import OpenFgaHttpAdapter
 from kya_platform.mcp.bootstrap import create_bootstrap_server
+from kya_platform.mcp.registry.oauth import NeonMcpTokenVerifier
+from kya_platform.mcp.registry.runtime import (
+    StateAuthorizationPort,
+    StateIdentityMapping,
+    StateRegistryBackend,
+)
+from kya_platform.mcp.registry.server import create_registry_server
 from kya_platform.observability import (
     CorrelationMiddleware,
     configure_logging,
@@ -42,12 +50,13 @@ from kya_platform.observability.telemetry import TelemetryRuntime
 class CanonicalMcpEndpoint:
     """Serve the exact connector URL without relying on redirect support."""
 
-    def __init__(self, app: ASGIApp) -> None:
+    def __init__(self, app: ASGIApp, mount_path: str) -> None:
         self._app = app
+        self._mount_path = mount_path
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         inner_scope = dict(scope)
-        inner_scope["root_path"] = f"{scope.get('root_path', '')}/mcp"
+        inner_scope["root_path"] = f"{scope.get('root_path', '')}{self._mount_path}"
         inner_scope["path"] = "/"
         inner_scope["raw_path"] = b"/"
         await self._app(inner_scope, receive, send)
@@ -70,6 +79,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             allowed_origins=list(resolved_settings.mcp_allowed_origins),
         ),
     )
+    registry_mcp_app: ASGIApp | None = None
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -149,7 +159,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             if resolved_settings.environment == "test":
                 yield
                 return
-            async with bootstrap_mcp_app.router.lifespan_context(bootstrap_mcp_app):
+            async with AsyncExitStack() as stack:
+                await stack.enter_async_context(
+                    bootstrap_mcp_app.router.lifespan_context(bootstrap_mcp_app)
+                )
+                if registry_mcp_app is not None:
+                    await stack.enter_async_context(
+                        registry_mcp_app.router.lifespan_context(registry_mcp_app)  # type: ignore[attr-defined]
+                    )
                 yield
 
         async with mcp_lifespan():
@@ -183,6 +200,31 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.state.artifact_registry = None
     application.state.registry_mcp_backend = None
     configure_security_runtime(application.state, resolved_settings)
+    if resolved_settings.has_registry_mcp_configuration:
+        api_token_verifier = application.state.token_verifier
+        authorization_server_url = resolved_settings.registry_mcp_authorization_server_url
+        if api_token_verifier is None or authorization_server_url is None:
+            raise RuntimeError("validated Registry MCP authentication is incomplete")
+        registry_mcp = create_registry_server(
+            backend=StateRegistryBackend(application.state),
+            authorization=AuthorizationService(StateAuthorizationPort(application.state)),
+            token_verifier=NeonMcpTokenVerifier(
+                api_token_verifier,
+                StateIdentityMapping(application.state),
+            ),
+            issuer_url=authorization_server_url,
+            resource_url=resolved_settings.registry_mcp_resource_url,
+        )
+        registry_mcp_app = registry_mcp.streamable_http_app(
+            streamable_http_path="/",
+            json_response=True,
+            stateless_http=True,
+            transport_security=TransportSecuritySettings(
+                enable_dns_rebinding_protection=True,
+                allowed_hosts=list(resolved_settings.mcp_allowed_hosts),
+                allowed_origins=list(resolved_settings.mcp_allowed_origins),
+            ),
+        )
     if resolved_settings.cors_allowed_origins:
         application.add_middleware(
             CORSMiddleware,
@@ -199,9 +241,32 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     install_error_handlers(application)
     application.include_router(api_router, prefix="/api/v1")
     application.router.routes.append(
-        Route("/mcp", CanonicalMcpEndpoint(bootstrap_mcp_app), include_in_schema=False)
+        Route(
+            "/mcp",
+            CanonicalMcpEndpoint(bootstrap_mcp_app, "/mcp"),
+            include_in_schema=False,
+        )
     )
     application.mount("/mcp", bootstrap_mcp_app)
+    if registry_mcp_app is not None:
+        metadata_path = "/.well-known/oauth-protected-resource/registry/mcp"
+        application.router.routes.append(
+            Route(metadata_path, registry_mcp_app, include_in_schema=False)
+        )
+        application.router.routes.append(
+            Route(
+                "/registry/mcp",
+                CanonicalMcpEndpoint(registry_mcp_app, "/registry/mcp"),
+                include_in_schema=False,
+            )
+        )
+        application.router.routes.append(
+            Route(
+                "/registry/mcp/",
+                CanonicalMcpEndpoint(registry_mcp_app, "/registry/mcp"),
+                include_in_schema=False,
+            )
+        )
     return application
 
 

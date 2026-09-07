@@ -2,6 +2,7 @@
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 
 from kya_platform.config import Settings
 from kya_platform.main import create_app
@@ -38,3 +39,29 @@ def test_mcp_connector_url_initializes_without_redirect(path: str) -> None:
     assert response.status_code == 200
     assert "location" not in response.headers
     assert response.json()["result"]["serverInfo"]["name"] == "kya-bootstrap"
+
+
+def test_protected_registry_routes_are_mounted_separately() -> None:
+    application = create_app(
+        Settings(
+            _env_file=None,
+            environment="test",
+            database_url=SecretStr("postgresql+asyncpg://test:test@localhost/test"),
+            neon_auth_issuer="https://auth.example.test",
+            neon_auth_jwks_url="https://auth.example.test/.well-known/jwks.json",
+            neon_auth_audience="https://registry.example.test/mcp",
+            openfga_api_url="https://fga.example.test",
+            openfga_api_token=SecretStr("test-token"),
+            openfga_store_id="test-store",
+            openfga_model_id="test-model",
+            registry_mcp_enabled=True,
+            registry_mcp_authorization_server_url="https://auth.example.test",
+            registry_mcp_resource_url="https://registry.example.test/mcp",
+        )
+    )
+
+    paths = {getattr(route, "path", None) for route in application.router.routes}
+    assert "/mcp" in paths
+    assert "/registry/mcp" in paths
+    assert "/registry/mcp/" in paths
+    assert "/.well-known/oauth-protected-resource/registry/mcp" in paths

@@ -55,14 +55,33 @@ reçoit ensuite que les identifiants internes déjà autorisés. Une liste vide 
 sans interroger le catalogue ; la résolution d'un identifiant public précède un contrôle frais sur
 l'identifiant interne et ne divulgue jamais l'existence d'un artefact refusé.
 
+### R-008 — Transport MCP 2026 sans session
+
+Le Registry cible MCP `2026-07-28` en Streamable HTTP sans état : un endpoint POST unique, aucune
+session de protocole, aucun flux GET autonome. Chaque requête moderne porte
+`MCP-Protocol-Version`, `Mcp-Method` et, lorsque requis, `Mcp-Name`, cohérents avec les métadonnées
+du corps. Le MCP public historique reste séparé pendant la transition de compatibilité.
+
+### R-009 — Courtier OAuth KYA devant Neon Auth
+
+Neon Auth reste la source d'identité et de session utilisateur, mais son endpoint de projet ne
+publie actuellement ni métadonnées RFC 8414/OIDC ni serveur d'autorisation MCP découvrable. KYA
+doit donc exposer un courtier OAuth 2.1 : il authentifie l'utilisateur via Neon Auth, émet un jeton
+à audience exacte du Registry MCP, applique PKCE et les scopes minimaux, puis publie les métadonnées
+requises. Le Registry reste le resource server ; OpenFGA demeure la décision finale par ressource.
+Cette frontière doit être livrée avant d'activer le Registry MCP distant.
+
 ## Références primaires
 
 - OpenAI Academy, « Using skills » : https://openai.com/academy/skills/
 - Claude Platform, « Agent Skills » :
   https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview
-- MCP, « Tools » : https://modelcontextprotocol.io/specification/2025-11-25/server/tools
+- MCP, « Streamable HTTP » :
+  https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http
 - MCP, « Authorization » :
-  https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization
+  https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization
+- MCP, « Authorization Server Discovery » :
+  https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization/authorization-server-discovery
 - ORAS, « Understanding OCI artifacts » : https://oras.land/docs/1.2/concepts/artifact/
 - OCI, « Image and Distribution Specs v1.1 » :
   https://opencontainers.org/posts/blog/2024-03-13-image-and-distribution-1-1/

@@ -1,7 +1,14 @@
 # Contrat Registry MCP
 
-Transport distant : Streamable HTTP protégé par OAuth. L'identité et les scopes du jeton sont
+Transport distant : MCP `2026-07-28`, Streamable HTTP sans session, protégé par OAuth 2.1.
+L'identité et les scopes du jeton sont
 nécessaires mais insuffisants : chaque outil appelle aussi l'autorisation KYA sur sa ressource.
+
+Le serveur expose un POST canonique sur `/registry/mcp` et les métadonnées RFC 9728 sur
+`/.well-known/oauth-protected-resource/registry/mcp`. Le jeton doit viser exactement la ressource
+canonique. Neon Auth établit l'identité ; le courtier OAuth KYA assure découverte, PKCE, consentement,
+scopes et émission du jeton MCP. L'activation distante échoue fermée tant que ce courtier n'est pas
+configuré.
 
 ## Outils initiaux
 

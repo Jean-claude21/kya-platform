@@ -58,6 +58,23 @@ class RegistryBackend(Protocol):
     async def publish_candidate(self, request: PublishCandidateInput) -> PublicationAccepted: ...
 
 
+class ScopedRegistryServer(MCPServer[None]):
+    """Advertise only tools covered by the caller's OAuth scopes."""
+
+    def __init__(self, *args: object, access_token_provider: AccessTokenProvider, **kwargs: object):
+        super().__init__(*args, **kwargs)  # type: ignore[arg-type]
+        self._access_token_provider = access_token_provider
+
+    async def list_tools(self):  # type: ignore[no-untyped-def]
+        token = self._access_token_provider()
+        if token is None:
+            return []
+        permitted = {
+            item.name for item in REGISTRY_TOOLS if item.oauth_scope in token.scopes
+        }
+        return [tool for tool in await super().list_tools() if tool.name in permitted]
+
+
 def _tool(name: str):  # type: ignore[no-untyped-def]
     return next(item for item in REGISTRY_TOOLS if item.name == name)
 
@@ -141,16 +158,17 @@ def create_registry_server(
     """Build the remote server; OAuth authenticates and KYA policy authorizes."""
 
     guard = RegistryGuard(authorization, access_token_provider)
-    server: MCPServer[None] = MCPServer(
+    server: MCPServer[None] = ScopedRegistryServer(
         "kya-registry",
         title="KYA Registry MCP",
         description="Catalogue gouverné des capacités numériques KYA",
         version="0.1.0",
         token_verifier=token_verifier,
+        access_token_provider=access_token_provider,
         auth=AuthSettings(
             issuer_url=issuer_url,
             resource_server_url=resource_url,
-            required_scopes=[],
+            required_scopes=["catalog:read"],
         ),
     )
 
