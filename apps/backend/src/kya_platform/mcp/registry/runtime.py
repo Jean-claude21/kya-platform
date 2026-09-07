@@ -67,6 +67,12 @@ class StateRegistryBackend:
     async def resolve_artifact_id(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
         return await self._backend().resolve_artifact_id(*args, **kwargs)
 
+    async def resolve_installation_workspace(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+        return await self._backend().resolve_installation_workspace(*args, **kwargs)
+
+    async def resolve_operation_workspace(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+        return await self._backend().resolve_operation_workspace(*args, **kwargs)
+
     async def get_artifact(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
         return await self._backend().get_artifact(*args, **kwargs)
 
@@ -76,8 +82,17 @@ class StateRegistryBackend:
     async def request_install(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
         return await self._backend().request_install(*args, **kwargs)
 
+    async def confirm_installation(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+        return await self._backend().confirm_installation(*args, **kwargs)
+
     async def request_update(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
         return await self._backend().request_update(*args, **kwargs)
+
+    async def confirm_update(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+        return await self._backend().confirm_update(*args, **kwargs)
+
+    async def manage_installation(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+        return await self._backend().manage_installation(*args, **kwargs)
 
     async def get_operation(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
         return await self._backend().get_operation(*args, **kwargs)

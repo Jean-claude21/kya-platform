@@ -47,8 +47,7 @@ class GetArtifactInput(StrictMcpContract):
 
 
 class ListUpdatesInput(StrictMcpContract):
-    environment: str | None = None
-    installation_id: UUID | None = None
+    installation_id: UUID
 
 
 class RequestInstallInput(StrictMcpContract):
@@ -61,9 +60,48 @@ class RequestInstallInput(StrictMcpContract):
     confirmation: Confirmation
 
 
+class ConfirmInstallationInput(StrictMcpContract):
+    plan_id: UUID
+    release_id: UUID
+    target: NonEmpty
+    profile: InstallationProfile
+    scope: InstallationScope
+    client_version: NonEmpty
+    installed_digest: Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")]
+    actor_id: UUID
+    idempotency_key: IdempotencyKey
+    confirmation: Confirmation
+
+
 class RequestUpdateInput(StrictMcpContract):
     installation_id: UUID
     release_id: UUID
+    actor_id: UUID
+    idempotency_key: IdempotencyKey
+    confirmation: Confirmation
+
+
+class ConfirmUpdateInput(StrictMcpContract):
+    operation_id: UUID
+    installed_digest: Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")]
+    expected_revision: int = Field(ge=1)
+    actor_id: UUID
+    confirmation: Confirmation
+
+
+class InstallationAction(StrEnum):
+    ROLLBACK = "rollback"
+    SUSPEND = "suspend"
+    RESUME = "resume"
+    REVOKE = "revoke"
+
+
+class ManageInstallationInput(StrictMcpContract):
+    installation_id: UUID
+    action: InstallationAction
+    expected_revision: int = Field(ge=1)
+    actor_id: UUID
+    reason: str | None = Field(default=None, max_length=500)
     idempotency_key: IdempotencyKey
     confirmation: Confirmation
 
@@ -114,6 +152,12 @@ class OperationAccepted(StrictMcpContract):
     status: Literal["accepted"] = "accepted"
 
 
+class InstallationRecorded(StrictMcpContract):
+    installation_id: UUID
+    operation_id: UUID
+    status: Literal["active"] = "active"
+
+
 class OperationStatus(StrictMcpContract):
     operation_id: UUID
     status: Literal["accepted", "pending", "running", "succeeded", "failed", "rolled-back"]
@@ -146,11 +190,21 @@ class RegistryTool:
 REGISTRY_TOOLS: tuple[RegistryTool, ...] = (
     RegistryTool("search_catalog", "catalog:read", "can_view", "catalog", RegistryRisk.READ),
     RegistryTool("get_artifact", "catalog:read", "can_view", "artifact", RegistryRisk.READ),
-    RegistryTool("list_updates", "catalog:read", "can_view", "installation", RegistryRisk.READ),
+    RegistryTool("list_updates", "catalog:read", "can_view", "workspace", RegistryRisk.READ),
     RegistryTool(
         "request_install",
         "catalog:install",
-        "can_install",
+        "can_edit",
+        "workspace",
+        RegistryRisk.CONTROLLED_WRITE,
+        True,
+        True,
+        True,
+    ),
+    RegistryTool(
+        "confirm_installation",
+        "catalog:install",
+        "can_edit",
         "workspace",
         RegistryRisk.CONTROLLED_WRITE,
         True,
@@ -160,18 +214,37 @@ REGISTRY_TOOLS: tuple[RegistryTool, ...] = (
     RegistryTool(
         "request_update",
         "catalog:install",
-        "can_update",
-        "installation",
+        "can_edit",
+        "workspace",
         RegistryRisk.CONTROLLED_WRITE,
         True,
         True,
         True,
     ),
-    RegistryTool("get_operation", "catalog:read", "can_view", "operation", RegistryRisk.READ),
+    RegistryTool(
+        "confirm_update",
+        "catalog:install",
+        "can_edit",
+        "workspace",
+        RegistryRisk.CONTROLLED_WRITE,
+        True,
+        True,
+    ),
+    RegistryTool(
+        "manage_installation",
+        "catalog:install",
+        "can_manage",
+        "workspace",
+        RegistryRisk.SENSITIVE_WRITE,
+        True,
+        True,
+        True,
+    ),
+    RegistryTool("get_operation", "catalog:read", "can_view", "workspace", RegistryRisk.READ),
     RegistryTool(
         "publish_candidate",
         "catalog:publish",
-        "can_publish",
+        "can_submit",
         "artifact",
         RegistryRisk.SENSITIVE_WRITE,
         True,
@@ -245,14 +318,19 @@ __all__ = [
     "REGISTRY_TOOLS",
     "ArtifactDetail",
     "ArtifactSummary",
+    "ConfirmInstallationInput",
+    "ConfirmUpdateInput",
     "Confirmation",
     "GetArtifactInput",
     "GetOperationInput",
+    "InstallationAction",
     "InstallationPlan",
     "InstallationProfile",
+    "InstallationRecorded",
     "InstallationScope",
     "ListUpdatesInput",
     "ListUpdatesOutput",
+    "ManageInstallationInput",
     "OperationAccepted",
     "OperationStatus",
     "PublicationAccepted",

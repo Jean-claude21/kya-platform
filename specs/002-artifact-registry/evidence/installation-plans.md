@@ -10,7 +10,8 @@
 - sept actions fermées, sans commande libre ni secret ;
 - destinations Codex, Claude Code et zip couvertes ;
 - refus des locators locaux/non supportés et des artefacts non-Skill pour les profils agents ;
-- appel MCP contrôlé par `catalog:install`, unité active et relation OpenFGA `can_install`.
+- appel MCP contrôlé par `catalog:install`, unité active et relation OpenFGA `can_edit` sur
+  l'espace cible.
 
 ## Validation attendue
 

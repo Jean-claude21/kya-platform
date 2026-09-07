@@ -16,6 +16,7 @@ from kya_platform.domain.distribution import (
     Installation,
     InstallationStatus,
     ReleaseAvailability,
+    UpdateDecision,
     UpdatePolicy,
     ValidatedRelease,
 )
@@ -210,3 +211,35 @@ def test_unavailable_release_cannot_be_installed(availability: ReleaseAvailabili
 
     with pytest.raises(DistributionRuleError, match=availability.value):
         Installation.install(id=uuid4(), target="workspace:dss", release=unavailable)
+
+
+def test_lifecycle_idempotence_and_terminal_guards() -> None:
+    artifact_id = uuid4()
+    first = release(artifact_id, "1.0.0")
+    installed = Installation.install(id=uuid4(), target="workspace:dss", release=first)
+
+    assert installed.update(first, decision=UpdateDecision.PROPOSE, approved=False) is installed
+    assert installed.resume() is installed
+    suspended = installed.suspend()
+    assert suspended.suspend() is suspended
+    revoked = suspended.revoke()
+    assert revoked.revoke() is revoked
+    with pytest.raises(DistributionRuleError, match="active installation"):
+        suspended.update(
+            release(artifact_id, "1.0.1"),
+            decision=UpdateDecision.PROPOSE,
+            approved=False,
+        )
+    with pytest.raises(DistributionRuleError, match="last-known-good"):
+        installed.rollback()
+
+    incompatible = ValidatedRelease(
+        id=uuid4(),
+        artifact_id=artifact_id,
+        version="1.1.0",
+        content_digest="a" * 64,
+        integrity_verified=True,
+        is_compatible=False,
+    )
+    with pytest.raises(DistributionRuleError, match="incompatible"):
+        incompatible.require_safe()

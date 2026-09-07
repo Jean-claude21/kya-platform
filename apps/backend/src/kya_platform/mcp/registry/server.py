@@ -19,13 +19,18 @@ from kya_platform.mcp.registry.contracts import (
     REGISTRY_TOOLS,
     ArtifactDetail,
     Confirmation,
+    ConfirmInstallationInput,
+    ConfirmUpdateInput,
     GetArtifactInput,
     GetOperationInput,
+    InstallationAction,
     InstallationPlan,
     InstallationProfile,
+    InstallationRecorded,
     InstallationScope,
     ListUpdatesInput,
     ListUpdatesOutput,
+    ManageInstallationInput,
     OperationAccepted,
     OperationStatus,
     PublicationAccepted,
@@ -48,13 +53,25 @@ class RegistryBackend(Protocol):
 
     async def resolve_artifact_id(self, public_id: str) -> UUID | None: ...
 
+    async def resolve_installation_workspace(self, installation_id: UUID) -> str | None: ...
+
+    async def resolve_operation_workspace(self, operation_id: UUID) -> str | None: ...
+
     async def get_artifact(self, request: GetArtifactInput) -> ArtifactDetail: ...
 
     async def list_updates(self, request: ListUpdatesInput) -> ListUpdatesOutput: ...
 
     async def request_install(self, request: RequestInstallInput) -> InstallationPlan: ...
 
+    async def confirm_installation(
+        self, request: ConfirmInstallationInput
+    ) -> InstallationRecorded: ...
+
     async def request_update(self, request: RequestUpdateInput) -> OperationAccepted: ...
+
+    async def confirm_update(self, request: ConfirmUpdateInput) -> OperationStatus: ...
+
+    async def manage_installation(self, request: ManageInstallationInput) -> OperationStatus: ...
 
     async def get_operation(self, request: GetOperationInput) -> OperationStatus: ...
 
@@ -133,6 +150,13 @@ class RegistryGuard:
         if not allowed:
             raise ToolError("not_authorized")
 
+    def principal_id(self, name: str) -> UUID:
+        principal = self._principal(self._token(name)).removeprefix("user:")
+        try:
+            return UUID(principal)
+        except ValueError as error:
+            raise ToolError("principal_identifier_invalid") from error
+
     async def allowed_artifact_ids(self, name: str) -> tuple[str, ...]:
         token = self._token(name)
         context, contextual_tuples = self._active_context(token)
@@ -204,15 +228,13 @@ def create_registry_server(
         )
 
     @server.tool(name="list_updates", structured_output=True)
-    async def list_updates(
-        environment: str | None = None, installation_id: UUID | None = None
-    ) -> ListUpdatesOutput:
+    async def list_updates(installation_id: UUID) -> ListUpdatesOutput:
         """Lister les mises à jour compatibles et autorisées."""
-        resource = str(installation_id) if installation_id else environment or "global"
-        await guard.require("list_updates", resource)
-        return await backend.list_updates(
-            ListUpdatesInput(environment=environment, installation_id=installation_id)
-        )
+        workspace = await backend.resolve_installation_workspace(installation_id)
+        if workspace is None:
+            raise ToolError("installation_not_found")
+        await guard.require("list_updates", workspace)
+        return await backend.list_updates(ListUpdatesInput(installation_id=installation_id))
 
     @server.tool(name="request_install", structured_output=True)
     async def request_install(
@@ -247,12 +269,68 @@ def create_registry_server(
         confirmation: Confirmation,
     ) -> OperationAccepted:
         """Demander une mise à jour soumise à la politique de revue."""
-        await guard.require("request_update", str(installation_id))
+        workspace = await backend.resolve_installation_workspace(installation_id)
+        if workspace is None:
+            raise ToolError("installation_not_found")
+        await guard.require("request_update", workspace)
         return await backend.request_update(
             RequestUpdateInput(
                 installation_id=installation_id,
                 release_id=release_id,
+                actor_id=guard.principal_id("request_update"),
                 idempotency_key=idempotency_key,
+                confirmation=confirmation,
+            )
+        )
+
+    @server.tool(name="confirm_installation", structured_output=True)
+    async def confirm_installation(
+        plan_id: UUID,
+        release_id: UUID,
+        target: str,
+        profile: InstallationProfile,
+        scope: InstallationScope,
+        client_version: str,
+        installed_digest: str,
+        idempotency_key: str,
+        confirmation: Confirmation,
+    ) -> InstallationRecorded:
+        """Enregistrer le reçu client après vérification et activation locales."""
+        target_id = target.removeprefix("workspace:")
+        await guard.require("confirm_installation", target_id)
+        return await backend.confirm_installation(
+            ConfirmInstallationInput(
+                plan_id=plan_id,
+                release_id=release_id,
+                target=target,
+                profile=profile,
+                scope=scope,
+                client_version=client_version,
+                installed_digest=installed_digest,
+                actor_id=guard.principal_id("confirm_installation"),
+                idempotency_key=idempotency_key,
+                confirmation=confirmation,
+            )
+        )
+
+    @server.tool(name="confirm_update", structured_output=True)
+    async def confirm_update(
+        operation_id: UUID,
+        installed_digest: str,
+        expected_revision: int,
+        confirmation: Confirmation,
+    ) -> OperationStatus:
+        """Finaliser une mise à jour uniquement après le reçu vérifié du client."""
+        workspace = await backend.resolve_operation_workspace(operation_id)
+        if workspace is None:
+            raise ToolError("operation_not_found")
+        await guard.require("confirm_update", workspace)
+        return await backend.confirm_update(
+            ConfirmUpdateInput(
+                operation_id=operation_id,
+                installed_digest=installed_digest,
+                expected_revision=expected_revision,
+                actor_id=guard.principal_id("confirm_update"),
                 confirmation=confirmation,
             )
         )
@@ -260,8 +338,37 @@ def create_registry_server(
     @server.tool(name="get_operation", structured_output=True)
     async def get_operation(operation_id: UUID) -> OperationStatus:
         """Consulter l'état et la preuve d'une opération visible."""
-        await guard.require("get_operation", str(operation_id))
+        workspace = await backend.resolve_operation_workspace(operation_id)
+        if workspace is None:
+            raise ToolError("operation_not_found")
+        await guard.require("get_operation", workspace)
         return await backend.get_operation(GetOperationInput(operation_id=operation_id))
+
+    @server.tool(name="manage_installation", structured_output=True)
+    async def manage_installation(
+        installation_id: UUID,
+        action: InstallationAction,
+        expected_revision: int,
+        idempotency_key: str,
+        confirmation: Confirmation,
+        reason: str | None = None,
+    ) -> OperationStatus:
+        """Suspendre, reprendre, révoquer ou restaurer une installation avec preuve."""
+        workspace = await backend.resolve_installation_workspace(installation_id)
+        if workspace is None:
+            raise ToolError("installation_not_found")
+        await guard.require("manage_installation", workspace)
+        return await backend.manage_installation(
+            ManageInstallationInput(
+                installation_id=installation_id,
+                action=action,
+                expected_revision=expected_revision,
+                actor_id=guard.principal_id("manage_installation"),
+                reason=reason,
+                idempotency_key=idempotency_key,
+                confirmation=confirmation,
+            )
+        )
 
     @server.tool(name="publish_candidate", structured_output=True)
     async def publish_candidate(
