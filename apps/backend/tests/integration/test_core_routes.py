@@ -293,9 +293,7 @@ def test_client_lists_and_not_found_are_explicit(app: FastAPI) -> None:
 def test_project_read_list_and_create_contracts(app: FastAPI) -> None:
     core = CoreStub()
     with configured(app, Policy(True), core) as client:
-        listed = client.get(
-            "/api/v1/core/organization/direction-cvsi/projects", headers=headers()
-        )
+        listed = client.get("/api/v1/core/organization/direction-cvsi/projects", headers=headers())
         found = client.get(
             f"/api/v1/core/organization/direction-cvsi/projects/{PROJECT}", headers=headers()
         )
@@ -352,8 +350,6 @@ def test_core_unavailable_is_reported_without_fallback(app: FastAPI) -> None:
     app.state.authorization = Policy(True)
     app.state.core_service = None
     with TestClient(app) as client:
-        response = client.get(
-            "/api/v1/core/organization/direction-cvsi", headers=headers()
-        )
+        response = client.get("/api/v1/core/organization/direction-cvsi", headers=headers())
 
     assert response.status_code == 503

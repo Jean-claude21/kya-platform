@@ -294,16 +294,11 @@ async def test_creating_unit_and_project_emit_transactional_events() -> None:
         status="active",
     )
     child = OrganizationalUnit(UUID(int=40), "equipe-data", "team", "Data", PERIOD)
-    unit_session = RepositorySession(
-        scalar_values=[parent, None], get_values=[unit_type]
-    )
+    unit_session = RepositorySession(scalar_values=[parent, None], get_values=[unit_type])
     unit_repository = SqlAlchemyCoreRepository(Sessions(unit_session))  # type: ignore[arg-type]
 
     assert (
-        await unit_repository.create_child_unit(
-            "direction-cvsi", child, command=command()
-        )
-        == child
+        await unit_repository.create_child_unit("direction-cvsi", child, command=command()) == child
     )
     assert len(unit_session.added) == 4
 
@@ -319,9 +314,7 @@ async def test_creating_unit_and_project_emit_transactional_events() -> None:
     project_repository = SqlAlchemyCoreRepository(Sessions(project_session))  # type: ignore[arg-type]
 
     assert (
-        await project_repository.create_project(
-            "direction-cvsi", project, command=command()
-        )
+        await project_repository.create_project("direction-cvsi", project, command=command())
         == project
     )
     assert any(isinstance(row, CoreProject) for row in project_session.added)
