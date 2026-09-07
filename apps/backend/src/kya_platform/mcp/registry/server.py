@@ -69,9 +69,7 @@ class ScopedRegistryServer(MCPServer[None]):
         token = self._access_token_provider()
         if token is None:
             return []
-        permitted = {
-            item.name for item in REGISTRY_TOOLS if item.oauth_scope in token.scopes
-        }
+        permitted = {item.name for item in REGISTRY_TOOLS if item.oauth_scope in token.scopes}
         return [tool for tool in await super().list_tools() if tool.name in permitted]
 
 

@@ -338,9 +338,7 @@ def test_registry_http_uses_2026_stateless_request_metadata() -> None:
             },
             json=request,
         )
-        metadata = client.get(
-            "/.well-known/oauth-protected-resource/mcp"
-        )
+        metadata = client.get("/.well-known/oauth-protected-resource/mcp")
 
     assert response.status_code == 200
     assert {item["name"] for item in response.json()["result"]["tools"]} == {
