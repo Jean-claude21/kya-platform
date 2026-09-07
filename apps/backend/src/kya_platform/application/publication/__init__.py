@@ -60,6 +60,7 @@ class PublicationService:
         at: datetime,
         correlation_id: UUID,
         separation_of_duties: bool = True,
+        evidence_ids: tuple[UUID, ...] = (),
     ) -> PublicationRequest:
         request = PublicationRequest.open(
             id=request_id,
@@ -67,6 +68,7 @@ class PublicationService:
             requested_by=actor_id,
             requested_at=at,
             separation_of_duties=separation_of_duties,
+            evidence_ids=evidence_ids,
         )
         async with self._unit_of_work_factory() as unit_of_work:
             await unit_of_work.publications.save(request)

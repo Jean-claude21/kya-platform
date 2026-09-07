@@ -44,6 +44,8 @@ class Settings(BaseSettings):
     oauth_client_secret_key: SecretStr | None = None
     oauth_access_token_ttl_seconds: int = 900
     oauth_refresh_token_ttl_seconds: int = 2_592_000
+    artifact_signing_key_id: str = "kya-dev-2026"
+    artifact_signing_private_key: SecretStr | None = None
     openfga_api_url: str | None = None
     openfga_api_token: SecretStr | None = None
     openfga_store_id: str | None = None
@@ -127,6 +129,18 @@ class Settings(BaseSettings):
             self.database_url is None or self.oauth_client_secret_key is None
         ):
             raise ValueError("Enabled OAuth broker requires database and encryption key")
+        if not self.artifact_signing_key_id.replace("-", "").isalnum():
+            raise ValueError("Artifact signing key id must use letters, digits and hyphens")
+        if self.artifact_signing_private_key is not None:
+            import base64
+
+            encoded = self.artifact_signing_private_key.get_secret_value()
+            try:
+                raw_key = base64.urlsafe_b64decode(encoded + "=" * (-len(encoded) % 4))
+            except ValueError as error:
+                raise ValueError("Artifact signing private key must be base64url") from error
+            if len(raw_key) != 32:
+                raise ValueError("Artifact signing private key must encode 32 bytes")
         if self.registry_mcp_enabled:
             registry_requirements = (
                 self.database_url,

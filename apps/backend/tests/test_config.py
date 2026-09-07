@@ -1,5 +1,7 @@
 """Runtime configuration is complete and secret-safe."""
 
+import base64
+
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr, ValidationError
@@ -82,3 +84,36 @@ def test_complete_bootstrap_configuration_is_enabled_and_normalized() -> None:
 
     assert settings.has_bootstrap_configuration
     assert settings.bootstrap_owner_email == "owner@kya-energy.com"
+
+
+@pytest.mark.unit
+def test_artifact_signing_key_requires_32_base64url_bytes() -> None:
+    encoded = base64.urlsafe_b64encode(b"s" * 32).rstrip(b"=").decode()
+
+    settings = Settings(
+        _env_file=None,
+        artifact_signing_key_id="kya-dev-2026",
+        artifact_signing_private_key=SecretStr(encoded),
+    )
+
+    assert settings.artifact_signing_private_key is not None
+    with pytest.raises(ValidationError, match="encode 32 bytes"):
+        Settings(_env_file=None, artifact_signing_private_key=SecretStr("c2hvcnQ"))
+    with pytest.raises(ValidationError, match="key id"):
+        Settings(_env_file=None, artifact_signing_key_id="invalid/key")
+
+
+@pytest.mark.unit
+def test_database_and_signing_key_enable_governed_publication_runtime() -> None:
+    encoded = base64.urlsafe_b64encode(b"s" * 32).rstrip(b"=").decode()
+    settings = Settings(
+        _env_file=None,
+        environment="test",
+        database_url=SecretStr("postgresql://user:password@db.example/neondb"),
+        artifact_signing_private_key=SecretStr(encoded),
+    )
+    app = create_app(settings)
+
+    with TestClient(app):
+        assert app.state.publication_service is not None
+        assert app.state.attestation_repository is not None

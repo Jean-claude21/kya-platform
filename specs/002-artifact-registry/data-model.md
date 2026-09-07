@@ -41,10 +41,28 @@ Requis si un fichier est exécutable, contient une macro ou si le manifeste dema
 `id`, `version_id`, `kind`, `predicate_type`, `digest`, `issuer`, `subject_digest`, `result`,
 `valid_from`, `valid_until`, `evidence_uri`.
 
+Chaque attestation est liée au digest exact de la version et reste historisée. Une publication
+`read` exige au minimum provenance, scan de secrets, licence, compatibilité et validation métier.
+Un artefact exécutable ou mutatif exige en plus tests, analyse des dépendances, SBOM et validation
+sécurité. Les preuves doivent être réussies et valides à la date de la demande.
+
+### PublicationRequest
+
+`id`, candidat figé (`artifact_id`, `version_id`, commit et digests), `evidence_ids`, auteur,
+relecteur, approbateur, décisions, horodatages, état et révision.
+
+La demande ne peut référencer qu'une version déjà persistée et exactement identique. L'auteur,
+le relecteur et l'approbateur sont distincts. Chaque changement d'état et chaque preuve produisent
+un événement outbox dans la même transaction Neon.
+
 ### Release
 
 `id`, `version_id`, `digest`, `signature`, `storage_locator`, `status`, `published_at`,
 `suspended_at`, `revoked_at`, `reason`.
+
+La release est créée une seule fois après approbation. Son digest est signé en Ed25519 avec un
+identifiant de clé explicite. Le digest, la signature, le locator Git, l'auteur et la date de
+publication sont immuables en base ; seuls les états de suspension et révocation peuvent évoluer.
 
 ### InstallationTarget et Installation
 

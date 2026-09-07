@@ -3,6 +3,8 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
+import pytest
+
 from kya_platform.application.publication.integrity import (
     Ed25519ArtifactSigner,
     InMemoryTrustStore,
@@ -37,6 +39,28 @@ def test_valid_release_signature_is_accepted() -> None:
 
     assert result is SignatureVerification.VALID
     assert "private" not in repr(signer).lower()
+
+
+def test_signer_can_be_recreated_from_the_same_raw_private_key() -> None:
+    generated = Ed25519ArtifactSigner.generate("kya-release-2026-01")
+    restored = Ed25519ArtifactSigner.from_private_key_bytes(
+        generated.key_id, generated.private_key_bytes()
+    )
+
+    signature = restored.sign(VERSION_ID, DIGEST, signed_at=SIGNED_AT)
+    store = InMemoryTrustStore(
+        (TrustedSigningKey(key_id=restored.key_id, public_key=restored.public_key_bytes()),)
+    )
+
+    assert (
+        verify_artifact_signature(signature, expected_digest=DIGEST, trust_store=store)
+        is SignatureVerification.VALID
+    )
+
+
+def test_signer_rejects_an_invalid_raw_private_key_length() -> None:
+    with pytest.raises(ValueError, match="exactly 32 bytes"):
+        Ed25519ArtifactSigner.from_private_key_bytes("kya-release-2026-01", b"short")
 
 
 def test_modified_digest_is_rejected() -> None:

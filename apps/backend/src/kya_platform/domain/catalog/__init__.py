@@ -138,6 +138,7 @@ class PublicationRequest:
     requested_at: datetime
     separation_of_duties: bool
     status: PublicationStatus
+    evidence_ids: tuple[UUID, ...] = ()
     review_record: Review | None = None
     approval: Approval | None = None
     published_by: UUID | None = None
@@ -152,6 +153,7 @@ class PublicationRequest:
         requested_by: UUID,
         requested_at: datetime,
         separation_of_duties: bool,
+        evidence_ids: tuple[UUID, ...] = (),
     ) -> PublicationRequest:
         return cls(
             id=id,
@@ -160,6 +162,7 @@ class PublicationRequest:
             requested_at=requested_at,
             separation_of_duties=separation_of_duties,
             status=PublicationStatus.AWAITING_REVIEW,
+            evidence_ids=evidence_ids,
         )
 
     def review(

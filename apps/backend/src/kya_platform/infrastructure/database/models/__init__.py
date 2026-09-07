@@ -4,8 +4,11 @@ from kya_platform.infrastructure.database.models.bootstrap import PlatformBootst
 from kya_platform.infrastructure.database.models.catalog import (
     CatalogArtifact,
     CatalogArtifactVersion,
+    CatalogAttestation,
     CatalogCapabilityManifest,
     CatalogPackageFile,
+    CatalogPublicationRequest,
+    CatalogRelease,
 )
 from kya_platform.infrastructure.database.models.identity import ExternalIdentity
 from kya_platform.infrastructure.database.models.oauth import (
@@ -23,8 +26,11 @@ __all__ = [
     "AuditEvent",
     "CatalogArtifact",
     "CatalogArtifactVersion",
+    "CatalogAttestation",
     "CatalogCapabilityManifest",
     "CatalogPackageFile",
+    "CatalogPublicationRequest",
+    "CatalogRelease",
     "ExternalIdentity",
     "IdempotencyRecord",
     "OAuthClient",

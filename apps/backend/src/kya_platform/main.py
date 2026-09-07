@@ -1,7 +1,9 @@
 """FastAPI application factory and process entry point."""
 
+import base64
 from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, asynccontextmanager
+from typing import cast
 
 import httpx
 import uvicorn
@@ -19,6 +21,11 @@ from kya_platform.api.router import api_router
 from kya_platform.api.security import configure_security_runtime
 from kya_platform.application.artifact_registry import ArtifactRegistryService
 from kya_platform.application.audit import AuditQueryService, AuditWriter
+from kya_platform.application.publication import (
+    PublicationService,
+    PublicationUnitOfWorkFactory,
+)
+from kya_platform.application.publication.integrity import Ed25519ArtifactSigner
 from kya_platform.authorization import AuthorizationService
 from kya_platform.bootstrap import BootstrapService
 from kya_platform.config import Settings, get_settings
@@ -27,6 +34,10 @@ from kya_platform.infrastructure.database.audit import SqlAlchemyAuditRepository
 from kya_platform.infrastructure.database.bootstrap import SqlAlchemyBootstrapClaimRepository
 from kya_platform.infrastructure.database.identity import SqlAlchemyIdentityMapping
 from kya_platform.infrastructure.database.oauth_broker import VALID_SCOPES, OAuthBroker
+from kya_platform.infrastructure.database.publication import (
+    SqlAlchemyAttestationRepository,
+    SqlAlchemyPublicationUnitOfWork,
+)
 from kya_platform.infrastructure.database.registry_mcp import SqlAlchemyRegistryMcpBackend
 from kya_platform.infrastructure.database.session import create_engine, create_session_factory
 from kya_platform.infrastructure.infisical import (
@@ -116,6 +127,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 SqlAlchemyArtifactRegistry(session_factory)
             )
             app.state.registry_mcp_backend = SqlAlchemyRegistryMcpBackend(session_factory)
+            signing_key = resolved_settings.artifact_signing_private_key
+            if signing_key is not None:
+                encoded = signing_key.get_secret_value()
+                raw_key = base64.urlsafe_b64decode(encoded + "=" * (-len(encoded) % 4))
+                signer = Ed25519ArtifactSigner.from_private_key_bytes(
+                    resolved_settings.artifact_signing_key_id,
+                    raw_key,
+                )
+                app.state.publication_service = PublicationService(
+                    cast(
+                        PublicationUnitOfWorkFactory,
+                        lambda: SqlAlchemyPublicationUnitOfWork(session_factory, signer),
+                    )
+                )
+                app.state.attestation_repository = SqlAlchemyAttestationRepository(session_factory)
         app.state.infisical_secret_resolver = None
         if resolved_settings.has_infisical_configuration:
             api_url = resolved_settings.infisical_api_url
@@ -216,6 +242,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.state.bootstrap_claims = None
     application.state.bootstrap_service = None
     application.state.artifact_registry = None
+    application.state.publication_service = None
+    application.state.attestation_repository = None
     application.state.registry_mcp_backend = None
     application.state.oauth_broker = oauth_broker
     configure_security_runtime(application.state, resolved_settings)

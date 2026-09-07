@@ -10,8 +10,11 @@ from kya_platform.infrastructure.database.models import (
     AuditEvent,
     CatalogArtifact,
     CatalogArtifactVersion,
+    CatalogAttestation,
     CatalogCapabilityManifest,
     CatalogPackageFile,
+    CatalogPublicationRequest,
+    CatalogRelease,
     ExternalIdentity,
     IdempotencyRecord,
     OAuthClient,
@@ -42,8 +45,11 @@ def test_reliability_models_have_explicit_schema_ownership() -> None:
         "audit.event",
         "catalog.artifact",
         "catalog.artifact_version",
+        "catalog.attestation",
         "catalog.capability_manifest",
         "catalog.package_file",
+        "catalog.publication_request",
+        "catalog.release",
         "identity.external_identity",
         "identity.platform_bootstrap_claim",
         "oauth.client",
@@ -61,8 +67,11 @@ def test_reliability_models_have_explicit_schema_ownership() -> None:
 def test_catalog_models_have_constraints_and_explicit_schema_ownership() -> None:
     assert CatalogArtifact.__table__.schema == "catalog"
     assert CatalogArtifactVersion.__table__.schema == "catalog"
+    assert CatalogAttestation.__table__.schema == "catalog"
     assert CatalogPackageFile.__table__.schema == "catalog"
     assert CatalogCapabilityManifest.__table__.schema == "catalog"
+    assert CatalogPublicationRequest.__table__.schema == "catalog"
+    assert CatalogRelease.__table__.schema == "catalog"
 
     artifact_unique = {
         tuple(column.name for column in constraint.columns)
