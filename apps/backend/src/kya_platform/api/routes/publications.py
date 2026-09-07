@@ -1,14 +1,19 @@
 """Governed submission, review, approval and release endpoints."""
 
 from datetime import UTC, datetime
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID, uuid7
 
 from fastapi import APIRouter, Depends, Request, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, HttpUrl, field_validator
 
 from kya_platform.api.security import AuthorizedPrincipal, require_permission
 from kya_platform.application.publication import PublicationNotFoundError, PublicationService
+from kya_platform.application.publication.evidence import (
+    AttestationKind,
+    AttestationRecord,
+    AttestationRepository,
+)
 from kya_platform.domain.catalog import (
     ApprovalDecision,
     ArtifactVersion,
@@ -18,6 +23,10 @@ from kya_platform.domain.catalog import (
 from kya_platform.observability import ApiError
 
 router = APIRouter(prefix="/artifacts/{artifact_id}/publication-requests", tags=["publication"])
+attestation_router = APIRouter(
+    prefix="/artifacts/{artifact_id}/versions/{version_id}/attestations",
+    tags=["publication"],
+)
 
 
 class CandidateRequest(BaseModel):
@@ -25,6 +34,33 @@ class CandidateRequest(BaseModel):
     commit_sha: str = Field(min_length=40, max_length=40)
     content_digest: str = Field(min_length=64, max_length=64)
     manifest_digest: str = Field(min_length=64, max_length=64)
+    evidence_ids: tuple[UUID, ...] = Field(min_length=1)
+
+
+class AttestationRequest(BaseModel):
+    kind: AttestationKind
+    result: Literal["passed", "failed"]
+    evidence_uri: HttpUrl
+    valid_until: datetime | None = None
+
+    @field_validator("valid_until")
+    @classmethod
+    def require_timezone(cls, value: datetime | None) -> datetime | None:
+        if value is not None and value.tzinfo is None:
+            raise ValueError("attestation expiration must be timezone-aware")
+        return value
+
+
+class AttestationResponse(BaseModel):
+    id: UUID
+    artifact_version_id: UUID
+    kind: AttestationKind
+    issuer_id: UUID
+    subject_digest: str
+    result: str
+    valid_from: datetime
+    valid_until: datetime | None
+    evidence_uri: str
 
 
 class ReviewRequest(BaseModel):
@@ -57,6 +93,20 @@ def _service(request: Request) -> PublicationService:
             "Le service de publication n'est pas configuré.",
         )
     return service
+
+
+def _attestations(request: Request) -> AttestationRepository:
+    repository: AttestationRepository | None = getattr(
+        request.app.state, "attestation_repository", None
+    )
+    if repository is None:
+        raise ApiError(
+            503,
+            "attestation_service_unavailable",
+            "Attestations indisponibles",
+            "Le service de preuves de publication n'est pas configuré.",
+        )
+    return repository
 
 
 def _correlation_id(request: Request) -> UUID:
@@ -122,10 +172,58 @@ async def submit_publication(
             at=datetime.now(UTC),
             correlation_id=_correlation_id(request),
             separation_of_duties=True,
+            evidence_ids=payload.evidence_ids,
         )
     except (ValueError, PermissionError, PublicationNotFoundError) as error:
         raise _domain_error(error) from error
     return _response(publication)
+
+
+attest_permission = require_permission(
+    relation="can_review", object_type="artifact", object_parameter="artifact_id"
+)
+
+
+@attestation_router.post(
+    "", response_model=AttestationResponse, status_code=status.HTTP_201_CREATED
+)
+async def create_attestation(
+    artifact_id: UUID,
+    version_id: UUID,
+    payload: AttestationRequest,
+    request: Request,
+    principal: Annotated[AuthorizedPrincipal, Depends(attest_permission)],
+) -> AttestationResponse:
+    try:
+        record: AttestationRecord = await _attestations(request).create(
+            artifact_id=artifact_id,
+            version_id=version_id,
+            kind=payload.kind,
+            issuer_id=principal.principal_id,
+            result=payload.result,
+            valid_from=datetime.now(UTC),
+            valid_until=payload.valid_until,
+            evidence_uri=str(payload.evidence_uri),
+            correlation_id=_correlation_id(request),
+        )
+    except ValueError as error:
+        raise ApiError(
+            422,
+            "attestation_invalid",
+            "Preuve de publication invalide",
+            str(error),
+        ) from error
+    return AttestationResponse(
+        id=record.id,
+        artifact_version_id=record.artifact_version_id,
+        kind=record.kind,
+        issuer_id=record.issuer_id,
+        subject_digest=record.subject_digest,
+        result=record.result,
+        valid_from=record.valid_from,
+        valid_until=record.valid_until,
+        evidence_uri=record.evidence_uri,
+    )
 
 
 review_permission = require_permission(
@@ -204,4 +302,4 @@ async def publish_artifact(
     return _response(publication)
 
 
-__all__ = ["router"]
+__all__ = ["attestation_router", "router"]

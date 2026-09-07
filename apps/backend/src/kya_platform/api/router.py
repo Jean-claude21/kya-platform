@@ -8,6 +8,7 @@ from kya_platform.api.routes.audit import router as audit_router
 from kya_platform.api.routes.bootstrap import router as bootstrap_router
 from kya_platform.api.routes.health import router as health_router
 from kya_platform.api.routes.oauth import router as oauth_router
+from kya_platform.api.routes.publications import attestation_router
 from kya_platform.api.routes.publications import router as publications_router
 from kya_platform.api.routes.secrets import router as secrets_router
 from kya_platform.api.routes.systems import router as systems_router
@@ -21,6 +22,7 @@ api_router.include_router(health_router)
 api_router.include_router(oauth_router)
 api_router.include_router(audit_router)
 api_router.include_router(publications_router)
+api_router.include_router(attestation_router)
 api_router.include_router(secrets_router)
 api_router.include_router(systems_router)
 api_router.include_router(workspaces_router)

@@ -122,9 +122,111 @@ class CatalogCapabilityManifest(Base):
     declaration: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
 
 
+class CatalogAttestation(Base):
+    __tablename__ = "attestation"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["artifact_version_id"], ["catalog.artifact_version.id"], ondelete="RESTRICT"
+        ),
+        UniqueConstraint(
+            "artifact_version_id",
+            "kind",
+            "issuer_id",
+            "digest",
+            name="uq_catalog_attestation_issuer_kind_digest",
+        ),
+        Index("ix_catalog_attestation_version", "artifact_version_id"),
+        CheckConstraint("result IN ('passed', 'failed')", name="valid_result"),
+        CheckConstraint(
+            "valid_until IS NULL OR valid_until > valid_from",
+            name="validity_window",
+        ),
+        {"schema": "catalog"},
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=new_id)
+    artifact_version_id: Mapped[UUID] = mapped_column(nullable=False)
+    kind: Mapped[str] = mapped_column(String(64), nullable=False)
+    predicate_type: Mapped[str] = mapped_column(String(300), nullable=False)
+    digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    issuer_id: Mapped[UUID] = mapped_column(nullable=False)
+    subject_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    result: Mapped[str] = mapped_column(String(16), nullable=False)
+    valid_from: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    valid_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    evidence_uri: Mapped[str] = mapped_column(String(700), nullable=False)
+
+
+class CatalogPublicationRequest(Base):
+    __tablename__ = "publication_request"
+    __table_args__ = (
+        ForeignKeyConstraint(["artifact_id"], ["catalog.artifact.id"], ondelete="RESTRICT"),
+        ForeignKeyConstraint(
+            ["artifact_version_id"], ["catalog.artifact_version.id"], ondelete="RESTRICT"
+        ),
+        CheckConstraint(
+            "status IN ('awaiting-review', 'awaiting-approval', 'approved', 'rejected', "
+            "'published')",
+            name="valid_status",
+        ),
+        Index("ix_catalog_publication_artifact", "artifact_id", "requested_at"),
+        {"schema": "catalog"},
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=new_id)
+    artifact_id: Mapped[UUID] = mapped_column(nullable=False)
+    artifact_version_id: Mapped[UUID] = mapped_column(nullable=False)
+    version: Mapped[str] = mapped_column(String(64), nullable=False)
+    commit_sha: Mapped[str] = mapped_column(String(40), nullable=False)
+    content_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    manifest_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    requested_by: Mapped[UUID] = mapped_column(nullable=False)
+    requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    separation_of_duties: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    evidence_ids: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    reviewer_id: Mapped[UUID | None] = mapped_column(nullable=True)
+    review_decision: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    approver_id: Mapped[UUID | None] = mapped_column(nullable=True)
+    approval_decision: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    published_by: Mapped[UUID | None] = mapped_column(nullable=True)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revision: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+
+
+class CatalogRelease(Base):
+    __tablename__ = "release"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["artifact_version_id"], ["catalog.artifact_version.id"], ondelete="RESTRICT"
+        ),
+        UniqueConstraint("artifact_version_id", name="uq_catalog_release_artifact_version"),
+        CheckConstraint("status IN ('published', 'suspended', 'revoked')", name="valid_status"),
+        Index("ix_catalog_release_digest", "content_digest"),
+        {"schema": "catalog"},
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=new_id)
+    artifact_version_id: Mapped[UUID] = mapped_column(nullable=False)
+    content_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    signature: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    storage_locator: Mapped[str] = mapped_column(String(700), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="published")
+    published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    published_by: Mapped[UUID] = mapped_column(nullable=False)
+    suspended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+
 __all__ = [
     "CatalogArtifact",
     "CatalogArtifactVersion",
+    "CatalogAttestation",
     "CatalogCapabilityManifest",
     "CatalogPackageFile",
+    "CatalogPublicationRequest",
+    "CatalogRelease",
 ]

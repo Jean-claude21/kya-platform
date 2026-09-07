@@ -83,6 +83,19 @@ class Ed25519ArtifactSigner:
     def generate(cls, key_id: str) -> Ed25519ArtifactSigner:
         return cls(key_id, Ed25519PrivateKey.generate())
 
+    @classmethod
+    def from_private_key_bytes(cls, key_id: str, private_key: bytes) -> Ed25519ArtifactSigner:
+        if len(private_key) != 32:
+            raise ValueError("Ed25519 private key must contain exactly 32 bytes")
+        return cls(key_id, Ed25519PrivateKey.from_private_bytes(private_key))
+
+    def private_key_bytes(self) -> bytes:
+        return self._private_key.private_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PrivateFormat.Raw,
+            encryption_algorithm=serialization.NoEncryption(),
+        )
+
     def __repr__(self) -> str:
         return f"Ed25519ArtifactSigner(key_id={self.key_id!r}, key_material='**********')"
 
