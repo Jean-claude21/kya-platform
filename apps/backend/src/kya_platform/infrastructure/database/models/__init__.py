@@ -8,6 +8,11 @@ from kya_platform.infrastructure.database.models.catalog import (
     CatalogPackageFile,
 )
 from kya_platform.infrastructure.database.models.identity import ExternalIdentity
+from kya_platform.infrastructure.database.models.oauth import (
+    OAuthClient,
+    OAuthGrant,
+    OAuthTokenRecord,
+)
 from kya_platform.infrastructure.database.models.reliability import (
     AuditEvent,
     IdempotencyRecord,
@@ -22,6 +27,9 @@ __all__ = [
     "CatalogPackageFile",
     "ExternalIdentity",
     "IdempotencyRecord",
+    "OAuthClient",
+    "OAuthGrant",
+    "OAuthTokenRecord",
     "OutboxEvent",
     "PlatformBootstrapClaim",
 ]

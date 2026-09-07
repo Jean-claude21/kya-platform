@@ -10,6 +10,16 @@ canonique. Neon Auth établit l'identité ; le courtier OAuth KYA assure découv
 scopes et émission du jeton MCP. L'activation distante échoue fermée tant que ce courtier n'est pas
 configuré.
 
+Le parcours suit OAuth 2.1 avec PKCE : le client découvre la ressource et le serveur d'autorisation
+KYA, s'enregistre, puis l'utilisateur authentifié par Neon Auth accepte ou refuse les scopes. KYA
+émet ensuite un code à usage unique et un jeton opaque lié à la ressource. OpenFGA contrôle encore
+chaque opération dans l'unité active ; le consentement ne crée donc jamais un droit métier.
+
+Les secrets clients sont chiffrés au repos. Requêtes, codes et jetons sont stockés uniquement sous
+forme de condensats SHA-256. Le jeton d'accès dure 15 minutes, le refresh token est rotatif et la
+révocation ferme toute sa famille. DCR reste disponible pour les clients actuels, avec une migration
+prévue vers les Client ID Metadata Documents recommandés par MCP `2026-07-28`.
+
 ## Outils initiaux
 
 - `search_catalog(query, types?, workspace?, cursor?)` — lecture filtrée par droits.

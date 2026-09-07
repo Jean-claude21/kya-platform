@@ -38,6 +38,12 @@ class Settings(BaseSettings):
     registry_mcp_enabled: bool = False
     registry_mcp_authorization_server_url: str | None = None
     registry_mcp_resource_url: str = "https://mcp.kya-platform.vttlife.com/registry/mcp"
+    oauth_broker_enabled: bool = False
+    oauth_issuer_url: str = "https://api.kya-platform.vttlife.com"
+    oauth_consent_url: str = "https://kya-platform.vttlife.com/oauth/consent"
+    oauth_client_secret_key: SecretStr | None = None
+    oauth_access_token_ttl_seconds: int = 900
+    oauth_refresh_token_ttl_seconds: int = 2_592_000
     openfga_api_url: str | None = None
     openfga_api_token: SecretStr | None = None
     openfga_store_id: str | None = None
@@ -108,9 +114,24 @@ class Settings(BaseSettings):
             )
             if not self.registry_mcp_authorization_server_url.startswith("https://"):
                 raise ValueError("Registry MCP authorization server URL must use HTTPS")
+        self.oauth_issuer_url = self.oauth_issuer_url.rstrip("/")
+        if not self.oauth_issuer_url.startswith("https://"):
+            raise ValueError("OAuth issuer URL must use HTTPS")
+        if not self.oauth_consent_url.startswith("https://"):
+            raise ValueError("OAuth consent URL must use HTTPS")
+        if not 300 <= self.oauth_access_token_ttl_seconds <= 3_600:
+            raise ValueError("OAuth access token TTL must be between 300 and 3600 seconds")
+        if not 3_600 <= self.oauth_refresh_token_ttl_seconds <= 7_776_000:
+            raise ValueError("OAuth refresh token TTL must be between 3600 and 7776000 seconds")
+        if self.oauth_broker_enabled and (
+            self.database_url is None or self.oauth_client_secret_key is None
+        ):
+            raise ValueError("Enabled OAuth broker requires database and encryption key")
         if self.registry_mcp_enabled:
             registry_requirements = (
                 self.database_url,
+                self.oauth_broker_enabled,
+                self.oauth_client_secret_key,
                 self.registry_mcp_authorization_server_url,
                 self.neon_auth_issuer,
                 self.neon_auth_jwks_url,
@@ -122,10 +143,8 @@ class Settings(BaseSettings):
             )
             if not all(registry_requirements):
                 raise ValueError("Enabled Registry MCP configuration must be complete")
-            if self.neon_auth_audience != self.registry_mcp_resource_url:
-                raise ValueError(
-                    "Registry MCP token audience must equal its canonical resource URL"
-                )
+            if self.registry_mcp_authorization_server_url != self.oauth_issuer_url:
+                raise ValueError("Registry MCP authorization server must be the KYA OAuth issuer")
         bootstrap = (self.bootstrap_owner_email, self.bootstrap_claim_code_hash)
         if any(item is not None for item in bootstrap) and not all(bootstrap):
             raise ValueError("Bootstrap owner configuration must be complete")
@@ -156,6 +175,8 @@ class Settings(BaseSettings):
         return self.registry_mcp_enabled and all(
             (
                 self.database_url,
+                self.oauth_broker_enabled,
+                self.oauth_client_secret_key,
                 self.registry_mcp_authorization_server_url,
                 self.neon_auth_jwks_url,
                 self.neon_auth_audience,
