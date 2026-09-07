@@ -16,6 +16,11 @@ from kya_platform.authorization import (
     ListObjectsRequest,
 )
 from kya_platform.contracts.artifact_manifest import ArtifactType
+from kya_platform.contracts.installation_plan import (
+    InstallationPlan,
+    InstallationProfile,
+    InstallationScope,
+)
 
 NonEmpty = Annotated[str, Field(min_length=1)]
 IdempotencyKey = Annotated[str, Field(min_length=16, max_length=200)]
@@ -49,6 +54,9 @@ class ListUpdatesInput(StrictMcpContract):
 class RequestInstallInput(StrictMcpContract):
     release_id: UUID
     target: NonEmpty
+    profile: InstallationProfile
+    scope: InstallationScope
+    client_version: NonEmpty
     idempotency_key: IdempotencyKey
     confirmation: Confirmation
 
@@ -240,6 +248,9 @@ __all__ = [
     "Confirmation",
     "GetArtifactInput",
     "GetOperationInput",
+    "InstallationPlan",
+    "InstallationProfile",
+    "InstallationScope",
     "ListUpdatesInput",
     "ListUpdatesOutput",
     "OperationAccepted",

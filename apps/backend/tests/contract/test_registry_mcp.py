@@ -12,6 +12,8 @@ from starlette.testclient import TestClient
 
 from kya_platform.authorization import AuthorizationDecision, CheckRequest, ListObjectsRequest
 from kya_platform.authorization.service import AuthorizationService
+from kya_platform.contracts.artifact_manifest import ArtifactType
+from kya_platform.contracts.installation_plan import InstallationPlan, build_installation_plan
 from kya_platform.mcp.registry import (
     ArtifactDetail,
     ArtifactSummary,
@@ -82,10 +84,14 @@ def test_install_contract_accepts_explicit_confirmation() -> None:
     request = RequestInstallInput(
         release_id=uuid4(),
         target="workspace:dss",
+        profile="codex",
+        scope="personal",
+        client_version="2026-09",
         idempotency_key="install-request-0001",
         confirmation=Confirmation(confirmed=True),
     )
     assert request.confirmation.confirmed is True
+    assert request.profile.value == "codex"
 
 
 @pytest.mark.asyncio
@@ -283,6 +289,66 @@ async def test_registry_server_advertises_only_tools_in_token_scopes() -> None:
 class AcceptingMcpTokenVerifier:
     async def verify_token(self, token: str) -> AccessToken | None:
         return access_token() if token == "valid-token" else None
+
+
+class InstallBackend(SearchBackend):
+    async def request_install(self, request: RequestInstallInput) -> InstallationPlan:
+        return build_installation_plan(
+            release_id=request.release_id,
+            artifact_id=UUID("11111111-1111-4111-8111-111111111111"),
+            artifact_type=ArtifactType.SKILL,
+            artifact_slug="business-method",
+            version="1.0.0",
+            profile=request.profile,
+            scope=request.scope,
+            target=request.target,
+            package_locator="https://packages.kya.energy/business-method.zip",
+            content_digest="b" * 64,
+            compatibility_requirement=">=2026-09",
+            client_version=request.client_version,
+            file_count=3,
+            package_size=1024,
+        )
+
+
+@pytest.mark.asyncio
+async def test_registry_server_returns_a_consent_bound_installation_plan() -> None:
+    token = AccessToken(
+        token="opaque-install-token",
+        client_id="codex-test",
+        subject="alice",
+        scopes=["catalog:install"],
+        claims={"active_unit": "dss", "iss": "https://auth.example.test"},
+    )
+    server = create_registry_server(
+        backend=InstallBackend(),
+        authorization=AuthorizationService(RecordingPolicy(allowed=True, checks=[])),
+        token_verifier=NoopTokenVerifier(),
+        issuer_url="https://auth.example.test",
+        resource_url="https://registry.example.test/mcp",
+        access_token_provider=lambda: token,
+    )
+
+    release_id = UUID("01991b00-0000-7000-8000-000000000301")
+    async with Client(server) as client:
+        result = await client.call_tool(
+            "request_install",
+            {
+                "release_id": str(release_id),
+                "target": "workspace:dss",
+                "profile": "codex",
+                "scope": "personal",
+                "client_version": "2026-09",
+                "idempotency_key": "install-business-method-0001",
+                "confirmation": {"confirmed": True},
+            },
+        )
+
+    assert result.is_error is False
+    assert result.structured_content["release_id"] == str(release_id)
+    assert result.structured_content["requires_client_confirmation"] is True
+    assert result.structured_content["server_writes_local_files"] is False
+    assert len(result.structured_content["steps"]) == 7
 
 
 def test_registry_http_uses_2026_stateless_request_metadata() -> None:

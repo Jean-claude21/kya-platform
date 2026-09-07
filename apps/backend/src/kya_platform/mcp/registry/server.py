@@ -21,6 +21,9 @@ from kya_platform.mcp.registry.contracts import (
     Confirmation,
     GetArtifactInput,
     GetOperationInput,
+    InstallationPlan,
+    InstallationProfile,
+    InstallationScope,
     ListUpdatesInput,
     ListUpdatesOutput,
     OperationAccepted,
@@ -49,7 +52,7 @@ class RegistryBackend(Protocol):
 
     async def list_updates(self, request: ListUpdatesInput) -> ListUpdatesOutput: ...
 
-    async def request_install(self, request: RequestInstallInput) -> OperationAccepted: ...
+    async def request_install(self, request: RequestInstallInput) -> InstallationPlan: ...
 
     async def request_update(self, request: RequestUpdateInput) -> OperationAccepted: ...
 
@@ -215,16 +218,22 @@ def create_registry_server(
     async def request_install(
         release_id: UUID,
         target: str,
+        profile: InstallationProfile,
+        scope: InstallationScope,
+        client_version: str,
         idempotency_key: str,
         confirmation: Confirmation,
-    ) -> OperationAccepted:
-        """Créer une demande d'installation explicite et traçable."""
+    ) -> InstallationPlan:
+        """Résoudre un plan déterministe ; le client garde la décision d'écriture."""
         target_id = target.removeprefix("workspace:")
         await guard.require("request_install", target_id)
         return await backend.request_install(
             RequestInstallInput(
                 release_id=release_id,
                 target=target,
+                profile=profile,
+                scope=scope,
+                client_version=client_version,
                 idempotency_key=idempotency_key,
                 confirmation=confirmation,
             )

@@ -1,19 +1,36 @@
 """Neon catalog discovery never expands beyond OpenFGA-authorized identifiers."""
 
+from datetime import UTC, datetime
 from typing import Self
 from uuid import UUID
 
 import pytest
 from mcp.server.mcpserver.exceptions import ToolError
 
-from kya_platform.infrastructure.database.models import CatalogArtifact, CatalogArtifactVersion
+from kya_platform.application.publication.integrity import (
+    Ed25519ArtifactSigner,
+    InMemoryTrustStore,
+    TrustedSigningKey,
+)
+from kya_platform.infrastructure.database.models import (
+    CatalogArtifact,
+    CatalogArtifactVersion,
+    CatalogRelease,
+)
 from kya_platform.infrastructure.database.registry_mcp import SqlAlchemyRegistryMcpBackend
-from kya_platform.mcp.registry.contracts import GetArtifactInput, SearchCatalogInput
+from kya_platform.mcp.registry.contracts import (
+    Confirmation,
+    GetArtifactInput,
+    RequestInstallInput,
+    SearchCatalogInput,
+)
 
 ALLOWED = UUID("01991c00-0000-7000-8000-000000000001")
 WORKSPACE = UUID("01991c00-0000-7000-8000-000000000002")
 OWNER = UUID("01991c00-0000-7000-8000-000000000003")
 VERSION = UUID("01991c00-0000-7000-8000-000000000004")
+RELEASE = UUID("01991c00-0000-7000-8000-000000000005")
+SIGNED_AT = datetime(2026, 9, 7, 8, 0, tzinfo=UTC)
 
 
 def rows(*, status: str = "draft") -> tuple[CatalogArtifact, CatalogArtifactVersion]:
@@ -39,7 +56,7 @@ def rows(*, status: str = "draft") -> tuple[CatalogArtifact, CatalogArtifactVers
         source_commit="a" * 40,
         content_digest="b" * 64,
         manifest_digest="c" * 64,
-        manifest={},
+        manifest={"compatibility": {"codex": ">=2026-09", "portable-zip": ">=1"}},
         inventory_digest="d" * 64,
         package_size=100,
         file_count=2,
@@ -159,3 +176,81 @@ async def test_get_returns_versions_and_installability_without_package_content()
 
     assert detail.versions == ("1.0.0", "0.9.0")
     assert detail.installable is True
+
+
+def signed_release() -> tuple[CatalogRelease, InMemoryTrustStore]:
+    signer = Ed25519ArtifactSigner.from_private_key_bytes("kya-dev-2026", b"k" * 32)
+    signature = signer.sign(VERSION, "b" * 64, signed_at=SIGNED_AT)
+    release = CatalogRelease(
+        id=RELEASE,
+        artifact_version_id=VERSION,
+        content_digest="b" * 64,
+        signature=signature.model_dump(mode="json"),
+        storage_locator="git+https://github.com/kya-energy/skills@" + "a" * 40 + "#one",
+        status="published",
+        published_at=SIGNED_AT,
+        published_by=OWNER,
+    )
+    trust = InMemoryTrustStore(
+        (TrustedSigningKey(key_id=signer.key_id, public_key=signer.public_key_bytes()),)
+    )
+    return release, trust
+
+
+def install_request() -> RequestInstallInput:
+    return RequestInstallInput(
+        release_id=RELEASE,
+        target="workspace:dss",
+        profile="codex",
+        scope="personal",
+        client_version="2026-09",
+        idempotency_key="install-document-0001",
+        confirmation=Confirmation(confirmed=True),
+    )
+
+
+@pytest.mark.asyncio
+async def test_install_plan_requires_configured_signing_trust() -> None:
+    backend = SqlAlchemyRegistryMcpBackend(Sessions(Session(scalar_values=[], results=[])))  # type: ignore[arg-type]
+
+    with pytest.raises(ToolError, match="installation_trust_unavailable"):
+        await backend.request_install(install_request())
+
+
+@pytest.mark.asyncio
+async def test_install_plan_is_built_only_from_a_verified_published_release() -> None:
+    artifact, version = rows(status="published")
+    release, trust = signed_release()
+    session = Session(scalar_values=[], results=[Result([(release, version, artifact)])])
+    backend = SqlAlchemyRegistryMcpBackend(Sessions(session), trust)  # type: ignore[arg-type]
+
+    plan = await backend.request_install(install_request())
+
+    assert plan.release_id == RELEASE
+    assert plan.content_digest == "b" * 64
+    assert plan.destination == "${CODEX_PERSONAL_SKILLS_DIR}/document-standard"
+    assert plan.server_writes_local_files is False
+
+
+@pytest.mark.asyncio
+async def test_install_plan_rejects_a_tampered_release_signature() -> None:
+    artifact, version = rows(status="published")
+    release, trust = signed_release()
+    release.signature = {**release.signature, "signature": "tampered"}
+    session = Session(scalar_values=[], results=[Result([(release, version, artifact)])])
+    backend = SqlAlchemyRegistryMcpBackend(Sessions(session), trust)  # type: ignore[arg-type]
+
+    with pytest.raises(ToolError, match="release_signature_invalid_signature"):
+        await backend.request_install(install_request())
+
+
+@pytest.mark.asyncio
+async def test_install_plan_rejects_an_incompatible_client() -> None:
+    artifact, version = rows(status="published")
+    version.manifest["compatibility"]["codex"] = ">=2027"
+    release, trust = signed_release()
+    session = Session(scalar_values=[], results=[Result([(release, version, artifact)])])
+    backend = SqlAlchemyRegistryMcpBackend(Sessions(session), trust)  # type: ignore[arg-type]
+
+    with pytest.raises(ToolError, match="target_profile_incompatible"):
+        await backend.request_install(install_request())

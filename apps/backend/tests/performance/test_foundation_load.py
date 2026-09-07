@@ -100,6 +100,9 @@ def test_mcp_install_contract_handles_burst_without_relaxing_validation() -> Non
         RequestInstallInput(
             release_id=uuid4(),
             target="workspace:dss",
+            profile="codex",
+            scope="personal",
+            client_version="2026-09",
             idempotency_key=f"load-install-{index:06d}",
             confirmation=Confirmation(confirmed=True),
         )

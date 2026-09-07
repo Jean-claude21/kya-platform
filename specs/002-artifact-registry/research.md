@@ -71,6 +71,20 @@ doit donc exposer un courtier OAuth 2.1 : il authentifie l'utilisateur via Neon 
 requises. Le Registry reste le resource server ; OpenFGA demeure la décision finale par ressource.
 Cette frontière doit être livrée avant d'activer le Registry MCP distant.
 
+### R-010 — Installation résolue côté serveur, écriture décidée côté client
+
+Le Registry vérifie la release publiée, sa signature, son digest et la compatibilité de la version
+du client, puis retourne un plan typé et déterministe. Il ne renvoie ni commande arbitraire, ni
+secret, ni contenu exécutable inline et n'écrit jamais sur le poste. Le client montre la cible,
+obtient le consentement, télécharge dans une zone temporaire, revérifie signature et digest, active
+atomiquement puis conserve un reçu permettant l'audit et le rollback.
+
+Les profils sont : Codex projet dans `.agents/skills`, Claude Code personnel dans
+`~/.claude/skills`, Claude Code projet dans `.claude/skills`, et zip portable dans un répertoire
+choisi. L'emplacement personnel Codex reste un symbole résolu par le client
+`${CODEX_PERSONAL_SKILLS_DIR}` : l'API OpenAI expose aussi la création et les versions immuables de
+Skills, mais ne garantit pas un chemin local universel pour tous les environnements Codex.
+
 ## Références primaires
 
 - OpenAI Academy, « Using skills » : https://openai.com/academy/skills/

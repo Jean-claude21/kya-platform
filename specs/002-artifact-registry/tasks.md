@@ -29,7 +29,7 @@
 ## Phase 5 — Publication et distribution
 
 - [x] T015 Raccorder attestations, séparation des rôles et signature à la persistance.
-- [ ] T016 Produire un plan d'installation Codex, Claude Code et portable zip.
+- [x] T016 Produire un plan d'installation Codex, Claude Code et portable zip.
 - [ ] T017 Implémenter mises à jour, suspension, révocation et rollback.
 
 ## Phase 6 — Pilote et clôture

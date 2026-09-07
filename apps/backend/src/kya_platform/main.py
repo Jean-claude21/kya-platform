@@ -25,7 +25,11 @@ from kya_platform.application.publication import (
     PublicationService,
     PublicationUnitOfWorkFactory,
 )
-from kya_platform.application.publication.integrity import Ed25519ArtifactSigner
+from kya_platform.application.publication.integrity import (
+    Ed25519ArtifactSigner,
+    InMemoryTrustStore,
+    TrustedSigningKey,
+)
 from kya_platform.authorization import AuthorizationService
 from kya_platform.bootstrap import BootstrapService
 from kya_platform.config import Settings, get_settings
@@ -134,6 +138,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 signer = Ed25519ArtifactSigner.from_private_key_bytes(
                     resolved_settings.artifact_signing_key_id,
                     raw_key,
+                )
+                trust_store = InMemoryTrustStore(
+                    (
+                        TrustedSigningKey(
+                            key_id=signer.key_id,
+                            public_key=signer.public_key_bytes(),
+                        ),
+                    )
+                )
+                app.state.registry_mcp_backend = SqlAlchemyRegistryMcpBackend(
+                    session_factory,
+                    trust_store,
                 )
                 app.state.publication_service = PublicationService(
                     cast(
