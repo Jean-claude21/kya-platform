@@ -23,7 +23,9 @@ def upgrade() -> None:
         sa.Column("client_id", sa.String(length=128), primary_key=True),
         sa.Column("metadata", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
         sa.Column("encrypted_secret", sa.LargeBinary(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
         schema="oauth",
     )
     op.create_table(
@@ -44,12 +46,18 @@ def upgrade() -> None:
         sa.Column("approved_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("denied_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("consumed_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
         sa.ForeignKeyConstraint(["client_id"], ["oauth.client.client_id"], ondelete="CASCADE"),
         schema="oauth",
     )
-    op.create_index("ix_oauth_grant_request_digest", "grant", ["request_digest"], unique=True, schema="oauth")
-    op.create_index("ix_oauth_grant_code_digest", "grant", ["code_digest"], unique=True, schema="oauth")
+    op.create_index(
+        "ix_oauth_grant_request_digest", "grant", ["request_digest"], unique=True, schema="oauth"
+    )
+    op.create_index(
+        "ix_oauth_grant_code_digest", "grant", ["code_digest"], unique=True, schema="oauth"
+    )
     op.create_table(
         "token",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
@@ -63,7 +71,9 @@ def upgrade() -> None:
         sa.Column("resource", sa.Text(), nullable=False),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
         sa.ForeignKeyConstraint(["grant_id"], ["oauth.grant.id"], ondelete="CASCADE"),
         schema="oauth",
     )
