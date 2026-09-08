@@ -72,4 +72,3 @@ sources via les outils MCP du profil autorisé. Une écriture exige confirmation
 - notifications e-mail/Teams ;
 - recherche vectorielle ou classement personnalisé ;
 - tableau de bord analytique avancé.
-

@@ -35,4 +35,3 @@ ne sera introduite qu'après un corpus et des mesures réelles de rappel/précis
 - **Stocker tous les résultats générés par IA** : mélange preuve/opinion et provenance ambiguë.
 - **Un outil MCP unique polyvalent** : descriptions plus floues, autorisations moins fines et charge
   d'outils plus difficile à maîtriser.
-

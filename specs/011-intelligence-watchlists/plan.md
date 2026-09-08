@@ -29,4 +29,3 @@ stockage PostgreSQL, Business API, outils MCP et tests. Un worker événementiel
 
 Désactiver routes et outils MCP, puis arrêter toute consommation événementielle. Les tables
 additives peuvent rester en lecture pour audit ; aucun contenu source n'est modifié.
-

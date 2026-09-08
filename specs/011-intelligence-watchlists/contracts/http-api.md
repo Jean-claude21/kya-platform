@@ -2,13 +2,13 @@
 
 Préfixe : `/api/v1/intelligence/organization/{unit_key}`.
 
-| Méthode | Route | Autorisation |
-|---|---|---|
-| `POST` | `/watches` | `org_unit:{unit_key}#can_manage` |
-| `GET` | `/watches` | `org_unit:{unit_key}#can_view` |
-| `POST` | `/watches/{watch_key}/evaluate` | `can_manage` |
-| `GET` | `/watches/{watch_key}/signals` | `can_view` |
-| `POST` | `/signals/{signal_id}/acknowledge` | `can_manage` |
+| Méthode | Route                              | Autorisation                     |
+| ------- | ---------------------------------- | -------------------------------- |
+| `POST`  | `/watches`                         | `org_unit:{unit_key}#can_manage` |
+| `GET`   | `/watches`                         | `org_unit:{unit_key}#can_view`   |
+| `POST`  | `/watches/{watch_key}/evaluate`    | `can_manage`                     |
+| `GET`   | `/watches/{watch_key}/signals`     | `can_view`                       |
+| `POST`  | `/signals/{signal_id}/acknowledge` | `can_manage`                     |
 
 Toutes les mutations exigent `Idempotency-Key`. L'acquittement exige également `If-Match`.
 
@@ -22,4 +22,3 @@ Toutes les mutations exigent `Idempotency-Key`. L'acquittement exige également 
 
 Les lectures utilisent `data:read`. Les mutations utilisent `data:ingest`, une confirmation
 explicite et une clé d'idempotence. Les profils peuvent masquer individuellement chaque outil.
-
