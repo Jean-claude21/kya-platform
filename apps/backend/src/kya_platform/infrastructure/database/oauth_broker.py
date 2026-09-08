@@ -35,6 +35,7 @@ VALID_SCOPES = frozenset(
         "catalog:publish",
         "data:read",
         "data:ingest",
+        "data:content:read",
     }
 )
 

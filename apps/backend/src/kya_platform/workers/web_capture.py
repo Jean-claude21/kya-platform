@@ -8,6 +8,7 @@ from uuid import UUID, uuid7
 from kya_platform.application.data import CommandMetadata, DataService, RunCompletion
 from kya_platform.application.reliability import JsonValue, canonical_request_hash
 from kya_platform.connectors.web_capture import WebCaptureConfig, WebCaptureConnector
+from kya_platform.connectors.web_capture.content import project_capture_content
 from kya_platform.connectors.web_capture.storage import ImmutableObjectStore
 from kya_platform.domain.data import DataSnapshot, QualityResult, QualityStatus
 
@@ -68,20 +69,21 @@ class WebCaptureWorker:
             digest=bundle.digest,
         )
         completed_at = datetime.now(UTC)
+        snapshot = DataSnapshot(
+            uuid7(),
+            asset_id,
+            run.id,
+            contract_id,
+            stored,
+            bundle.digest,
+            "application/vnd.kya.web-capture+json",
+            completed_at,
+            len(bundle.pages),
+            len(content),
+        )
         completion = RunCompletion(
             run.complete(completed_at),
-            DataSnapshot(
-                uuid7(),
-                asset_id,
-                run.id,
-                contract_id,
-                stored,
-                bundle.digest,
-                "application/vnd.kya.web-capture+json",
-                completed_at,
-                len(bundle.pages),
-                len(content),
-            ),
+            snapshot,
             (
                 QualityResult("pages-present", QualityStatus.PASSED, {"count": len(bundle.pages)}),
                 QualityResult(
@@ -103,6 +105,7 @@ class WebCaptureWorker:
                     },
                 ),
             ),
+            content_documents=project_capture_content(snapshot.id, bundle),
         )
         command_payload: dict[str, JsonValue] = {
             "run_id": str(run.id),

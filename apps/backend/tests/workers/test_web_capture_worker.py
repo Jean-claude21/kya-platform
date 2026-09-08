@@ -97,6 +97,11 @@ async def test_worker_persists_before_completing_governed_run() -> None:
     assert data.completion.run.status is RunStatus.COMPLETED
     assert data.completion.snapshot.storage.object_key == store.key
     assert data.completion.snapshot.row_count == 1
+    assert len(data.completion.content_documents) == 1
+    document = data.completion.content_documents[0]
+    assert document.source_uri == "https://kya-energy.com/fr"
+    assert document.content_trust == "untrusted_external_content"
+    assert [chunk.text for chunk in document.chunks] == ["KYA"]
     assert {result.rule_key for result in data.completion.quality_results} == {
         "pages-present",
         "http-success",

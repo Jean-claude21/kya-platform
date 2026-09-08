@@ -5,6 +5,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
+from kya_platform.domain.content import ContentSearchHit
 from kya_platform.domain.data import (
     DataAsset,
     DataAssetLayer,
@@ -191,6 +192,64 @@ class IngestionRunDetail(StrictDataMcpContract):
     correlation_id: UUID
 
 
+class ContentCitation(StrictDataMcpContract):
+    citation_id: str
+    snapshot_id: UUID
+    snapshot_digest: str
+    page_digest: str
+    source_uri: str
+    observed_at: datetime
+    char_start: int
+    char_end: int
+
+
+class ContentHitDetail(StrictDataMcpContract):
+    chunk_id: UUID
+    asset_key: str
+    title: str | None
+    text: str
+    score: float
+    search_mode: str
+    content_trust: str
+    citation: ContentCitation
+
+    @classmethod
+    def from_domain(cls, hit: ContentSearchHit) -> ContentHitDetail:
+        return cls(
+            chunk_id=hit.chunk_id,
+            asset_key=hit.asset_key,
+            title=hit.title,
+            text=hit.text,
+            score=hit.score,
+            search_mode="lexical",
+            content_trust=hit.content_trust,
+            citation=ContentCitation(
+                citation_id=hit.citation_id,
+                snapshot_id=hit.snapshot_id,
+                snapshot_digest=hit.snapshot_digest,
+                page_digest=hit.page_digest,
+                source_uri=hit.source_uri,
+                observed_at=hit.observed_at,
+                char_start=hit.char_start,
+                char_end=hit.char_end,
+            ),
+        )
+
+
+class ContentSearchResult(StrictDataMcpContract):
+    items: tuple[ContentHitDetail, ...]
+    active_unit: str
+    search_mode: str
+    has_more: bool
+    correlation_id: UUID
+
+
+class ContentExcerptResult(StrictDataMcpContract):
+    item: ContentHitDetail
+    active_unit: str
+    correlation_id: UUID
+
+
 DATA_TOOLS: tuple[RegistryTool, ...] = (
     RegistryTool("discover_data_assets", "data:read", "can_view", "org_unit", RegistryRisk.READ),
     RegistryTool("get_data_asset", "data:read", "can_view", "org_unit", RegistryRisk.READ),
@@ -198,6 +257,20 @@ DATA_TOOLS: tuple[RegistryTool, ...] = (
     RegistryTool("list_data_snapshots", "data:read", "can_view", "org_unit", RegistryRisk.READ),
     RegistryTool("trace_data_lineage", "data:read", "can_view", "org_unit", RegistryRisk.READ),
     RegistryTool("get_ingestion_run", "data:read", "can_view", "org_unit", RegistryRisk.READ),
+    RegistryTool(
+        "search_data_content",
+        "data:content:read",
+        "can_view",
+        "org_unit",
+        RegistryRisk.READ,
+    ),
+    RegistryTool(
+        "get_data_excerpt",
+        "data:content:read",
+        "can_view",
+        "org_unit",
+        RegistryRisk.READ,
+    ),
     RegistryTool(
         "start_ingestion",
         "data:ingest",
@@ -213,6 +286,10 @@ DATA_TOOLS: tuple[RegistryTool, ...] = (
 
 __all__ = [
     "DATA_TOOLS",
+    "ContentCitation",
+    "ContentExcerptResult",
+    "ContentHitDetail",
+    "ContentSearchResult",
     "DataAssetDetail",
     "DataAssetSummary",
     "DataContractDetail",

@@ -1,0 +1,25 @@
+flowchart LR
+    WEB["Site KYA public<br/>contenu externe non fiable"]
+    WORKER["Worker de collecte<br/>extraction déterministe"]
+    STORE["Neon Object Storage<br/>snapshot brut immuable"]
+    INDEX["Neon Postgres<br/>projection + index GIN"]
+    GATE["OAuth + unité + OpenFGA<br/>classification publique"]
+    MCP["MCP KYA<br/>recherche + citations"]
+    CLIENT["Claude / ChatGPT<br/>raisonnement au choix"]
+
+    WEB --> WORKER
+    WORKER --> STORE
+    WORKER --> INDEX
+    INDEX --> GATE
+    GATE --> MCP
+    MCP --> CLIENT
+    STORE -.->|preuve vérifiable par digest| MCP
+
+    classDef source fill:#fff7df,stroke:#f59e0b,color:#4a2c0a
+    classDef data fill:#effaf2,stroke:#176b3a,color:#073d22
+    classDef gate fill:#fffdf0,stroke:#d4a72c,color:#4a2c0a
+    classDef client fill:#f7f5f0,stroke:#6b4f3b,color:#2f241d
+    class WEB source
+    class WORKER,STORE,INDEX data
+    class GATE,MCP gate
+    class CLIENT client

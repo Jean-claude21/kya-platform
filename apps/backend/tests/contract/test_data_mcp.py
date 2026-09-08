@@ -12,6 +12,7 @@ from mcp.server.auth.provider import AccessToken
 from kya_platform.application.data import CommandMetadata, IngestionRunReport, SnapshotLineage
 from kya_platform.authorization import AuthorizationDecision, CheckRequest, ListObjectsRequest
 from kya_platform.authorization.service import AuthorizationService
+from kya_platform.domain.content import ContentSearchHit
 from kya_platform.domain.data import (
     DataAsset,
     DataAssetLayer,
@@ -36,6 +37,7 @@ ASSET = UUID("01993480-0000-7000-8000-000000000003")
 CONTRACT = UUID("01993480-0000-7000-8000-000000000004")
 PIPELINE = UUID("01993480-0000-7000-8000-000000000005")
 SNAPSHOT = UUID("01993480-0000-7000-8000-000000000006")
+CHUNK = UUID("01993480-0000-7000-8000-000000000007")
 NOW = datetime(2026, 9, 7, 16, tzinfo=UTC)
 
 
@@ -99,6 +101,43 @@ class DataBackend:
             ASSET,
             DataStatus.ACTIVE,
         )
+
+    def content_hit(self) -> ContentSearchHit:
+        text = "Lampadaires solaires intelligents"
+        return ContentSearchHit(
+            chunk_id=CHUNK,
+            snapshot_id=SNAPSHOT,
+            asset_key="kya-institutional-web-capture",
+            source_uri="https://kya-energy.com/fr/solutions",
+            title="Solutions KYA",
+            observed_at=NOW,
+            snapshot_digest="c" * 64,
+            page_digest="d" * 64,
+            chunk_ordinal=0,
+            char_start=0,
+            char_end=len(text),
+            text=text,
+            score=0.8,
+            content_trust="untrusted_external_content",
+        )
+
+    async def search_public_content(
+        self,
+        unit: str,
+        query: str,
+        *,
+        asset_keys: tuple[str, ...],
+        limit: int,
+    ) -> tuple[ContentSearchHit, ...]:
+        assert unit == "direction-cvsi"
+        assert query == "lampadaires solaires"
+        assert asset_keys == ("kya-institutional-web-capture",)
+        assert limit == 3
+        return (self.content_hit(),)
+
+    async def get_public_excerpt(self, unit: str, chunk_id: UUID) -> ContentSearchHit | None:
+        assert unit == "direction-cvsi"
+        return self.content_hit() if chunk_id == CHUNK else None
 
     async def search_assets(self, unit: str, query: str, *, limit: int) -> tuple[DataAsset, ...]:
         assert unit == "direction-cvsi"
@@ -328,6 +367,41 @@ async def test_ingestion_run_reports_status_quality_and_no_storage_location() ->
     }
     assert "secret/capture.json" not in serialized
     assert audit.events[-1]["target_type"] == "data_run"
+
+
+@pytest.mark.asyncio
+async def test_public_content_search_and_excerpt_are_cited_untrusted_and_audited() -> None:
+    audit = Audit()
+    data_server = server(
+        policy=Policy(True),
+        backend=DataBackend(),
+        audit=audit,
+        access_token=token("data:content:read"),
+    )
+    async with Client(data_server) as client:
+        listed = await client.list_tools()
+        search = await client.call_tool(
+            "search_data_content",
+            {
+                "query": "lampadaires solaires",
+                "asset_keys": ["kya-institutional-web-capture"],
+                "limit": 2,
+            },
+        )
+        excerpt = await client.call_tool("get_data_excerpt", {"chunk_id": str(CHUNK)})
+
+    assert {"search_data_content", "get_data_excerpt"} <= {item.name for item in listed.tools}
+    item = search.structured_content["items"][0]
+    assert item["search_mode"] == "lexical"
+    assert item["content_trust"] == "untrusted_external_content"
+    assert item["citation"]["source_uri"] == "https://kya-energy.com/fr/solutions"
+    assert item["citation"]["snapshot_digest"] == "c" * 64
+    assert "storage" not in str(search.structured_content)
+    assert excerpt.structured_content["item"]["chunk_id"] == str(CHUNK)
+    assert [event["target_type"] for event in audit.events] == [
+        "data_content",
+        "data_content_chunk",
+    ]
 
 
 @pytest.mark.asyncio
