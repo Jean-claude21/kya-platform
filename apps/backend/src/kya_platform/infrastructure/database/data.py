@@ -58,6 +58,7 @@ def _source(row: DataSourceRow) -> DataSource:
         row.system_artifact_id,
         row.secret_reference,
         DataStatus(row.status),
+        cast(dict[str, object], row.configuration or {}),
     )
 
 
@@ -157,6 +158,7 @@ def _event(
             "aggregate_id": str(aggregate_id),
             "scope_unit_id": str(scope_unit_id),
             "actor_id": str(command.actor_id),
+            "correlation_id": str(command.correlation_id),
         },
     )
 
@@ -207,6 +209,7 @@ class SqlAlchemyDataRepository:
                             owner_unit_id=unit_id,
                             system_artifact_id=source.system_artifact_id,
                             secret_reference=source.secret_reference,
+                            configuration=source.configuration,
                             status=source.status.value,
                             created_by=command.actor_id,
                         ),
@@ -481,6 +484,20 @@ class SqlAlchemyDataRepository:
                     raise DataReferenceError("pipeline is outside the authorized scope")
                 if pipeline.status != "active":
                     raise DataStateError("only an active pipeline can start")
+                source = await session.get(DataSourceRow, pipeline.source_id)
+                if source is None or source.status != "active":
+                    raise DataStateError("only an active source can be ingested")
+                contract = await session.scalar(
+                    select(DataContractVersionRow)
+                    .where(DataContractVersionRow.asset_id == pipeline.output_asset_id)
+                    .order_by(
+                        DataContractVersionRow.created_at.desc(),
+                        DataContractVersionRow.id.desc(),
+                    )
+                    .limit(1)
+                )
+                if contract is None:
+                    raise DataReferenceError("pipeline output requires a published data contract")
                 scope = f"data:run:start:{pipeline.id}:{command.actor_id}"
                 replay = await self._replay_id(session, scope, command)
                 if replay is not None:
@@ -488,6 +505,18 @@ class SqlAlchemyDataRepository:
                     if row is None:
                         raise DataReferenceError("idempotent run is no longer available")
                     return _run(row)
+                event = _event("kya.data.run.started.v1", "data_run", run.id, unit_id, command)
+                event.payload.update(
+                    {
+                        "unit_key": unit_key,
+                        "pipeline_id": str(pipeline.id),
+                        "pipeline_key": pipeline.key,
+                        "source_id": str(source.id),
+                        "source_configuration": source.configuration,
+                        "asset_id": str(pipeline.output_asset_id),
+                        "contract_id": str(contract.id),
+                    }
+                )
                 session.add_all(
                     [
                         DataIngestionRunRow(
@@ -498,7 +527,7 @@ class SqlAlchemyDataRepository:
                             started_at=run.started_at,
                             metrics={},
                         ),
-                        _event("kya.data.run.started.v1", "data_run", run.id, unit_id, command),
+                        event,
                     ]
                 )
                 self._remember(session, scope, command, run.id)

@@ -54,6 +54,7 @@ class SourceCreateRequest(BaseModel):
     system_artifact_id: UUID | None = None
     secret_reference: str | None = Field(default=None, max_length=500)
     status: DataStatus = DataStatus.DRAFT
+    configuration: dict[str, Any] = Field(default_factory=dict)
 
 
 class SourceResponse(BaseModel):
@@ -65,6 +66,7 @@ class SourceResponse(BaseModel):
     system_artifact_id: UUID | None
     has_credentials: bool
     status: DataStatus
+    configuration: dict[str, Any]
 
 
 class SourceListResponse(BaseModel):
@@ -250,6 +252,7 @@ def _source_response(item: DataSource) -> SourceResponse:
         system_artifact_id=item.system_artifact_id,
         has_credentials=item.secret_reference is not None,
         status=item.status,
+        configuration=item.configuration,
     )
 
 
@@ -317,6 +320,7 @@ async def create_source(
         payload.system_artifact_id,
         payload.secret_reference,
         payload.status,
+        payload.configuration,
     )
     try:
         result = await _service(request).create_source(

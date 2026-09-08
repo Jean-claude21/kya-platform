@@ -45,6 +45,7 @@ class DataSourceRow(Base):
         ForeignKey("catalog.artifact.id", ondelete="RESTRICT"), nullable=True
     )
     secret_reference: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    configuration: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="draft")
     created_by: Mapped[UUID] = mapped_column(nullable=False)
     created_at: Mapped[datetime] = mapped_column(

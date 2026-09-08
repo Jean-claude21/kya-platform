@@ -167,6 +167,7 @@ def source_row() -> DataSourceRow:
         kind=item.kind.value,
         owner_unit_id=item.owner_unit_id,
         secret_reference=item.secret_reference,
+        configuration=item.configuration,
         status=item.status.value,
         created_by=ACTOR,
     )
@@ -532,8 +533,15 @@ async def test_pipeline_requires_a_published_connector_version() -> None:
 @pytest.mark.unit
 async def test_starts_active_pipeline_and_rejects_paused_one() -> None:
     run = IngestionRun(RUN, PIPELINE, ACTOR, RunStatus.STARTED, NOW)
-    valid = Session(scalar_values=[UNIT, None], get_values=[pipeline_row()])
+    valid = Session(
+        scalar_values=[UNIT, contract_row(), None],
+        get_values=[pipeline_row(), source_row()],
+    )
     assert (await repository(valid).start_run("direction-cvsi", run, command=command())).id == RUN
+    event = next(item for item in valid.added if isinstance(item, OutboxEvent))
+    assert event.payload["contract_id"] == str(CONTRACT)
+    assert event.payload["unit_key"] == "direction-cvsi"
+    assert event.payload["source_configuration"] == {}
 
     paused = pipeline_row()
     paused.status = "paused"

@@ -75,6 +75,12 @@ class Settings(BaseSettings):
     coolify_server_uuid: str | None = None
     coolify_web_application_name: str = "kya-platform-web"
     coolify_backend_application_name: str = "kya-platform-backend"
+    web_capture_enabled: bool = False
+    object_storage_endpoint_url: str | None = None
+    object_storage_region: str | None = None
+    object_storage_bucket: str | None = None
+    object_storage_access_key_id: SecretStr | None = None
+    object_storage_secret_access_key: SecretStr | None = None
 
     @model_validator(mode="after")
     def validate_infisical_configuration(self) -> Settings:
@@ -157,6 +163,21 @@ class Settings(BaseSettings):
             )
             if not all(registry_requirements):
                 raise ValueError("Enabled Registry MCP configuration must be complete")
+        storage = (
+            self.object_storage_endpoint_url,
+            self.object_storage_region,
+            self.object_storage_bucket,
+            self.object_storage_access_key_id,
+            self.object_storage_secret_access_key,
+        )
+        if any(item is not None for item in storage) and not all(storage):
+            raise ValueError("Object storage configuration must be complete")
+        if self.object_storage_endpoint_url is not None:
+            self.object_storage_endpoint_url = self.object_storage_endpoint_url.rstrip("/")
+            if not self.object_storage_endpoint_url.startswith("https://"):
+                raise ValueError("Object storage endpoint must use HTTPS")
+        if self.web_capture_enabled and (self.database_url is None or not all(storage)):
+            raise ValueError("Enabled web capture requires database and object storage")
             if self.registry_mcp_authorization_server_url != self.oauth_issuer_url:
                 raise ValueError("Registry MCP authorization server must be the KYA OAuth issuer")
         bootstrap = (self.bootstrap_owner_email, self.bootstrap_claim_code_hash)
@@ -198,6 +219,19 @@ class Settings(BaseSettings):
                 self.openfga_api_token,
                 self.openfga_store_id,
                 self.openfga_model_id,
+            )
+        )
+
+    @property
+    def has_web_capture_configuration(self) -> bool:
+        return self.web_capture_enabled and all(
+            (
+                self.database_url,
+                self.object_storage_endpoint_url,
+                self.object_storage_region,
+                self.object_storage_bucket,
+                self.object_storage_access_key_id,
+                self.object_storage_secret_access_key,
             )
         )
 

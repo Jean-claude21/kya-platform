@@ -20,8 +20,14 @@ class _AffectedRows(Protocol):
 
 
 class DatabaseOutboxQueue:
-    def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
+    def __init__(
+        self,
+        session_factory: async_sessionmaker[AsyncSession],
+        *,
+        topics: frozenset[str] | None = None,
+    ) -> None:
         self._session_factory = session_factory
+        self._topics = tuple(sorted(topics)) if topics else None
 
     async def lease(
         self, *, owner: str, limit: int, now: datetime, duration: timedelta
@@ -42,6 +48,8 @@ class DatabaseOutboxQueue:
                 .limit(limit)
                 .with_for_update(skip_locked=True)
             )
+            if self._topics is not None:
+                candidate_ids = candidate_ids.where(OutboxEvent.topic.in_(self._topics))
             ids = list((await session.scalars(candidate_ids)).all())
             if not ids:
                 return []

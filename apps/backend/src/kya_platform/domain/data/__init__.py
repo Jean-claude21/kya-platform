@@ -1,7 +1,8 @@
 """Vendor-neutral primitives for governed data acquisition and delivery."""
 
 import re
-from dataclasses import dataclass, replace
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
@@ -19,6 +20,21 @@ def _required_key(value: str, name: str) -> None:
 def _aware(value: datetime, name: str) -> None:
     if value.tzinfo is None or value.utcoffset() is None:
         raise ValueError(f"{name} must include a timezone")
+
+
+def _public_configuration(value: object) -> None:
+    forbidden = {"secret", "password", "token", "credential", "api_key", "access_key"}
+    if isinstance(value, Mapping):
+        for key, nested in value.items():
+            normalized = str(key).casefold().replace("-", "_")
+            if any(marker in normalized for marker in forbidden):
+                raise ValueError("source configuration must not contain credential fields")
+            _public_configuration(nested)
+    elif isinstance(value, Sequence) and not isinstance(value, str | bytes):
+        for nested in value:
+            _public_configuration(nested)
+    elif value is not None and not isinstance(value, str | int | float | bool):
+        raise ValueError("source configuration must contain JSON values only")
 
 
 class DataClassification(StrEnum):
@@ -62,6 +78,7 @@ class DataSource:
     system_artifact_id: UUID | None = None
     secret_reference: str | None = None
     status: DataStatus = DataStatus.DRAFT
+    configuration: dict[str, object] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         _required_key(self.key, "data source key")
@@ -70,6 +87,7 @@ class DataSource:
         if self.secret_reference is not None:
             if not self.secret_reference.strip() or "://" in self.secret_reference:
                 raise ValueError("secret_reference must be an opaque reference, not a URL")
+        _public_configuration(self.configuration)
 
 
 @dataclass(frozen=True, slots=True)

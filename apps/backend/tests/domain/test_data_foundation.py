@@ -49,6 +49,28 @@ def test_source_keeps_only_an_opaque_secret_reference() -> None:
 
 
 @pytest.mark.unit
+def test_source_configuration_is_non_secret_json_only() -> None:
+    with pytest.raises(ValueError, match="credential"):
+        DataSource(
+            IDENTIFIER,
+            "owned-web",
+            "Site KYA",
+            DataSourceKind.WEB,
+            IDENTIFIER,
+            configuration={"http": {"api_token": "must-not-be-here"}},
+        )
+    with pytest.raises(ValueError, match="JSON"):
+        DataSource(
+            IDENTIFIER,
+            "owned-web",
+            "Site KYA",
+            DataSourceKind.WEB,
+            IDENTIFIER,
+            configuration={"hosts": {"kya-energy.com"}},
+        )
+
+
+@pytest.mark.unit
 def test_asset_is_independent_from_any_single_source() -> None:
     asset = DataAsset(
         IDENTIFIER,
