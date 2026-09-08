@@ -1,40 +1,39 @@
-# ADR 0001 — FastAPI comme backend métier unique
+# ADR 0001 — FastAPI as the single business backend
 
-- **Statut** : accepté
-- **Date** : 2026-09-03
-- **Décideur** : CVSI KYA-Energy Group
+- **Status:** accepted
+- **Date:** 2026-09-03
+- **Decision owner:** KYA-Energy Group CVSI
 
-## Contexte
+## Context
 
-La plateforme doit protéger Neon, les secrets, les autorisations fines, l'audit, les publications,
-les outils MCP et les déploiements. Une interface TanStack seule ne constitue pas une frontière de
-confiance suffisante. Maintenir en parallèle une API métier TypeScript et une API Python créerait
-deux implémentations des mêmes règles.
+The platform must protect Neon, secrets, fine-grained authorization, audit, publications, MCP tools
+and deployments. A TanStack interface alone is not a sufficient trust boundary. Maintaining
+parallel TypeScript and Python business APIs would create two implementations of the same rules.
 
-## Décision
+## Decision
 
-FastAPI devient l'unique backend métier. Le même package Python expose trois processus logiques :
+FastAPI is the single business backend. The same Python package exposes three logical processes:
 
-1. API HTTP versionnée ;
-2. Registry MCP protégé ;
-3. workers et routines planifiées.
+1. a versioned HTTP API;
+2. a protected MCP registry and gateway;
+3. workers and scheduled routines.
 
-TanStack reste responsable de l'expérience utilisateur et intègre Neon Auth. FastAPI valide les
-jetons Neon Auth par issuer, audience et JWKS, puis demande les décisions d'autorisation à OpenFGA. SQLAlchemy 2 et
-Alembic deviennent l'unique couche de persistance vers Neon.
+TanStack owns the user experience and integrates Neon Auth. FastAPI validates Neon Auth token
+issuer, audience, JWKS signature and expiration, then asks OpenFGA for authorization decisions.
+SQLAlchemy 2 and Alembic are the single persistence path to Neon.
 
-## Conséquences
+## Consequences
 
-- aucune clé fournisseur ni connexion Neon n'est exposée au navigateur ;
-- les règles métier sont testées une seule fois avec pytest ;
-- l'API, le MCP et les workers peuvent être déployés séparément sans devenir des microservices ;
-- les contrats Web sont générés depuis OpenAPI/JSON Schema ;
-- Hono et Drizzle ne portent plus de logique métier ni de migrations.
+- Provider keys and Neon connections never reach the browser.
+- Business rules are tested once with pytest.
+- API, MCP and workers may deploy separately without becoming independent microservices.
+- Web contracts derive from OpenAPI and JSON Schema.
+- Hono and Drizzle do not carry business logic or migrations.
 
-## Garde-fous
+## Guardrails
 
-- dépendances dirigées `transport → application → domain` ;
-- adapters fournisseurs derrière des ports ;
-- refus par défaut et contrôle OpenFGA au moment de chaque action ;
-- migrations immuables après publication ;
-- tests de contrats, politiques, sécurité et intégration avant promotion.
+- Dependencies point `delivery → application → domain`.
+- Provider adapters implement application-facing ports.
+- Every action is denied by default and checked by OpenFGA at execution time.
+- Published migrations are immutable.
+- Contract, policy, security and integration tests run before promotion.

@@ -1,38 +1,34 @@
-# Gouvernance du dépôt KYA Platform
+# KYA Platform repository governance
 
-Date de contrôle : 2026-09-05
+Last reviewed: 2026-09-05.
 
-## Flux obligatoire
+## Required flow
 
-- `feat-xxx` part de `dev` et revient vers `dev` par Pull Request ;
-- `dev` est la branche d'intégration, avec tags facultatifs `vX.Y.Z-dev.N` sur les jalons
-  effectivement déployables ;
-- seule `dev` peut ouvrir une Pull Request vers `main` ;
-- chaque commit accepté sur `main` reçoit un tag SemVer annoté ;
-- aucune branche fonctionnelle ne pousse directement sur `main`.
+- `feat-xxx` starts from `dev` and returns to `dev` through a Pull Request.
+- `dev` is the integration branch; optional `vX.Y.Z-dev.N` tags mark deployable milestones.
+- Only `dev` may open a Pull Request to `main`.
+- Every commit accepted on `main` receives an annotated SemVer tag.
+- Feature branches never push directly to `main`.
 
-Les workflows contrôlent déjà le nom et la destination des branches, le lint, le typage, les tests,
-le modèle OpenFGA, les secrets, les images de conteneur et les SBOM.
+Workflows already check branch direction, linting, types, tests, the OpenFGA model, secrets,
+container images and SBOMs.
 
-## Propriétaires et approbations
+## Owners and approvals
 
-Le dépôt privé possède actuellement un seul administrateur direct : `Jean-claude21`. Il n'existe
-donc pas encore deux comptes permettant de démontrer une séparation de responsabilités dans
-GitHub. Pour les changements sensibles, la validation fonctionnelle et la validation technique
-doivent être deux décisions distinctes dans KYA Platform, même si GitHub ne peut pas encore les
-matérialiser avec deux approbateurs.
+The private repository currently has one direct administrator, `Jean-claude21`. GitHub therefore
+cannot yet demonstrate separation of duties with two independent accounts. Sensitive changes still
+require separate functional and technical decisions in KYA Platform, even when GitHub cannot
+materialize two approvers.
 
-## Protection GitHub non activable actuellement
+## GitHub protection currently unavailable
 
-L'API GitHub renvoie `403` pour les protections de `main` et `dev` : le plan du dépôt privé doit être
-mis à niveau, ou le dépôt rendu public, pour activer cette fonctionnalité. Le dépôt ne doit pas être
-rendu public pour contourner cette restriction.
+The GitHub API returns `403` for `main` and `dev` protection because the private repository plan
+must be upgraded. The repository must not be made public to bypass this restriction.
 
-T080 reste donc ouverte. Une fois la fonctionnalité disponible et un second propriétaire nommé :
+Task T080 remains open. Once the feature is available and a second owner is appointed:
 
-- interdire les pushes directs et suppressions de `main` ;
-- exiger une Pull Request `dev → main`, une approbation indépendante et tous les checks ;
-- interdire le contournement administrateur de `main` hors procédure d'urgence auditée ;
-- exiger une Pull Request `feat-xxx → dev` et les checks de qualité/sécurité ;
-- conserver l'historique linéaire ou les merge commits selon la preuve de release retenue, sans
-  squash d'un tag déjà publié.
+- deny direct pushes and deletion of `main`;
+- require a `dev → main` Pull Request, independent approval and all checks;
+- deny administrator bypass outside an audited emergency process;
+- require `feat-xxx → dev` Pull Requests and quality/security checks;
+- retain a release-compatible history and never squash an already published tag.

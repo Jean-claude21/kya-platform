@@ -1,26 +1,28 @@
-# ADR 0006 — Premier connecteur : capture du Web détenu par KYA
+# ADR 0006 — First connector: KYA-owned Web capture
 
-## Décision
+## Decision
 
-Le premier connecteur réel capture le site institutionnel KYA. Il s'exécute dans un worker
-séparé, sur événement outbox, et produit un paquet JSON canonique dans un stockage S3 compatible.
-Neon Object Storage est le fournisseur initial prévu ; le domaine ne dépend pas de Neon.
+The first real connector captures KYA's institutional website. A separate worker processes an
+outbox event and writes a canonical JSON package to S3-compatible storage. Neon Object Storage is
+the initial provider; the domain does not depend on Neon.
 
-## Raisons
+## Rationale
 
-- source utile, publique et contrôlée par KYA ;
-- validation réelle du chemin MCP → Data → outbox → collecte → stockage → snapshot ;
-- base réutilisable pour contrôle éditorial, SEO, connaissance produits et détection de changements ;
-- risque moindre qu'un premier pilote sur une plateforme tierce ;
-- logiciel déterministe pour la collecte, IA pour l'analyse ultérieure.
+- The source is useful, public and controlled by KYA.
+- It validates the real MCP → Data → outbox → capture → storage → snapshot path.
+- It creates a reusable foundation for editorial control, SEO, product knowledge and change
+  detection.
+- It carries less risk than a first pilot on a third-party platform.
+- Deterministic software collects; AI performs subsequent analysis.
 
-## Conséquences
+## Consequences
 
-- les sources Data possèdent une configuration publique JSON ; les secrets restent référencés ;
-- chaque run épingle sa configuration, son actif et son contrat dans l'événement ;
-- la collecte est HTTPS, même origine, bornée, attentive à `robots.txt` et sans navigateur ;
-- les contenus non HTML et erreurs secondaires deviennent des avertissements qualité ;
-- l'activation nécessite des credentials S3 de Neon Storage dans Infisical.
+- Data sources contain public JSON configuration; secrets remain referenced.
+- Each run pins its configuration, asset and contract in the event.
+- Capture uses HTTPS, stays on the same origin, respects bounded limits and `robots.txt`, and does
+  not require a browser.
+- Non-HTML content and secondary failures become quality warnings.
+- Activation requires Neon Storage S3 credentials in Infisical.
 
-Un futur connecteur de marchés publics réutilisera le protocole Data et le port de stockage, mais
-gardera sa propre logique de source, ses règles de conformité et son contrat métier.
+A future public-procurement connector may reuse the Data protocol and storage port, while retaining
+its own source logic, compliance rules and business contract.

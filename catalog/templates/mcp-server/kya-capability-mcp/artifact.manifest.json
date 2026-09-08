@@ -13,7 +13,7 @@
   "source": {
     "repository": "https://github.com/kya-energy/replace-me",
     "commit": "0000000000000000000000000000000000000000",
-    "path": "mcp/kya-capability-mcp"
+    "path": "catalog/sources/mcp-servers/kya-capability-mcp"
   },
   "integrity": {
     "algorithm": "sha256",
@@ -24,6 +24,6 @@
     "transport": "streamable-http"
   },
   "dependencies": [],
-  "scopes": ["capability.discover"],
+  "scopes": ["capability.read"],
   "risk": "read"
 }

@@ -1,20 +1,19 @@
-# ADR 0005 — Exposer Data Foundation par la passerelle MCP KYA unique
+# ADR 0005 — Expose Data Foundation through the single KYA MCP gateway
 
-## Statut
+- **Status:** accepted
+- **Date:** 2026-09-08
 
-Accepté le 8 septembre 2026.
+## Decision
 
-## Décision
+Data capabilities register on the existing MCP server. OAuth grants distinct `data:read` and
+`data:ingest` scopes; OpenFGA then decides in the active organizational unit. Handlers reuse
+`DataService`, fail closed when audit is unavailable, and return projections without secrets or
+storage locations.
 
-Les capacités Data sont enregistrées sur le serveur MCP existant. OAuth accorde des portées
-distinctes (`data:read`, `data:ingest`) ; OpenFGA décide ensuite sur l'unité active. Les handlers
-réutilisent `DataService`, ferment l'accès sans audit et retournent des projections sans secrets ni
-emplacements de stockage.
+## Consequences
 
-## Conséquences
-
-- Une seule connexion suffit dans Claude, ChatGPT ou un éditeur compatible.
-- Le nombre d'outils visible dépend du consentement et du rôle courant.
-- Les modèles ne reçoivent pas de SQL arbitraire ou de clé fournisseur.
-- Le premier scraper pourra s'intégrer sans modifier les contrats de gouvernance.
-- L'activation personnelle d'outils reste une extension ultérieure du profil utilisateur.
+- One connection is sufficient in Claude, ChatGPT or a compatible editor.
+- Visible tools depend on consent, role and active context.
+- Models receive neither arbitrary SQL nor provider keys.
+- New scrapers integrate without changing governance contracts.
+- Users can later configure a smaller personal tool profile without reconnecting the gateway.

@@ -1,44 +1,14 @@
-"""Provider-neutral deployment ports and deterministic adapters."""
+"""Deterministic deployment adapters used by tests and local development."""
 
 from dataclasses import dataclass
-from typing import Protocol
 from uuid import uuid4
 
-
-class DeploymentError(RuntimeError):
-    """A provider rejected a deployment operation."""
-
-
-@dataclass(frozen=True, slots=True)
-class DeploymentRequest:
-    application: str
-    commit_sha: str
-    environment: str
-    image_digest: str | None = None
-    previous_commit_sha: str | None = None
-
-    def __post_init__(self) -> None:
-        if not self.application or not self.commit_sha:
-            raise ValueError("application and commit_sha are required")
-        if self.environment not in {"preview", "staging", "production"}:
-            raise ValueError("unsupported deployment environment")
-
-
-@dataclass(frozen=True, slots=True)
-class DeploymentRecord:
-    id: str
-    provider: str
-    request: DeploymentRequest
-    status: str
-    url: str | None = None
-
-
-class DeploymentProvider(Protocol):
-    name: str
-
-    async def deploy(self, request: DeploymentRequest) -> DeploymentRecord: ...
-
-    async def rollback(self, deployment_id: str) -> DeploymentRecord: ...
+from kya_platform.application.deployment import (
+    DeploymentError,
+    DeploymentProvider,
+    DeploymentRecord,
+    DeploymentRequest,
+)
 
 
 @dataclass(slots=True)

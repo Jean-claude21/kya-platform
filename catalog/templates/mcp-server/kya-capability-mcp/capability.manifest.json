@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "1",
+  "runtime": "python>=3.14,<3.15",
+  "entrypoints": {
+    "server": "src/kya_capability_mcp/server.py"
+  },
+  "commands": ["serve"],
+  "network": {
+    "mode": "none",
+    "allowedHosts": []
+  },
+  "filesystem": {
+    "readPaths": [],
+    "writePaths": []
+  },
+  "secretReferences": [],
+  "requestedPermissions": ["capability.read"],
+  "resourceLimits": {
+    "timeoutSeconds": 60,
+    "memoryMegabytes": 512
+  }
+}

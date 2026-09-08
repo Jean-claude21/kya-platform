@@ -7,6 +7,9 @@ description: Apply one validated KYA business method when producing or reviewing
 
 Use the validated method and source material supplied by the owning Direction.
 
+Read [references/method.md](references/method.md) when the request requires the detailed business
+method, its required inputs, validation rules or expected output.
+
 ## Required behavior
 
 1. Confirm the requested deliverable, audience, owner and approved version of the method.

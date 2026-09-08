@@ -1,7 +1,7 @@
 [project]
 name = "kya-platform-backend"
 version = "0.0.1"
-description = "Backend métier, API et surfaces MCP de KYA Platform"
+description = "KYA Platform business backend, API and MCP surfaces"
 requires-python = ">=3.14,<3.15"
 dependencies = [
   "aioboto3>=15.5,<16",

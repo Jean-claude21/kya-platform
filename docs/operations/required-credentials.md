@@ -1,43 +1,42 @@
-# Clés et identités techniques requises
+# Required credentials and machine identities
 
-Ce document inventorie les accès attendus sans jamais enregistrer leur valeur. Les valeurs seront
-créées dans Infisical et injectées au runtime avec le moindre privilège.
+This page inventories expected access without recording secret values. Values are created in
+Infisical and injected at runtime with least privilege.
 
-## État actuel
+## Current state
 
-Aucune clé externe n'est requise pour le socle local, les contrats et les tests. Les tests utilisent
-des instances locales ou des adapters simulés.
+Local contracts and tests require no external key. Tests use local instances or controlled adapters.
 
-## Demande juste à temps
+## Just-in-time access
 
-| Étape               | Accès à fournir                             | Finalité                         | Séparation obligatoire        |
-| ------------------- | ------------------------------------------- | -------------------------------- | ----------------------------- |
-| Persistance Neon    | URL poolée runtime + URL directe migrations | API et Alembic                   | preview, test, production     |
-| Identité            | URL Neon Auth, issuer, audience et JWKS     | sessions et jetons               | par branche/environnement     |
-| Fichiers            | identité S3 Neon Object Storage             | objets privés et publications    | par branche/environnement     |
-| Autorisation        | store/model OpenFGA + identité machine      | décisions serveur                | par environnement             |
-| Secrets             | identité machine Infisical                  | lecture de références autorisées | par workload et environnement |
-| Synchronisation     | GitHub App ID, installation ID, clé privée  | dépôts, PR, tags et manifestes   | permissions minimales         |
-| Déploiement         | jeton Dokploy et/ou Coolify                 | preview, promotion, rollback     | par fournisseur/environnement |
-| Frappe              | identité d'intégration Frappe               | capacités et données autorisées  | par site et périmètre         |
-| Modèle IA optionnel | clé Z.AI ou abonnement compatible           | GLM-5.3 via adapter              | personnel, pilote, production |
+| Stage             | Required access                                | Purpose                               | Required separation         |
+| ----------------- | ---------------------------------------------- | ------------------------------------- | --------------------------- |
+| Neon persistence  | pooled runtime URL and direct migration URL    | API and Alembic                       | preview, test, production   |
+| Identity          | Neon Auth URL, issuer, audience and JWKS       | sessions and tokens                   | per branch/environment      |
+| Files             | Neon Object Storage S3 identity                | private objects and publications      | per branch/environment      |
+| Authorization     | OpenFGA store/model and machine identity       | server decisions                      | per environment             |
+| Secrets           | Infisical machine identity                     | resolve authorized references         | per workload/environment    |
+| Synchronization   | GitHub App ID, installation ID and private key | repositories, PRs, tags and manifests | least privilege             |
+| Deployment        | Dokploy and/or Coolify token                   | preview, promotion and rollback       | per provider/environment    |
+| Frappe            | Frappe integration identity                    | authorized capabilities and data      | per site/scope              |
+| Optional AI model | Z.AI key or compatible subscription            | GLM-5.3 through an adapter            | personal, pilot, production |
 
-## Correspondance Neon Object Storage
+## Neon Object Storage mapping
 
-Pour l'implémentation initiale, les cinq paramètres génériques du runtime KYA désignent tous la
-même branche Neon Storage :
+The initial implementation maps five generic KYA runtime parameters to the same Neon Storage
+branch:
 
-| Paramètre KYA                          | Valeur Neon Storage attendue                      |
-| -------------------------------------- | ------------------------------------------------- |
-| `KYA_OBJECT_STORAGE_ENDPOINT_URL`      | endpoint S3 HTTPS de la branche                   |
-| `KYA_OBJECT_STORAGE_REGION`            | région S3 fournie pour cet endpoint               |
-| `KYA_OBJECT_STORAGE_BUCKET`            | bucket déclaré dans `neon.ts` (`kya-data`)        |
-| `KYA_OBJECT_STORAGE_ACCESS_KEY_ID`     | access key S3 générée par Neon pour la branche    |
-| `KYA_OBJECT_STORAGE_SECRET_ACCESS_KEY` | secret key S3 associée, lue uniquement au runtime |
+| KYA parameter                          | Expected Neon Storage value                 |
+| -------------------------------------- | ------------------------------------------- |
+| `KYA_OBJECT_STORAGE_ENDPOINT_URL`      | branch S3 HTTPS endpoint                    |
+| `KYA_OBJECT_STORAGE_REGION`            | region supplied for the endpoint            |
+| `KYA_OBJECT_STORAGE_BUCKET`            | bucket declared in `neon.ts` (`kya-data`)   |
+| `KYA_OBJECT_STORAGE_ACCESS_KEY_ID`     | branch S3 access key                        |
+| `KYA_OBJECT_STORAGE_SECRET_ACCESS_KEY` | associated secret key, read only at runtime |
 
-`KYA_NEON_API_KEY` et `KYA_NEON_PROJECT_ID` pilotent le control plane Neon ; ils ne remplacent
-jamais les deux credentials S3. Development, preview/staging et production utilisent des valeurs
-distinctes afin que les fichiers suivent l'isolation des branches Neon.
+`KYA_NEON_API_KEY` and `KYA_NEON_PROJECT_ID` control the Neon control plane; they never replace S3
+credentials. Development, preview/staging and production use distinct values so file isolation
+follows Neon branches.
 
-Avant chaque première connexion réelle, le CVSI reçoit la liste exacte des droits demandés, la
-procédure de création, le propriétaire, la durée, le plan de rotation et le test de révocation.
+Before the first real connection, CVSI receives the exact requested permissions, creation
+procedure, owner, lifetime, rotation plan and revocation test.

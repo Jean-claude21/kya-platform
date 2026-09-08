@@ -1,26 +1,27 @@
-# ADR 0002 — Neon Auth et Object Storage branchables
+# ADR 0002 — Branchable Neon Auth and Object Storage
 
-- **Statut** : accepté
-- **Date** : 2026-09-03
-- **Décideur** : CVSI KYA-Energy Group
+- **Status:** accepted
+- **Date:** 2026-09-03
+- **Decision owner:** KYA-Energy Group CVSI
 
-## Décision
+## Decision
 
-Neon fournit le socle branchable de KYA Platform : Postgres, Neon Auth et Object Storage. Chaque
-preview reçoit des données, une identité et des fichiers isolés. FastAPI reste l'unique frontière
-métier et ne délègue pas ses décisions d'autorisation à l'interface.
+Neon provides KYA Platform's branchable foundation: Postgres, Neon Auth and Object Storage. Each
+preview receives isolated data, identity and files. FastAPI remains the single business trust
+boundary and does not delegate authorization decisions to the interface.
 
-Neon Auth authentifie les personnes et émet les jetons. FastAPI valide issuer, audience, signature
-JWKS et expiration. OpenFGA décide ensuite si le principal peut agir sur la ressource et la portée.
+Neon Auth authenticates people and issues tokens. FastAPI validates issuer, audience, JWKS
+signature and expiration. OpenFGA then decides whether the principal may act on the resource in the
+active scope.
 
-Neon Object Storage implémente un port S3 remplaçable. Il conserve les fichiers et bundles, jamais
-le code source, les métadonnées d'autorité ou les valeurs secrètes. Durant sa bêta, les objets
-critiques conservent une stratégie de copie et de restauration indépendante.
+Neon Object Storage implements a replaceable S3 port. It stores files and bundles, never source
+code, authorization metadata or secret values. While the service is in beta, critical objects keep
+an independent copy and restore strategy.
 
-## Conséquences
+## Consequences
 
-- Better Auth n'est pas installé directement par KYA Platform ;
-- les identités de preview suivent les branches Neon ;
-- TanStack ne reçoit aucune connexion PostgreSQL ;
-- la Data API n'est pas une voie métier parallèle à FastAPI ;
-- les clés Object Storage restent dans Infisical et ne transitent pas par le catalogue.
+- KYA Platform does not install Better Auth directly.
+- Preview identities follow Neon branches.
+- TanStack receives no PostgreSQL connection.
+- The Data API is not a parallel business path around FastAPI.
+- Object Storage keys remain in Infisical and never enter the catalog.

@@ -1,50 +1,47 @@
-# ADR 0003 — KYA Core comme référentiel canonique indépendant
+# ADR 0003 — KYA Core as an independent canonical registry
 
-**Statut** : accepté
-**Date** : 2026-09-07
+- **Status:** accepted
+- **Date:** 2026-09-07
 
-## Contexte
+## Context
 
-Les applications KYA doivent partager une organisation mouvante, les personnes, clients,
-projets et sites sans reproduire les doublons et personnalisations dispersées. Frappe/ERPNext
-reste utile pendant la transition, mais ne doit plus définir les identifiants ni la structure
-des nouvelles applications autonomes.
+KYA applications must share a changing organization, people, customers, projects and sites without
+reproducing scattered duplicates and customizations. Frappe and ERPNext remain useful during the
+transition, but they must not define the identifiers or structure of new autonomous applications.
 
-## Décision
+## Decision
 
-KYA Core est un domaine du monolithe modulaire FastAPI. Neon porte ses données canoniques dans
-le schéma `core`. Les consommateurs utilisent ses ports applicatifs et sa Business API ; les
-futurs MCP et adaptateurs Frappe utiliseront les mêmes cas d'usage.
+KYA Core is a domain of the FastAPI modular monolith. Neon stores its canonical data in the `core`
+schema. Consumers use its application ports and Business API; future MCP capabilities and Frappe
+adapters will use the same use cases.
 
-Le modèle distingue :
+The model distinguishes:
 
-- `Party`, réalité métier, de `Principal`, identité numérique ;
-- personne stable, relation de travail datée et affectation à un poste datée ;
-- unité stable, type extensible et relations organisationnelles historisées ;
-- clients, projets et sites possédés par un périmètre organisationnel explicite.
+- a `Party`, which is a business entity, from a `Principal`, which is a digital identity;
+- a stable person from dated work relationships and dated position assignments;
+- stable organizational units from extensible types and historical relationships;
+- customers, projects and sites owned by an explicit organizational scope.
 
-OpenFGA décide les droits, Neon garantit les contraintes et l'outbox publie les changements dans
-la même transaction. La migration crée l'unité racine `group`, mais le droit de propriétaire
-reste attribué par le bootstrap sécurisé : données de référence et privilèges ne sont pas confondus.
+OpenFGA decides access. Neon guarantees constraints. The transactional outbox publishes changes in
+the same transaction. The migration creates the `group` root unit, while secured bootstrap grants
+ownership: reference data and privileges are not conflated.
 
-## Options écartées
+## Rejected options
 
-- Continuer à utiliser les DocTypes Frappe comme source unique : couplage fort et propagation des
-  doublons actuels.
-- Extraire immédiatement un microservice KYA Core : coût opérationnel sans besoin de charge ou de
-  cycle de déploiement distinct.
-- Concevoir d'abord une interface complète : elle figerait les écrans avant les contrats et les
-  usages réels.
+- Keep Frappe DocTypes as the sole authority: this preserves tight coupling and existing duplicates.
+- Extract KYA Core immediately as a microservice: this adds operational cost without an independent
+  load or release requirement.
+- Design a complete interface first: this would freeze screens before contracts and real use cases.
 
-## Conséquences
+## Consequences
 
-- Une application peut naître sans dépendance Frappe et recevoir un adaptateur plus tard.
-- Les clés et relations disposent d'une histoire auditable et d'une autorité claire.
-- La v0.1 expose seulement unités, clients et projets ; contacts, personnes, postes, sites et
-  relations de travail seront ouverts par tranches verticales justifiées.
-- Toute modification du schéma suit une migration réversible testée sur une branche Neon isolée.
+- An application can start without Frappe and receive an adapter later.
+- Keys and relationships have an auditable history and explicit authority.
+- Version 0.1 exposes only units, customers and projects; contacts, people, positions, sites and work
+  relationships open through justified vertical slices.
+- Every schema change uses a reversible migration tested on an isolated Neon branch.
 
-## Conditions de révision
+## Review condition
 
-Réexaminer l'extraction en service séparé si KYA Core acquiert un propriétaire, un niveau de
-sécurité, une charge ou un cycle de publication réellement distincts du backend de la plateforme.
+Reconsider extraction when KYA Core has a genuinely independent owner, security level, load profile
+or release lifecycle.

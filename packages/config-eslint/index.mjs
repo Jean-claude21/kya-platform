@@ -8,6 +8,8 @@ export default tseslint.config(
       '**/dist/**',
       '**/.output/**',
       '**/coverage/**',
+      '**/site/**',
+      '**/tmp/**',
       '**/.venv/**',
       'catalog/templates/**',
     ],
