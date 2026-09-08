@@ -42,6 +42,13 @@ from kya_platform.infrastructure.database.models.data import (
     DataSourceRow,
 )
 from kya_platform.infrastructure.database.models.identity import ExternalIdentity
+from kya_platform.infrastructure.database.models.mcp_control import (
+    McpToolDefinition,
+    McpToolProfile,
+    McpToolProfileAssignment,
+    McpToolProfileItem,
+    McpUserToolPreference,
+)
 from kya_platform.infrastructure.database.models.oauth import (
     OAuthClient,
     OAuthGrant,
@@ -91,6 +98,11 @@ __all__ = [
     "DataSourceRow",
     "ExternalIdentity",
     "IdempotencyRecord",
+    "McpToolDefinition",
+    "McpToolProfile",
+    "McpToolProfileAssignment",
+    "McpToolProfileItem",
+    "McpUserToolPreference",
     "OAuthClient",
     "OAuthGrant",
     "OAuthTokenRecord",

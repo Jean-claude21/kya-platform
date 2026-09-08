@@ -1,0 +1,25 @@
+flowchart LR
+    Req["Requête MCP stateless"] --> Identity["Identité + unité active + client"]
+    Identity --> Active["Définitions avec handler actif"]
+    Identity --> Scopes["Scopes OAuth"]
+    Identity --> Grants["OpenFGA can_discover / can_invoke"]
+    Identity --> Profiles["Profils assignés et valides"]
+    Identity --> Preferences["Préférences personnelles disabled"]
+    Active --> Resolver["EffectiveToolResolver"]
+    Scopes --> Resolver
+    Grants --> Resolver
+    Profiles --> Resolver
+    Preferences --> Resolver
+    Resolver --> Limit{"Au plus 24 outils ?"}
+    Limit -->|Oui| Stable["Tri stable + révision"]
+    Limit -->|Non| Refuse["Liste vide / mutation refusée"]
+    Stable --> List["tools/list exact"]
+    Stable --> Call["tools/call réautorisé"]
+    Call --> Target["Permission sur la ressource métier"]
+
+    classDef input fill:#F7F3E8,stroke:#6B4F3A,color:#173B2D
+    classDef control fill:#E8F3EC,stroke:#0E6B3B,color:#173B2D
+    classDef deny fill:#FFF0E6,stroke:#E66A1F,color:#6B2D16
+    class Req,Identity,Active,Scopes,Grants,Profiles,Preferences input
+    class Resolver,Limit,Stable,List,Call,Target control
+    class Refuse deny
