@@ -4,5 +4,5 @@
 - [x] T002 — Implémenter le handler automatique.
 - [x] T003 — Raccorder les topics du worker.
 - [x] T004 — Couvrir les invariants par tests.
-- [ ] T005 — Déployer le worker sur le commit validé.
+- [x] T005 — Déployer le worker sur le commit validé.
 - [ ] T006 — Exécuter un pilote réel et consigner les preuves.
