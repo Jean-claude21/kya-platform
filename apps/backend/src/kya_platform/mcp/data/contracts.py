@@ -3,7 +3,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from kya_platform.domain.content import ContentSearchHit
 from kya_platform.domain.data import (
@@ -12,9 +12,11 @@ from kya_platform.domain.data import (
     DataClassification,
     DataContract,
     DataSnapshot,
+    DataSourceKind,
     DataStatus,
     QualityResult,
 )
+from kya_platform.domain.source_lifecycle import SourceFlow, SourceFlowHealth
 from kya_platform.mcp.registry.contracts import RegistryRisk, RegistryTool
 
 
@@ -250,6 +252,128 @@ class ContentExcerptResult(StrictDataMcpContract):
     correlation_id: UUID
 
 
+class SourceConnectorInput(StrictDataMcpContract):
+    key: str = Field(pattern=r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$", max_length=120)
+    version: str = Field(pattern=r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
+
+
+class SourceScheduleInput(StrictDataMcpContract):
+    interval_minutes: int = Field(ge=15, le=43_200)
+    next_run_at: datetime
+    enabled: bool = True
+
+    @field_validator("next_run_at")
+    @classmethod
+    def require_timezone(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("next_run_at must include a timezone")
+        return value
+
+
+class SourceQualityRuleInput(StrictDataMcpContract):
+    key: str = Field(pattern=r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$", max_length=120)
+    kind: str = Field(min_length=1, max_length=120)
+    expression: str = Field(min_length=1, max_length=4000)
+    severity: str = Field(default="error", pattern=r"^(warning|error)$")
+
+
+class SourceFlowDefinitionInput(StrictDataMcpContract):
+    key: str = Field(pattern=r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$", max_length=100)
+    name: str = Field(min_length=1, max_length=200)
+    source_kind: DataSourceKind
+    source_configuration: dict[str, object] = Field(default_factory=dict)
+    secret_reference: str | None = Field(default=None, max_length=500)
+    connector: SourceConnectorInput
+    classification: DataClassification = DataClassification.INTERNAL
+    contract_version: str = Field(
+        default="1.0.0",
+        pattern=r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$",
+    )
+    schema_document: dict[str, object]
+    quality_rules: tuple[SourceQualityRuleInput, ...] = Field(default=(), max_length=100)
+    freshness_minutes: int | None = Field(default=None, ge=1)
+    retention_days: int | None = Field(default=None, ge=1)
+    schedule: SourceScheduleInput | None = None
+    activate: bool = True
+
+
+class SourceScheduleDetail(StrictDataMcpContract):
+    interval_minutes: int
+    next_run_at: datetime
+    enabled: bool
+    revision: int
+    last_claimed_at: datetime | None
+
+
+class SourceFlowDetail(StrictDataMcpContract):
+    key: str
+    name: str
+    status: DataStatus
+    revision: int
+    source_kind: DataSourceKind
+    has_credentials: bool
+    asset_key: str
+    classification: DataClassification
+    contract_version: str
+    schedule: SourceScheduleDetail | None
+    active_unit: str
+    correlation_id: UUID
+
+    @classmethod
+    def from_domain(
+        cls, flow: SourceFlow, *, active_unit: str, correlation_id: UUID
+    ) -> SourceFlowDetail:
+        schedule = flow.schedule
+        return cls(
+            key=flow.key,
+            name=flow.pipeline.name,
+            status=flow.status,
+            revision=flow.revision,
+            source_kind=flow.source.kind,
+            has_credentials=flow.source.secret_reference is not None,
+            asset_key=flow.asset.key,
+            classification=flow.asset.classification,
+            contract_version=flow.contract.version,
+            schedule=(
+                SourceScheduleDetail(
+                    interval_minutes=schedule.interval_minutes,
+                    next_run_at=schedule.next_run_at,
+                    enabled=schedule.enabled,
+                    revision=schedule.revision,
+                    last_claimed_at=schedule.last_claimed_at,
+                )
+                if schedule is not None
+                else None
+            ),
+            active_unit=active_unit,
+            correlation_id=correlation_id,
+        )
+
+
+class SourceFlowHealthDetail(StrictDataMcpContract):
+    flow: SourceFlowDetail
+    latest_run_status: str | None
+    latest_snapshot_id: UUID | None
+    latest_snapshot_observed_at: datetime | None
+    quality_status: str | None
+
+    @classmethod
+    def from_domain(
+        cls, health: SourceFlowHealth, *, active_unit: str, correlation_id: UUID
+    ) -> SourceFlowHealthDetail:
+        return cls(
+            flow=SourceFlowDetail.from_domain(
+                health.flow, active_unit=active_unit, correlation_id=correlation_id
+            ),
+            latest_run_status=(
+                health.latest_run.status.value if health.latest_run is not None else None
+            ),
+            latest_snapshot_id=health.latest_snapshot_id,
+            latest_snapshot_observed_at=health.latest_snapshot_observed_at,
+            quality_status=health.quality_status,
+        )
+
+
 DATA_TOOLS: tuple[RegistryTool, ...] = (
     RegistryTool("discover_data_assets", "data:read", "can_view", "org_unit", RegistryRisk.READ),
     RegistryTool("get_data_asset", "data:read", "can_view", "org_unit", RegistryRisk.READ),
@@ -281,6 +405,43 @@ DATA_TOOLS: tuple[RegistryTool, ...] = (
         True,
         True,
     ),
+    RegistryTool(
+        "get_source_flow_health",
+        "data:read",
+        "can_view",
+        "org_unit",
+        RegistryRisk.READ,
+    ),
+    RegistryTool(
+        "configure_source_flow",
+        "data:ingest",
+        "can_manage",
+        "org_unit",
+        RegistryRisk.CONTROLLED_WRITE,
+        True,
+        True,
+        True,
+    ),
+    RegistryTool(
+        "set_source_flow_state",
+        "data:ingest",
+        "can_manage",
+        "org_unit",
+        RegistryRisk.CONTROLLED_WRITE,
+        True,
+        True,
+        True,
+    ),
+    RegistryTool(
+        "schedule_source_flow",
+        "data:ingest",
+        "can_manage",
+        "org_unit",
+        RegistryRisk.CONTROLLED_WRITE,
+        True,
+        True,
+        True,
+    ),
 )
 
 
@@ -300,4 +461,9 @@ __all__ = [
     "QualityResultDetail",
     "SnapshotListResult",
     "SnapshotSummary",
+    "SourceFlowDefinitionInput",
+    "SourceFlowDetail",
+    "SourceFlowHealthDetail",
+    "SourceQualityRuleInput",
+    "SourceScheduleInput",
 ]

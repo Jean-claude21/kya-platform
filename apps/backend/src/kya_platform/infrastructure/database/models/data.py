@@ -5,6 +5,7 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     Computed,
     DateTime,
@@ -144,6 +145,56 @@ class DataPipelineRow(Base):
     created_by: Mapped[UUID] = mapped_column(nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class DataSourceFlowRow(Base):
+    """Control-plane revision for one source/asset/contract/pipeline aggregate."""
+
+    __tablename__ = "source_flow"
+    __table_args__ = (
+        CheckConstraint("revision > 0", name="positive_revision"),
+        {"schema": "data"},
+    )
+
+    pipeline_id: Mapped[UUID] = mapped_column(
+        ForeignKey("data.pipeline.id", ondelete="CASCADE"), primary_key=True
+    )
+    revision: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    updated_by: Mapped[UUID] = mapped_column(nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+
+class DataIngestionScheduleRow(Base):
+    __tablename__ = "ingestion_schedule"
+    __table_args__ = (
+        CheckConstraint(
+            "interval_minutes >= 15 AND interval_minutes <= 43200",
+            name="valid_interval",
+        ),
+        CheckConstraint("revision > 0", name="positive_revision"),
+        Index("ix_data_schedule_due", "enabled", "next_run_at"),
+        {"schema": "data"},
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=new_id)
+    pipeline_id: Mapped[UUID] = mapped_column(
+        ForeignKey("data.pipeline.id", ondelete="CASCADE"), nullable=False, unique=True
+    )
+    interval_minutes: Mapped[int] = mapped_column(Integer, nullable=False)
+    next_run_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    revision: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    last_claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_by: Mapped[UUID] = mapped_column(nullable=False)
+    updated_by: Mapped[UUID] = mapped_column(nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
 
 

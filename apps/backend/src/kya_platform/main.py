@@ -40,6 +40,7 @@ from kya_platform.application.publication.integrity import (
     InMemoryTrustStore,
     TrustedSigningKey,
 )
+from kya_platform.application.source_lifecycle import SourceLifecycleService
 from kya_platform.authorization import AuthorizationService
 from kya_platform.bootstrap import BootstrapService
 from kya_platform.config import Settings, get_settings
@@ -59,6 +60,9 @@ from kya_platform.infrastructure.database.publication import (
 )
 from kya_platform.infrastructure.database.registry_mcp import SqlAlchemyRegistryMcpBackend
 from kya_platform.infrastructure.database.session import create_engine, create_session_factory
+from kya_platform.infrastructure.database.source_lifecycle import (
+    SqlAlchemySourceLifecycleRepository,
+)
 from kya_platform.infrastructure.infisical import (
     HttpxInfisicalTransport,
     InfisicalMachineIdentityAdapter,
@@ -176,6 +180,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             app.state.core_service = CoreService(SqlAlchemyCoreRepository(session_factory))
             app.state.content_service = ContentService(SqlAlchemyContentRepository(session_factory))
             app.state.data_service = DataService(SqlAlchemyDataRepository(session_factory))
+            app.state.source_lifecycle_service = SourceLifecycleService(
+                SqlAlchemySourceLifecycleRepository(session_factory)
+            )
             app.state.artifact_registry = ArtifactRegistryService(
                 SqlAlchemyArtifactRegistry(session_factory)
             )
@@ -333,6 +340,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.state.core_service = None
     application.state.content_service = None
     application.state.data_service = None
+    application.state.source_lifecycle_service = None
     application.state.artifact_registry = None
     application.state.publication_service = None
     application.state.attestation_repository = None

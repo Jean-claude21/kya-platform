@@ -2,22 +2,37 @@
 
 from collections.abc import Awaitable, Callable, Sequence
 from datetime import UTC, datetime, timedelta
-from typing import Protocol, TypeVar
+from typing import Protocol, TypeVar, cast
 from uuid import UUID, uuid7
 
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 
 from kya_platform.application.data import CommandMetadata, IngestionRunReport, SnapshotLineage
-from kya_platform.application.reliability import canonical_request_hash
+from kya_platform.application.reliability import JsonValue, canonical_request_hash
+from kya_platform.application.source_lifecycle import (
+    SourceFlowConflictError,
+    SourceFlowReferenceError,
+    SourceFlowStateError,
+)
 from kya_platform.domain.content import ContentSearchHit
 from kya_platform.domain.data import (
     DataAsset,
+    DataAssetLayer,
     DataContract,
     DataPipeline,
     DataSnapshot,
+    DataSource,
+    DataStatus,
     IngestionRun,
+    QualityRule,
     RunStatus,
+)
+from kya_platform.domain.source_lifecycle import (
+    IngestionSchedule,
+    SourceFlow,
+    SourceFlowDraft,
+    SourceFlowHealth,
 )
 from kya_platform.mcp.data.contracts import (
     ContentExcerptResult,
@@ -33,6 +48,10 @@ from kya_platform.mcp.data.contracts import (
     QualityResultDetail,
     SnapshotListResult,
     SnapshotSummary,
+    SourceFlowDefinitionInput,
+    SourceFlowDetail,
+    SourceFlowHealthDetail,
+    SourceScheduleInput,
 )
 from kya_platform.mcp.registry.contracts import Confirmation
 from kya_platform.mcp.registry.server import RegistryGuard
@@ -41,6 +60,8 @@ T = TypeVar("T")
 
 
 class DataMcpBackend(Protocol):
+    async def resolve_unit_id(self, unit_key: str) -> UUID | None: ...
+
     async def search_assets(
         self, unit_key: str, query: str, *, limit: int
     ) -> Sequence[DataAsset]: ...
@@ -77,6 +98,39 @@ class DataMcpBackend(Protocol):
     async def start_run(
         self, unit_key: str, run: IngestionRun, *, command: CommandMetadata
     ) -> IngestionRun: ...
+
+    async def configure_source_flow(
+        self,
+        unit_key: str,
+        draft: SourceFlowDraft,
+        *,
+        schedule: IngestionSchedule | None,
+        command: CommandMetadata,
+    ) -> SourceFlow: ...
+
+    async def get_source_flow_health(
+        self, unit_key: str, flow_key: str
+    ) -> SourceFlowHealth | None: ...
+
+    async def transition_source_flow(
+        self,
+        unit_key: str,
+        flow_key: str,
+        status: DataStatus,
+        *,
+        expected_revision: int,
+        command: CommandMetadata,
+    ) -> SourceFlow: ...
+
+    async def schedule_source_flow(
+        self,
+        unit_key: str,
+        flow_key: str,
+        schedule: IngestionSchedule,
+        *,
+        expected_revision: int,
+        command: CommandMetadata,
+    ) -> SourceFlow: ...
 
 
 class DataMcpAuditSink(Protocol):
@@ -164,6 +218,21 @@ def register_data_tools(
     """Add a bounded Data toolset; storage references and secrets stay server-side."""
 
     execution = GovernedDataExecution(guard, audit)
+
+    def command(
+        actor: UUID,
+        correlation: UUID,
+        idempotency_key: str,
+        body: object,
+    ) -> CommandMetadata:
+        now = datetime.now(UTC)
+        return CommandMetadata(
+            actor,
+            correlation,
+            idempotency_key,
+            canonical_request_hash(cast(JsonValue, body)),
+            now + timedelta(hours=24),
+        )
 
     @server.tool(name="discover_data_assets", structured_output=True)
     async def discover_data_assets(query: str, limit: int = 20) -> DataDiscoveryResult:
@@ -426,6 +495,211 @@ def register_data_tools(
             target_type="data_run",
             target_id=str(run_id),
             operation=get,
+        )
+
+    @server.tool(name="get_source_flow_health", structured_output=True)
+    async def get_source_flow_health(flow_key: str) -> SourceFlowHealthDetail:
+        """Consulter l'état, la prochaine collecte et la qualité d'un flux autorisé."""
+
+        async def get(unit: str, actor: UUID, correlation: UUID) -> SourceFlowHealthDetail:
+            del actor
+            health = await backend.get_source_flow_health(unit, flow_key)
+            if health is None:
+                raise ToolError("source_flow_not_found")
+            return SourceFlowHealthDetail.from_domain(
+                health, active_unit=unit, correlation_id=correlation
+            )
+
+        return await execution.run(
+            "get_source_flow_health",
+            target_type="source_flow",
+            target_id=flow_key,
+            operation=get,
+        )
+
+    @server.tool(name="configure_source_flow", structured_output=True)
+    async def configure_source_flow(
+        definition: SourceFlowDefinitionInput,
+        idempotency_key: str,
+        confirmation: Confirmation,
+    ) -> SourceFlowDetail:
+        """Créer atomiquement une source, son actif, son contrat, son pipeline et son planning."""
+        del confirmation
+        if not 16 <= len(idempotency_key) <= 200:
+            raise ToolError("idempotency_key_invalid")
+
+        async def configure(unit: str, actor: UUID, correlation: UUID) -> SourceFlowDetail:
+            owner = await backend.resolve_unit_id(unit)
+            if owner is None:
+                raise ToolError("active_unit_not_found")
+            status = DataStatus.ACTIVE if definition.activate else DataStatus.DRAFT
+            source = DataSource(
+                uuid7(),
+                f"{definition.key}-source",
+                f"{definition.name} — source",
+                definition.source_kind,
+                owner,
+                secret_reference=definition.secret_reference,
+                status=status,
+                configuration=definition.source_configuration,
+            )
+            asset = DataAsset(
+                uuid7(),
+                f"{definition.key}-raw",
+                f"{definition.name} — données brutes",
+                owner,
+                DataAssetLayer.RAW,
+                definition.classification,
+                status,
+            )
+            definition_body = definition.model_dump(mode="json")
+            contract = DataContract(
+                uuid7(),
+                asset.id,
+                definition.contract_version,
+                definition.schema_document,
+                canonical_request_hash(cast(JsonValue, definition_body)),
+                tuple(QualityRule(**item.model_dump()) for item in definition.quality_rules),
+                freshness_minutes=definition.freshness_minutes,
+                retention_days=definition.retention_days,
+            )
+            pipeline = DataPipeline(
+                uuid7(),
+                definition.key,
+                definition.name,
+                owner,
+                source.id,
+                UUID(int=0),
+                asset.id,
+                status,
+            )
+            schedule = (
+                IngestionSchedule(
+                    uuid7(),
+                    pipeline.id,
+                    definition.schedule.interval_minutes,
+                    definition.schedule.next_run_at,
+                    definition.schedule.enabled,
+                )
+                if definition.schedule is not None
+                else None
+            )
+            try:
+                flow = await backend.configure_source_flow(
+                    unit,
+                    SourceFlowDraft(
+                        source,
+                        asset,
+                        contract,
+                        pipeline,
+                        definition.connector.key,
+                        definition.connector.version,
+                    ),
+                    schedule=schedule,
+                    command=command(actor, correlation, idempotency_key, definition_body),
+                )
+            except (ValueError, SourceFlowConflictError, SourceFlowReferenceError) as error:
+                raise ToolError(type(error).__name__) from error
+            return SourceFlowDetail.from_domain(flow, active_unit=unit, correlation_id=correlation)
+
+        return await execution.run(
+            "configure_source_flow",
+            target_type="source_flow",
+            target_id=definition.key,
+            operation=configure,
+        )
+
+    @server.tool(name="set_source_flow_state", structured_output=True)
+    async def set_source_flow_state(
+        flow_key: str,
+        target_state: str,
+        expected_revision: int,
+        idempotency_key: str,
+        confirmation: Confirmation,
+    ) -> SourceFlowDetail:
+        """Activer ou mettre en pause tout un flux avec contrôle de version."""
+        del confirmation
+        if target_state not in {"active", "paused"}:
+            raise ToolError("source_flow_target_state_invalid")
+        if expected_revision < 1:
+            raise ToolError("source_flow_revision_invalid")
+        if not 16 <= len(idempotency_key) <= 200:
+            raise ToolError("idempotency_key_invalid")
+
+        async def transition(unit: str, actor: UUID, correlation: UUID) -> SourceFlowDetail:
+            try:
+                flow = await backend.transition_source_flow(
+                    unit,
+                    flow_key,
+                    DataStatus(target_state),
+                    expected_revision=expected_revision,
+                    command=command(
+                        actor,
+                        correlation,
+                        idempotency_key,
+                        {"flow_key": flow_key, "target_state": target_state},
+                    ),
+                )
+            except (
+                SourceFlowConflictError,
+                SourceFlowReferenceError,
+                SourceFlowStateError,
+            ) as error:
+                raise ToolError(type(error).__name__) from error
+            return SourceFlowDetail.from_domain(flow, active_unit=unit, correlation_id=correlation)
+
+        return await execution.run(
+            "set_source_flow_state",
+            target_type="source_flow",
+            target_id=flow_key,
+            operation=transition,
+        )
+
+    @server.tool(name="schedule_source_flow", structured_output=True)
+    async def schedule_source_flow(
+        flow_key: str,
+        schedule: SourceScheduleInput,
+        expected_revision: int,
+        idempotency_key: str,
+        confirmation: Confirmation,
+    ) -> SourceFlowDetail:
+        """Créer ou remplacer la cadence durable d'un flux avec contrôle de version."""
+        del confirmation
+        if expected_revision < 1:
+            raise ToolError("source_flow_revision_invalid")
+        if not 16 <= len(idempotency_key) <= 200:
+            raise ToolError("idempotency_key_invalid")
+
+        async def put(unit: str, actor: UUID, correlation: UUID) -> SourceFlowDetail:
+            schedule_body = schedule.model_dump(mode="json")
+            try:
+                flow = await backend.schedule_source_flow(
+                    unit,
+                    flow_key,
+                    IngestionSchedule(
+                        uuid7(),
+                        UUID(int=0),
+                        schedule.interval_minutes,
+                        schedule.next_run_at,
+                        schedule.enabled,
+                    ),
+                    expected_revision=expected_revision,
+                    command=command(
+                        actor,
+                        correlation,
+                        idempotency_key,
+                        {"flow_key": flow_key, "schedule": schedule_body},
+                    ),
+                )
+            except (ValueError, SourceFlowConflictError, SourceFlowReferenceError) as error:
+                raise ToolError(type(error).__name__) from error
+            return SourceFlowDetail.from_domain(flow, active_unit=unit, correlation_id=correlation)
+
+        return await execution.run(
+            "schedule_source_flow",
+            target_type="source_flow",
+            target_id=flow_key,
+            operation=put,
         )
 
 
