@@ -2,7 +2,7 @@
 
 - [x] T001 Formaliser spécification, recherche, données, contrats et schéma
 - [x] T002 Ajouter migration `20260908_0014` et modèles SQLAlchemy
-- [ ] T003 Ajouter le seed idempotent des outils et profils système
+- [x] T003 Ajouter le seed idempotent des outils et profils système
 - [x] T004 Implémenter et tester `EffectiveToolResolver`
 - [ ] T005 Implémenter le dépôt et la révision optimiste
 - [ ] T006 Étendre et valider le modèle OpenFGA

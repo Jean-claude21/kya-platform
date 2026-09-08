@@ -24,6 +24,7 @@ from kya_platform.application.audit import AuditQueryService, AuditWriter
 from kya_platform.application.content import ContentService
 from kya_platform.application.core import CoreService
 from kya_platform.application.data import DataService
+from kya_platform.application.mcp_profiles import McpProfileService
 from kya_platform.application.publication import (
     PublicationService,
     PublicationUnitOfWorkFactory,
@@ -43,6 +44,7 @@ from kya_platform.infrastructure.database.content import SqlAlchemyContentReposi
 from kya_platform.infrastructure.database.core import SqlAlchemyCoreRepository
 from kya_platform.infrastructure.database.data import SqlAlchemyDataRepository
 from kya_platform.infrastructure.database.identity import SqlAlchemyIdentityMapping
+from kya_platform.infrastructure.database.mcp_profiles import SqlAlchemyMcpProfileRegistry
 from kya_platform.infrastructure.database.oauth_broker import VALID_SCOPES, OAuthBroker
 from kya_platform.infrastructure.database.publication import (
     SqlAlchemyAttestationRepository,
@@ -57,6 +59,7 @@ from kya_platform.infrastructure.infisical import (
 )
 from kya_platform.infrastructure.openfga import OpenFgaHttpAdapter
 from kya_platform.mcp.bootstrap import create_bootstrap_server
+from kya_platform.mcp.registry.profiles import SYSTEM_PROFILES, TOOL_REGISTRATIONS
 from kya_platform.mcp.registry.runtime import (
     StateAuthorizationPort,
     StateDataMcpAuditSink,
@@ -129,6 +132,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         infisical_http_client: httpx.AsyncClient | None = None
         openfga_http_client: httpx.AsyncClient | None = None
+        # Test settings may intentionally use a non-routable database URL to
+        # validate configuration wiring. Catalogue synchronization is an
+        # operational startup concern and is covered by repository tests.
         if session_factory is not None:
             audit_repository = SqlAlchemyAuditRepository(session_factory)
             app.state.audit_queries = AuditQueryService(audit_repository)
@@ -142,6 +148,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 SqlAlchemyArtifactRegistry(session_factory)
             )
             app.state.registry_mcp_backend = SqlAlchemyRegistryMcpBackend(session_factory)
+            app.state.mcp_profile_service = McpProfileService(
+                SqlAlchemyMcpProfileRegistry(session_factory)
+            )
+            if resolved_settings.environment != "test":
+                await app.state.mcp_profile_service.synchronize(
+                    TOOL_REGISTRATIONS,
+                    SYSTEM_PROFILES,
+                )
             signing_key = resolved_settings.artifact_signing_private_key
             if signing_key is not None:
                 encoded = signing_key.get_secret_value()
@@ -275,6 +289,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.state.publication_service = None
     application.state.attestation_repository = None
     application.state.registry_mcp_backend = None
+    application.state.mcp_profile_service = None
     application.state.oauth_broker = oauth_broker
     configure_security_runtime(application.state, resolved_settings)
     if resolved_settings.has_registry_mcp_configuration:
