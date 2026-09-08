@@ -44,6 +44,10 @@ from kya_platform.infrastructure.database.models.data import (
     DataSourceRow,
 )
 from kya_platform.infrastructure.database.models.identity import ExternalIdentity
+from kya_platform.infrastructure.database.models.intelligence import (
+    IntelligenceSignalRow,
+    IntelligenceWatchRow,
+)
 from kya_platform.infrastructure.database.models.mcp_control import (
     McpToolDefinition,
     McpToolProfile,
@@ -102,6 +106,8 @@ __all__ = [
     "DataSourceRow",
     "ExternalIdentity",
     "IdempotencyRecord",
+    "IntelligenceSignalRow",
+    "IntelligenceWatchRow",
     "McpToolDefinition",
     "McpToolProfile",
     "McpToolProfileAssignment",

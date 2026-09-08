@@ -14,6 +14,7 @@ from kya_platform.application.audit import AuditEvent, AuditWriter
 from kya_platform.application.content import ContentService
 from kya_platform.application.core import CoreService
 from kya_platform.application.data import DataService
+from kya_platform.application.intelligence import IntelligenceService
 from kya_platform.application.mcp_profiles.runtime import (
     McpToolProfileRuntime,
     ToolProfileRequest,
@@ -270,11 +271,50 @@ class StateDataMcpAuditSink:
         )
 
 
+class StateIntelligenceMcpBackend:
+    """Late-bound Intelligence service used by the shared MCP gateway."""
+
+    def __init__(self, state: State) -> None:
+        self._state = state
+
+    def _backend(self) -> IntelligenceService:
+        backend: IntelligenceService | None = self._state.intelligence_service
+        if backend is None:
+            raise ToolError("intelligence_service_unavailable")
+        return backend
+
+    def _core(self) -> CoreService:
+        backend: CoreService | None = self._state.core_service
+        if backend is None:
+            raise ToolError("core_service_unavailable")
+        return backend
+
+    async def resolve_unit_id(self, unit_key: str) -> UUID | None:
+        unit = await self._core().get_unit(unit_key)
+        return unit.id if unit is not None else None
+
+    async def create_watch(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+        return await self._backend().create_watch(*args, **kwargs)
+
+    async def list_watches(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+        return await self._backend().list_watches(*args, **kwargs)
+
+    async def evaluate_watch(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+        return await self._backend().evaluate_watch(*args, **kwargs)
+
+    async def list_signals(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+        return await self._backend().list_signals(*args, **kwargs)
+
+    async def acknowledge_signal(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+        return await self._backend().acknowledge_signal(*args, **kwargs)
+
+
 __all__ = [
     "StateAuthorizationPort",
     "StateDataMcpAuditSink",
     "StateDataMcpBackend",
     "StateIdentityMapping",
+    "StateIntelligenceMcpBackend",
     "StateRegistryBackend",
     "StateToolSetProvider",
 ]

@@ -17,6 +17,7 @@ from kya_platform.authorization import AuthorizationService, ContextualTuple
 from kya_platform.authorization.model import active_unit_context
 from kya_platform.contracts.artifact_manifest import ArtifactType
 from kya_platform.mcp.data.contracts import DATA_TOOLS
+from kya_platform.mcp.intelligence.contracts import INTELLIGENCE_TOOLS
 from kya_platform.mcp.registry.contracts import (
     REGISTRY_TOOLS,
     ArtifactDetail,
@@ -47,11 +48,12 @@ from kya_platform.mcp.registry.contracts import (
 
 if TYPE_CHECKING:
     from kya_platform.mcp.data.server import DataMcpAuditSink, DataMcpBackend
+    from kya_platform.mcp.intelligence.server import IntelligenceMcpBackend
 
 type AccessTokenProvider = Callable[[], AccessToken | None]
 type ToolVisibility = Callable[[str], Awaitable[bool]]
 type ToolSetProvider = Callable[[], Awaitable[frozenset[str]]]
-ALL_TOOLS = REGISTRY_TOOLS + DATA_TOOLS
+ALL_TOOLS = REGISTRY_TOOLS + DATA_TOOLS + INTELLIGENCE_TOOLS
 SUPPORTED_SCOPES = sorted({item.oauth_scope for item in ALL_TOOLS})
 
 
@@ -261,6 +263,7 @@ def create_registry_server(
     access_token_provider: AccessTokenProvider = get_access_token,
     data_backend: DataMcpBackend | None = None,
     data_audit: DataMcpAuditSink | None = None,
+    intelligence_backend: IntelligenceMcpBackend | None = None,
     tool_set_provider: ToolSetProvider | None = None,
 ) -> MCPServer[None]:
     """Build the remote server; OAuth authenticates and KYA policy authorizes."""
@@ -481,6 +484,14 @@ def create_registry_server(
         from kya_platform.mcp.data.server import register_data_tools
 
         register_data_tools(server, backend=data_backend, guard=guard, audit=data_audit)
+    if intelligence_backend is not None:
+        if data_audit is None:
+            raise ValueError("Intelligence MCP requires the shared audit sink")
+        from kya_platform.mcp.intelligence.server import register_intelligence_tools
+
+        register_intelligence_tools(
+            server, backend=intelligence_backend, guard=guard, audit=data_audit
+        )
 
     return server
 

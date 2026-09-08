@@ -25,6 +25,7 @@ from kya_platform.application.audit import AuditQueryService, AuditWriter
 from kya_platform.application.content import ContentService
 from kya_platform.application.core import CoreService
 from kya_platform.application.data import DataService
+from kya_platform.application.intelligence import IntelligenceService
 from kya_platform.application.mcp_profiles import McpPreferenceService, McpProfileService
 from kya_platform.application.mcp_profiles.runtime import (
     McpToolProfileRuntime,
@@ -52,6 +53,7 @@ from kya_platform.infrastructure.database.content import SqlAlchemyContentReposi
 from kya_platform.infrastructure.database.core import SqlAlchemyCoreRepository
 from kya_platform.infrastructure.database.data import SqlAlchemyDataRepository
 from kya_platform.infrastructure.database.identity import SqlAlchemyIdentityMapping
+from kya_platform.infrastructure.database.intelligence import SqlAlchemyIntelligenceRepository
 from kya_platform.infrastructure.database.mcp_profiles import SqlAlchemyMcpProfileRegistry
 from kya_platform.infrastructure.database.oauth_broker import VALID_SCOPES, OAuthBroker
 from kya_platform.infrastructure.database.publication import (
@@ -75,6 +77,7 @@ from kya_platform.mcp.registry.runtime import (
     StateAuthorizationPort,
     StateDataMcpAuditSink,
     StateDataMcpBackend,
+    StateIntelligenceMcpBackend,
     StateRegistryBackend,
     StateToolSetProvider,
 )
@@ -179,6 +182,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             app.state.bootstrap_claims = SqlAlchemyBootstrapClaimRepository(session_factory)
             app.state.core_service = CoreService(SqlAlchemyCoreRepository(session_factory))
             app.state.content_service = ContentService(SqlAlchemyContentRepository(session_factory))
+            app.state.intelligence_service = IntelligenceService(
+                SqlAlchemyIntelligenceRepository(session_factory), app.state.content_service
+            )
             app.state.data_service = DataService(SqlAlchemyDataRepository(session_factory))
             app.state.source_lifecycle_service = SourceLifecycleService(
                 SqlAlchemySourceLifecycleRepository(session_factory)
@@ -339,6 +345,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.state.bootstrap_service = None
     application.state.core_service = None
     application.state.content_service = None
+    application.state.intelligence_service = None
     application.state.data_service = None
     application.state.source_lifecycle_service = None
     application.state.artifact_registry = None
@@ -363,6 +370,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             resource_url=resolved_settings.registry_mcp_resource_url,
             data_backend=StateDataMcpBackend(application.state),
             data_audit=StateDataMcpAuditSink(application.state),
+            intelligence_backend=StateIntelligenceMcpBackend(application.state),
             tool_set_provider=(
                 StateToolSetProvider(application.state)
                 if resolved_settings.mcp_tool_profile_mode != "off"

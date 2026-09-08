@@ -5,6 +5,7 @@ from kya_platform.application.mcp_profiles import (
     ToolRegistration,
 )
 from kya_platform.mcp.data.contracts import DATA_TOOLS
+from kya_platform.mcp.intelligence.contracts import INTELLIGENCE_TOOLS
 from kya_platform.mcp.registry.contracts import REGISTRY_TOOLS, RegistryTool
 
 
@@ -28,12 +29,15 @@ TOOL_REGISTRATIONS = tuple(
     [
         *(_registration(tool, "registry") for tool in REGISTRY_TOOLS),
         *(_registration(tool, "data") for tool in DATA_TOOLS),
+        *(_registration(tool, "intelligence") for tool in INTELLIGENCE_TOOLS),
     ]
 )
 
 _REGISTRY_READ = tuple(tool.name for tool in REGISTRY_TOOLS if not tool.is_write)
 _DATA_READ = tuple(tool.name for tool in DATA_TOOLS if not tool.is_write)
 _DATA_OPERATOR = tuple(tool.name for tool in DATA_TOOLS)
+_INTELLIGENCE_READ = tuple(tool.name for tool in INTELLIGENCE_TOOLS if not tool.is_write)
+_INTELLIGENCE_OPERATOR = tuple(tool.name for tool in INTELLIGENCE_TOOLS)
 _CATALOG_PUBLISHER = tuple(tool.name for tool in REGISTRY_TOOLS)
 
 SYSTEM_PROFILES = (
@@ -53,7 +57,13 @@ SYSTEM_PROFILES = (
         "data-operator",
         "Opérateur des données",
         "Lire les données et démarrer les ingestions autorisées.",
-        _DATA_OPERATOR,
+        _DATA_OPERATOR + _INTELLIGENCE_OPERATOR,
+    ),
+    SystemProfileRegistration(
+        "intelligence-reader",
+        "Lecteur des veilles",
+        "Consulter les veilles et signaux citables autorisés.",
+        _INTELLIGENCE_READ,
     ),
     SystemProfileRegistration(
         "catalog-publisher",

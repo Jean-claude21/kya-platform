@@ -88,6 +88,8 @@ def test_reliability_models_have_explicit_schema_ownership() -> None:
         "data.source_flow",
         "identity.external_identity",
         "identity.platform_bootstrap_claim",
+        "intelligence.signal",
+        "intelligence.watch",
         "mcp_control.tool_definition",
         "mcp_control.tool_profile",
         "mcp_control.tool_profile_assignment",
