@@ -658,6 +658,23 @@ class SqlAlchemyDataRepository:
                 )
                 session.add(snapshot_row)
                 await session.flush()
+                document_rows = [
+                    DataContentDocumentRow(
+                        id=document.id,
+                        snapshot_id=snapshot.id,
+                        ordinal=document.ordinal,
+                        source_uri=document.source_uri,
+                        canonical_uri=document.canonical_uri,
+                        title=document.title,
+                        language=document.language,
+                        body_digest=document.body_digest,
+                        content_trust=document.content_trust,
+                    )
+                    for document in completion.content_documents
+                ]
+                if document_rows:
+                    session.add_all(document_rows)
+                    await session.flush()
                 session.add_all(
                     [
                         *(
@@ -678,33 +695,17 @@ class SqlAlchemyDataRepository:
                             for input_row in input_rows
                         ),
                         *(
-                            item
-                            for document in completion.content_documents
-                            for item in (
-                                DataContentDocumentRow(
-                                    id=document.id,
-                                    snapshot_id=snapshot.id,
-                                    ordinal=document.ordinal,
-                                    source_uri=document.source_uri,
-                                    canonical_uri=document.canonical_uri,
-                                    title=document.title,
-                                    language=document.language,
-                                    body_digest=document.body_digest,
-                                    content_trust=document.content_trust,
-                                ),
-                                *(
-                                    DataContentChunkRow(
-                                        id=chunk.id,
-                                        document_id=document.id,
-                                        ordinal=chunk.ordinal,
-                                        text=chunk.text,
-                                        char_start=chunk.char_start,
-                                        char_end=chunk.char_end,
-                                        content_digest=chunk.digest,
-                                    )
-                                    for chunk in document.chunks
-                                ),
+                            DataContentChunkRow(
+                                id=chunk.id,
+                                document_id=document.id,
+                                ordinal=chunk.ordinal,
+                                text=chunk.text,
+                                char_start=chunk.char_start,
+                                char_end=chunk.char_end,
+                                content_digest=chunk.digest,
                             )
+                            for document in completion.content_documents
+                            for chunk in document.chunks
                         ),
                         _event("kya.data.run.completed.v1", "data_run", row.id, unit_id, command),
                     ]
