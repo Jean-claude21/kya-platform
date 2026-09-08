@@ -134,6 +134,9 @@ class StateDataMcpBackend:
     async def get_pipeline(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
         return await self._backend().get_pipeline(*args, **kwargs)
 
+    async def get_run_report(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+        return await self._backend().get_run_report(*args, **kwargs)
+
     async def start_run(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
         return await self._backend().start_run(*args, **kwargs)
 

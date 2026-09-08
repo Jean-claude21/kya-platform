@@ -12,6 +12,7 @@ from kya_platform.domain.data import (
     DataContract,
     DataSnapshot,
     DataStatus,
+    QualityResult,
 )
 from kya_platform.mcp.registry.contracts import RegistryRisk, RegistryTool
 
@@ -163,12 +164,40 @@ class IngestionAccepted(StrictDataMcpContract):
     correlation_id: UUID
 
 
+class QualityResultDetail(StrictDataMcpContract):
+    rule_key: str
+    status: str
+    observed: dict[str, object] | None
+
+    @classmethod
+    def from_domain(cls, result: QualityResult) -> QualityResultDetail:
+        return cls(
+            rule_key=result.rule_key,
+            status=result.status.value,
+            observed=result.observed,
+        )
+
+
+class IngestionRunDetail(StrictDataMcpContract):
+    run_id: UUID
+    pipeline_key: str
+    status: str
+    started_at: datetime
+    completed_at: datetime | None
+    error_code: str | None
+    snapshot: SnapshotSummary | None
+    quality_results: tuple[QualityResultDetail, ...]
+    active_unit: str
+    correlation_id: UUID
+
+
 DATA_TOOLS: tuple[RegistryTool, ...] = (
     RegistryTool("discover_data_assets", "data:read", "can_view", "org_unit", RegistryRisk.READ),
     RegistryTool("get_data_asset", "data:read", "can_view", "org_unit", RegistryRisk.READ),
     RegistryTool("get_data_contract", "data:read", "can_view", "org_unit", RegistryRisk.READ),
     RegistryTool("list_data_snapshots", "data:read", "can_view", "org_unit", RegistryRisk.READ),
     RegistryTool("trace_data_lineage", "data:read", "can_view", "org_unit", RegistryRisk.READ),
+    RegistryTool("get_ingestion_run", "data:read", "can_view", "org_unit", RegistryRisk.READ),
     RegistryTool(
         "start_ingestion",
         "data:ingest",
@@ -189,7 +218,9 @@ __all__ = [
     "DataContractDetail",
     "DataDiscoveryResult",
     "IngestionAccepted",
+    "IngestionRunDetail",
     "LineageResult",
+    "QualityResultDetail",
     "SnapshotListResult",
     "SnapshotSummary",
 ]

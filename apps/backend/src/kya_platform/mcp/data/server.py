@@ -8,7 +8,7 @@ from uuid import UUID, uuid7
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 
-from kya_platform.application.data import CommandMetadata, SnapshotLineage
+from kya_platform.application.data import CommandMetadata, IngestionRunReport, SnapshotLineage
 from kya_platform.application.reliability import canonical_request_hash
 from kya_platform.domain.data import (
     DataAsset,
@@ -24,7 +24,9 @@ from kya_platform.mcp.data.contracts import (
     DataContractDetail,
     DataDiscoveryResult,
     IngestionAccepted,
+    IngestionRunDetail,
     LineageResult,
+    QualityResultDetail,
     SnapshotListResult,
     SnapshotSummary,
 )
@@ -52,6 +54,8 @@ class DataMcpBackend(Protocol):
     async def trace_lineage(self, unit_key: str, snapshot_id: UUID) -> SnapshotLineage | None: ...
 
     async def get_pipeline(self, unit_key: str, pipeline_key: str) -> DataPipeline | None: ...
+
+    async def get_run_report(self, unit_key: str, run_id: UUID) -> IngestionRunReport | None: ...
 
     async def start_run(
         self, unit_key: str, run: IngestionRun, *, command: CommandMetadata
@@ -310,6 +314,41 @@ def register_data_tools(
             target_type="data_pipeline",
             target_id=pipeline_key,
             operation=start,
+        )
+
+    @server.tool(name="get_ingestion_run", structured_output=True)
+    async def get_ingestion_run(run_id: UUID) -> IngestionRunDetail:
+        """Suivre une collecte et ses contrôles qualité sans exposer le stockage."""
+
+        async def get(unit: str, actor: UUID, correlation: UUID) -> IngestionRunDetail:
+            del actor
+            report = await backend.get_run_report(unit, run_id)
+            if report is None:
+                raise ToolError("data_ingestion_run_not_found")
+            return IngestionRunDetail(
+                run_id=report.run.id,
+                pipeline_key=report.pipeline_key,
+                status=report.run.status.value,
+                started_at=report.run.started_at,
+                completed_at=report.run.completed_at,
+                error_code=report.run.error_code,
+                snapshot=(
+                    SnapshotSummary.from_domain(report.snapshot)
+                    if report.snapshot is not None
+                    else None
+                ),
+                quality_results=tuple(
+                    QualityResultDetail.from_domain(result) for result in report.quality_results
+                ),
+                active_unit=unit,
+                correlation_id=correlation,
+            )
+
+        return await execution.run(
+            "get_ingestion_run",
+            target_type="data_run",
+            target_id=str(run_id),
+            operation=get,
         )
 
 

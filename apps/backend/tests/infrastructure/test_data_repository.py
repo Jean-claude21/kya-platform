@@ -38,6 +38,7 @@ from kya_platform.infrastructure.database.models import (
     DataContractVersionRow,
     DataIngestionRunRow,
     DataPipelineRow,
+    DataQualityResultRow,
     DataSnapshotRow,
     DataSourceRow,
     IdempotencyRecord,
@@ -363,6 +364,35 @@ async def test_lists_sources_assets_runs_and_snapshots_in_unit_scope() -> None:
 
 @pytest.mark.asyncio
 @pytest.mark.unit
+async def test_reads_scoped_run_report_with_snapshot_and_quality() -> None:
+    completed_run = run_row("completed")
+    pipeline_record = pipeline_row()
+    quality = DataQualityResultRow(
+        snapshot_id=SNAPSHOT,
+        rule_key="price-required",
+        status="passed",
+        observed={"nulls": 0},
+    )
+    session = Session(
+        scalar_values=[UNIT, snapshot_row()],
+        scalar_rows=[[quality]],
+        execute_values=[(completed_run, pipeline_record)],
+    )
+
+    report = await repository(session).get_run_report("direction-cvsi", RUN)
+
+    assert report is not None
+    assert report.pipeline_key == "collect-market-prices"
+    assert report.run.status is RunStatus.COMPLETED
+    assert report.snapshot is not None
+    assert report.snapshot.id == SNAPSHOT
+    assert report.quality_results == (
+        QualityResult("price-required", QualityStatus.PASSED, {"nulls": 0}),
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.unit
 async def test_searches_and_resolves_governed_data_metadata() -> None:
     search_session = Session(scalar_values=[UNIT], scalar_rows=[[asset_row()]])
     matches = await repository(search_session).search_assets("direction-cvsi", "prix", limit=10)
@@ -410,6 +440,7 @@ async def test_unknown_unit_lists_are_empty() -> None:
     assert await repository(Session(scalar_values=[None])).list_sources("unknown", limit=10) == ()
     assert await repository(Session(scalar_values=[None])).list_assets("unknown", limit=10) == ()
     assert await repository(Session(scalar_values=[None])).get_run("unknown", RUN) is None
+    assert await repository(Session(scalar_values=[None])).get_run_report("unknown", RUN) is None
     assert (
         await repository(Session(scalar_values=[None])).list_snapshots("unknown", "asset", limit=10)
         == ()
