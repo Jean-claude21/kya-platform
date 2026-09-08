@@ -9,4 +9,4 @@
 - [x] Brancher l'audit append-only avec identifiant de corrélation.
 - [x] Ajouter les tests contractuels, runtime et dépôt.
 - [x] Valider le diagramme, toute la qualité locale et la CI distante.
-- [ ] Fusionner la PR dans `dev` après tous les contrôles.
+- [x] Fusionner la PR dans `dev` après tous les contrôles.
