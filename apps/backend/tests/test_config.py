@@ -1,11 +1,13 @@
 """Runtime configuration is complete and secret-safe."""
 
 import base64
+from unittest.mock import AsyncMock
 
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr, ValidationError
 
+from kya_platform.application.mcp_profiles import McpProfileService
 from kya_platform.config import Settings
 from kya_platform.main import create_app
 
@@ -117,3 +119,19 @@ def test_database_and_signing_key_enable_governed_publication_runtime() -> None:
     with TestClient(app):
         assert app.state.publication_service is not None
         assert app.state.attestation_repository is not None
+
+
+@pytest.mark.unit
+def test_preview_startup_synchronizes_system_mcp_profiles(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    synchronize = AsyncMock()
+    monkeypatch.setattr(McpProfileService, "synchronize", synchronize)
+    settings = Settings(
+        _env_file=None,
+        environment="preview",
+        database_url=SecretStr("postgresql://user:password@db.example/neondb"),
+    )
+
+    with TestClient(create_app(settings)):
+        synchronize.assert_awaited_once()

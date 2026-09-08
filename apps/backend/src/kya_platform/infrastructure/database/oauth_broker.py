@@ -116,6 +116,31 @@ class OAuthBroker:
                 return None
         return OAuthClientInformationFull.model_validate(metadata)
 
+    async def get_active_grant_scopes(
+        self,
+        *,
+        principal_id: UUID,
+        active_unit_id: str,
+        client_id: str,
+    ) -> frozenset[str] | None:
+        """Return the latest live connector grant without disclosing any token."""
+
+        async with self._sessions() as session:
+            scopes = await session.scalar(
+                select(OAuthTokenRecord.scopes)
+                .where(
+                    OAuthTokenRecord.principal_id == principal_id,
+                    OAuthTokenRecord.active_unit_id == active_unit_id,
+                    OAuthTokenRecord.client_id == client_id,
+                    OAuthTokenRecord.kind == "refresh",
+                    OAuthTokenRecord.revoked_at.is_(None),
+                    OAuthTokenRecord.expires_at > datetime.now(UTC),
+                )
+                .order_by(OAuthTokenRecord.created_at.desc())
+                .limit(1)
+            )
+            return frozenset(scopes) if scopes is not None else None
+
     async def register_client(self, client_info: OAuthClientInformationFull) -> None:
         scopes = set((client_info.scope or "").split())
         if not scopes.issubset(VALID_SCOPES):

@@ -326,6 +326,34 @@ async def test_registry_server_advertises_only_tools_in_token_scopes() -> None:
     }
 
 
+@pytest.mark.asyncio
+async def test_registry_server_applies_one_governed_set_to_list_and_direct_call() -> None:
+    calls = 0
+
+    async def governed_tools() -> frozenset[str]:
+        nonlocal calls
+        calls += 1
+        return frozenset({"get_artifact"})
+
+    server = create_registry_server(
+        backend=SearchBackend(),
+        authorization=AuthorizationService(RecordingPolicy(allowed=True, checks=[])),
+        token_verifier=NoopTokenVerifier(),
+        issuer_url="https://auth.example.test",
+        resource_url="https://registry.example.test/mcp",
+        access_token_provider=access_token,
+        tool_set_provider=governed_tools,
+    )
+
+    async with Client(server) as client:
+        listed = await client.list_tools()
+        denied = await client.call_tool("search_catalog", {"query": "méthode"})
+
+    assert {item.name for item in listed.tools} == {"get_artifact"}
+    assert denied.is_error
+    assert calls == 2
+
+
 class AcceptingMcpTokenVerifier:
     async def verify_token(self, token: str) -> AccessToken | None:
         return access_token() if token == "valid-token" else None

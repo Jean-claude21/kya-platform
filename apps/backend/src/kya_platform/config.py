@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     mcp_allowed_hosts: tuple[str, ...] = ("127.0.0.1:*", "localhost:*")
     mcp_allowed_origins: tuple[str, ...] = ()
     registry_mcp_enabled: bool = False
+    mcp_tool_profile_mode: Literal["off", "shadow", "enforce"] = "off"
     registry_mcp_authorization_server_url: str | None = None
     registry_mcp_resource_url: str = "https://mcp.kya-platform.vttlife.com/registry/mcp"
     oauth_broker_enabled: bool = False
