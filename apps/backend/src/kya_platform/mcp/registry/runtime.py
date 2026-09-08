@@ -5,12 +5,18 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid7
 
+from mcp.server.auth.middleware.auth_context import get_access_token
+from mcp.server.auth.provider import AccessToken
 from mcp.server.mcpserver.exceptions import ToolError
 from starlette.datastructures import State
 
 from kya_platform.application.audit import AuditEvent, AuditWriter
 from kya_platform.application.content import ContentService
 from kya_platform.application.data import DataService
+from kya_platform.application.mcp_profiles.runtime import (
+    McpToolProfileRuntime,
+    ToolProfileRequest,
+)
 from kya_platform.auth import AuthenticatedIdentity, IdentityMappingPort
 from kya_platform.authorization import (
     AuthorizationDecision,
@@ -19,6 +25,39 @@ from kya_platform.authorization import (
     ListObjectsRequest,
 )
 from kya_platform.mcp.registry.server import RegistryBackend
+
+
+class StateToolSetProvider:
+    """Resolve the current request's governed tool set from late-bound state."""
+
+    def __init__(self, state: State) -> None:
+        self._state = state
+
+    async def __call__(self) -> frozenset[str]:
+        token: AccessToken | None = get_access_token()
+        runtime: McpToolProfileRuntime | None = self._state.mcp_tool_profile_runtime
+        if token is None or runtime is None:
+            return frozenset()
+        claims = token.claims or {}
+        active_unit = claims.get("active_unit")
+        subject = token.subject or token.client_id
+        if subject.startswith("user:"):
+            subject = subject.removeprefix("user:")
+        if not isinstance(active_unit, str) or not active_unit:
+            return frozenset()
+        try:
+            principal_id = UUID(subject)
+        except ValueError:
+            return frozenset()
+        decision = await runtime.resolve(
+            ToolProfileRequest(
+                principal_id,
+                active_unit,
+                token.client_id,
+                frozenset(token.scopes),
+            )
+        )
+        return frozenset(decision.advertised_tool_keys)
 
 
 class StateIdentityMapping:
@@ -207,4 +246,5 @@ __all__ = [
     "StateDataMcpBackend",
     "StateIdentityMapping",
     "StateRegistryBackend",
+    "StateToolSetProvider",
 ]

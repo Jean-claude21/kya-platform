@@ -6,8 +6,8 @@
 - [x] T004 Implémenter et tester `EffectiveToolResolver`
 - [x] T005 Implémenter le dépôt et la révision optimiste
 - [x] T006 Étendre et valider le modèle OpenFGA
-- [ ] T007 Ajouter le shadow mode et la preuve de non-divergence
-- [ ] T008 Appliquer le profil à `tools/list` et `tools/call`
+- [x] T007 Ajouter le shadow mode et la preuve de non-divergence
+- [x] T008 Appliquer le profil à `tools/list` et `tools/call`
 - [ ] T009 Ajouter les API de lecture et de préférence restrictive
 - [ ] T010 Ajouter audit, idempotence et cas de panne fail-closed
 - [ ] T011 Exécuter la suite complète et valider le diagramme

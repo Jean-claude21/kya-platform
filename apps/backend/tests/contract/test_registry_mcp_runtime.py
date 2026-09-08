@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock
 from uuid import UUID
 
 import pytest
+from mcp.server.auth.provider import AccessToken
 from mcp.server.mcpserver.exceptions import ToolError
 from starlette.datastructures import State
 
@@ -16,6 +17,7 @@ from kya_platform.mcp.registry.runtime import (
     StateDataMcpBackend,
     StateIdentityMapping,
     StateRegistryBackend,
+    StateToolSetProvider,
 )
 
 
@@ -52,6 +54,60 @@ async def test_state_authorization_fails_closed_then_delegates() -> None:
     state.authorization = authorization
     assert (await adapter.check(check)).allowed is True
     assert await adapter.list_objects(listing) == ("artifact:one",)
+
+
+@pytest.mark.asyncio
+async def test_state_tool_set_provider_fails_closed_and_builds_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    state = State()
+    state.mcp_tool_profile_runtime = None
+    provider = StateToolSetProvider(state)
+    monkeypatch.setattr(
+        "kya_platform.mcp.registry.runtime.get_access_token",
+        lambda: None,
+    )
+    assert await provider() == frozenset()
+
+    runtime = AsyncMock()
+    runtime.resolve.return_value = SimpleNamespace(advertised_tool_keys=("data.find",))
+    state.mcp_tool_profile_runtime = runtime
+    token = AccessToken(
+        token="opaque",
+        client_id="claude",
+        subject="11111111-1111-4111-8111-111111111111",
+        scopes=["data:read"],
+        claims={"active_unit": "direction-cvsi"},
+    )
+    monkeypatch.setattr(
+        "kya_platform.mcp.registry.runtime.get_access_token",
+        lambda: token,
+    )
+    assert await provider() == frozenset({"data.find"})
+    request = runtime.resolve.await_args.args[0]
+    assert request.client_id == "claude"
+    assert request.active_unit_key == "direction-cvsi"
+
+
+@pytest.mark.asyncio
+async def test_state_tool_set_provider_rejects_invalid_context(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    state = State()
+    state.mcp_tool_profile_runtime = AsyncMock()
+    provider = StateToolSetProvider(state)
+    token = AccessToken(
+        token="opaque",
+        client_id="claude",
+        subject="not-a-uuid",
+        scopes=["data:read"],
+        claims={},
+    )
+    monkeypatch.setattr(
+        "kya_platform.mcp.registry.runtime.get_access_token",
+        lambda: token,
+    )
+    assert await provider() == frozenset()
 
 
 @pytest.mark.asyncio

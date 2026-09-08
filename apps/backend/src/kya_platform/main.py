@@ -1,6 +1,7 @@
 """FastAPI application factory and process entry point."""
 
 import base64
+import logging
 from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, asynccontextmanager
 from typing import cast
@@ -25,6 +26,11 @@ from kya_platform.application.content import ContentService
 from kya_platform.application.core import CoreService
 from kya_platform.application.data import DataService
 from kya_platform.application.mcp_profiles import McpProfileService
+from kya_platform.application.mcp_profiles.runtime import (
+    McpToolProfileRuntime,
+    ToolProfileMode,
+    ToolProfileRequest,
+)
 from kya_platform.application.publication import (
     PublicationService,
     PublicationUnitOfWorkFactory,
@@ -37,6 +43,7 @@ from kya_platform.application.publication.integrity import (
 from kya_platform.authorization import AuthorizationService
 from kya_platform.bootstrap import BootstrapService
 from kya_platform.config import Settings, get_settings
+from kya_platform.domain.mcp_profiles import ToolDescriptor
 from kya_platform.infrastructure.database.artifact_registry import SqlAlchemyArtifactRegistry
 from kya_platform.infrastructure.database.audit import SqlAlchemyAuditRepository
 from kya_platform.infrastructure.database.bootstrap import SqlAlchemyBootstrapClaimRepository
@@ -65,6 +72,7 @@ from kya_platform.mcp.registry.runtime import (
     StateDataMcpAuditSink,
     StateDataMcpBackend,
     StateRegistryBackend,
+    StateToolSetProvider,
 )
 from kya_platform.mcp.registry.server import create_registry_server
 from kya_platform.observability import (
@@ -88,6 +96,30 @@ class CanonicalMcpEndpoint:
         inner_scope["path"] = "/"
         inner_scope["raw_path"] = b"/"
         await self._app(inner_scope, receive, send)
+
+
+class LoggingToolProfileShadowSink:
+    """Emit comparison evidence without principal, token or secret values."""
+
+    async def record(
+        self,
+        *,
+        request: ToolProfileRequest,
+        legacy_tool_keys: tuple[str, ...],
+        effective_tool_keys: tuple[str, ...],
+        dependency_failed: bool,
+    ) -> None:
+        logging.getLogger("kya.mcp.profiles").info(
+            "mcp_tool_profile_comparison",
+            extra={
+                "active_unit": request.active_unit_key,
+                "client_id": request.client_id,
+                "legacy_count": len(legacy_tool_keys),
+                "effective_count": len(effective_tool_keys),
+                "diverged": legacy_tool_keys != effective_tool_keys,
+                "dependency_failed": dependency_failed,
+            },
+        )
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -148,13 +180,28 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 SqlAlchemyArtifactRegistry(session_factory)
             )
             app.state.registry_mcp_backend = SqlAlchemyRegistryMcpBackend(session_factory)
-            app.state.mcp_profile_service = McpProfileService(
-                SqlAlchemyMcpProfileRegistry(session_factory)
-            )
+            mcp_profile_repository = SqlAlchemyMcpProfileRegistry(session_factory)
+            app.state.mcp_profile_service = McpProfileService(mcp_profile_repository)
+            app.state.mcp_profile_repository = mcp_profile_repository
             if resolved_settings.environment != "test":
                 await app.state.mcp_profile_service.synchronize(
                     TOOL_REGISTRATIONS,
                     SYSTEM_PROFILES,
+                )
+            if resolved_settings.mcp_tool_profile_mode != "off":
+                app.state.mcp_tool_profile_runtime = McpToolProfileRuntime(
+                    tools=tuple(
+                        ToolDescriptor(
+                            item.key,
+                            item.namespace,
+                            item.oauth_scope,
+                        )
+                        for item in TOOL_REGISTRATIONS
+                    ),
+                    authorization=AuthorizationService(StateAuthorizationPort(app.state)),
+                    preferences=mcp_profile_repository,
+                    shadow_sink=LoggingToolProfileShadowSink(),
+                    mode=ToolProfileMode(resolved_settings.mcp_tool_profile_mode),
                 )
             signing_key = resolved_settings.artifact_signing_private_key
             if signing_key is not None:
@@ -290,6 +337,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.state.attestation_repository = None
     application.state.registry_mcp_backend = None
     application.state.mcp_profile_service = None
+    application.state.mcp_profile_repository = None
+    application.state.mcp_tool_profile_runtime = None
     application.state.oauth_broker = oauth_broker
     configure_security_runtime(application.state, resolved_settings)
     if resolved_settings.has_registry_mcp_configuration:
@@ -304,6 +353,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             resource_url=resolved_settings.registry_mcp_resource_url,
             data_backend=StateDataMcpBackend(application.state),
             data_audit=StateDataMcpAuditSink(application.state),
+            tool_set_provider=(
+                StateToolSetProvider(application.state)
+                if resolved_settings.mcp_tool_profile_mode != "off"
+                else None
+            ),
         )
         registry_mcp_app = registry_mcp.streamable_http_app(
             streamable_http_path="/",

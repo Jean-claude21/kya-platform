@@ -38,6 +38,12 @@ tuples:
   - user: workspace:platform
     relation: workspace
     object: mcp_profile:data-reader
+  - user: team:developers#member
+    relation: assignee
+    object: mcp_profile:data-reader
+  - user: mcp_profile:data-reader
+    relation: profile
+    object: mcp_tool:registry-search
   - user: user:diana
     relation: assignee
     object: role:communication-publisher

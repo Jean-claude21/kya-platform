@@ -50,6 +50,7 @@ if TYPE_CHECKING:
 
 type AccessTokenProvider = Callable[[], AccessToken | None]
 type ToolVisibility = Callable[[str], Awaitable[bool]]
+type ToolSetProvider = Callable[[], Awaitable[frozenset[str]]]
 ALL_TOOLS = REGISTRY_TOOLS + DATA_TOOLS
 SUPPORTED_SCOPES = sorted({item.oauth_scope for item in ALL_TOOLS})
 
@@ -94,11 +95,13 @@ class ScopedRegistryServer(MCPServer[None]):
         *args: object,
         access_token_provider: AccessTokenProvider,
         tool_visibility: ToolVisibility | None = None,
+        tool_set_provider: ToolSetProvider | None = None,
         **kwargs: object,
     ):
         super().__init__(*args, **kwargs)  # type: ignore[arg-type]
         self._access_token_provider = access_token_provider
         self._tool_visibility = tool_visibility
+        self._tool_set_provider = tool_set_provider
 
     async def list_tools(self):  # type: ignore[no-untyped-def]
         token = self._access_token_provider()
@@ -106,6 +109,9 @@ class ScopedRegistryServer(MCPServer[None]):
             return []
         permitted = {item.name for item in ALL_TOOLS if item.oauth_scope in token.scopes}
         tools = [tool for tool in await super().list_tools() if tool.name in permitted]
+        if self._tool_set_provider is not None:
+            governed = await self._tool_set_provider()
+            return [tool for tool in tools if tool.name in governed]
         if self._tool_visibility is None:
             return tools
         return [tool for tool in tools if await self._tool_visibility(tool.name)]
@@ -139,9 +145,15 @@ class RegistryGuard:
         self,
         authorization: AuthorizationService,
         access_token_provider: AccessTokenProvider,
+        tool_set_provider: ToolSetProvider | None = None,
     ) -> None:
         self._authorizer = ToolAuthorizer(authorization)
         self._access_token_provider = access_token_provider
+        self._tool_set_provider = tool_set_provider
+
+    async def _require_profile(self, name: str) -> None:
+        if self._tool_set_provider is not None and name not in await self._tool_set_provider():
+            raise ToolError("tool_profile_required")
 
     def _token(self, name: str) -> AccessToken:
         token = self._access_token_provider()
@@ -173,6 +185,7 @@ class RegistryGuard:
 
     async def require(self, name: str, resource: str) -> None:
         token = self._token(name)
+        await self._require_profile(name)
         context, contextual_tuples = self._active_context(token)
         allowed = await self._authorizer.is_allowed(
             _tool(name),
@@ -225,6 +238,7 @@ class RegistryGuard:
 
     async def allowed_artifact_ids(self, name: str) -> tuple[str, ...]:
         token = self._token(name)
+        await self._require_profile(name)
         context, contextual_tuples = self._active_context(token)
         return await self._authorizer.allowed_artifact_ids(
             ToolAccessContext(
@@ -247,10 +261,11 @@ def create_registry_server(
     access_token_provider: AccessTokenProvider = get_access_token,
     data_backend: DataMcpBackend | None = None,
     data_audit: DataMcpAuditSink | None = None,
+    tool_set_provider: ToolSetProvider | None = None,
 ) -> MCPServer[None]:
     """Build the remote server; OAuth authenticates and KYA policy authorizes."""
 
-    guard = RegistryGuard(authorization, access_token_provider)
+    guard = RegistryGuard(authorization, access_token_provider, tool_set_provider)
     server: MCPServer[None] = ScopedRegistryServer(
         "kya-platform",
         title="KYA Platform MCP",
@@ -259,6 +274,7 @@ def create_registry_server(
         token_verifier=token_verifier,
         access_token_provider=access_token_provider,
         tool_visibility=guard.is_visible,
+        tool_set_provider=tool_set_provider,
         auth=AuthSettings(
             issuer_url=issuer_url,
             resource_server_url=resource_url,
