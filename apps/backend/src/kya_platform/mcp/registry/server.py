@@ -1,12 +1,13 @@
 """OAuth-protected Registry MCP server over Streamable HTTP."""
 
-from collections.abc import Callable, Mapping
+from collections.abc import Awaitable, Callable, Mapping
 from datetime import UTC, datetime
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 from uuid import UUID
 
 from mcp.server.auth.middleware.auth_context import get_access_token
 from mcp.server.auth.provider import AccessToken, TokenVerifier
+from mcp.server.auth.routes import create_protected_resource_routes
 from mcp.server.auth.settings import AuthSettings
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
@@ -15,6 +16,7 @@ from kya_platform.application.reliability import JsonValue
 from kya_platform.authorization import AuthorizationService, ContextualTuple
 from kya_platform.authorization.model import active_unit_context
 from kya_platform.contracts.artifact_manifest import ArtifactType
+from kya_platform.mcp.data.contracts import DATA_TOOLS
 from kya_platform.mcp.registry.contracts import (
     REGISTRY_TOOLS,
     ArtifactDetail,
@@ -43,7 +45,13 @@ from kya_platform.mcp.registry.contracts import (
     ToolAuthorizer,
 )
 
+if TYPE_CHECKING:
+    from kya_platform.mcp.data.server import DataMcpAuditSink, DataMcpBackend
+
 type AccessTokenProvider = Callable[[], AccessToken | None]
+type ToolVisibility = Callable[[str], Awaitable[bool]]
+ALL_TOOLS = REGISTRY_TOOLS + DATA_TOOLS
+SUPPORTED_SCOPES = sorted({item.oauth_scope for item in ALL_TOOLS})
 
 
 class RegistryBackend(Protocol):
@@ -81,20 +89,49 @@ class RegistryBackend(Protocol):
 class ScopedRegistryServer(MCPServer[None]):
     """Advertise only tools covered by the caller's OAuth scopes."""
 
-    def __init__(self, *args: object, access_token_provider: AccessTokenProvider, **kwargs: object):
+    def __init__(
+        self,
+        *args: object,
+        access_token_provider: AccessTokenProvider,
+        tool_visibility: ToolVisibility | None = None,
+        **kwargs: object,
+    ):
         super().__init__(*args, **kwargs)  # type: ignore[arg-type]
         self._access_token_provider = access_token_provider
+        self._tool_visibility = tool_visibility
 
     async def list_tools(self):  # type: ignore[no-untyped-def]
         token = self._access_token_provider()
         if token is None:
             return []
-        permitted = {item.name for item in REGISTRY_TOOLS if item.oauth_scope in token.scopes}
-        return [tool for tool in await super().list_tools() if tool.name in permitted]
+        permitted = {item.name for item in ALL_TOOLS if item.oauth_scope in token.scopes}
+        tools = [tool for tool in await super().list_tools() if tool.name in permitted]
+        if self._tool_visibility is None:
+            return tools
+        return [tool for tool in tools if await self._tool_visibility(tool.name)]
+
+    def streamable_http_app(self, **kwargs: object):  # type: ignore[no-untyped-def]
+        """Advertise optional scopes while enforcing each one at tool invocation."""
+        app = super().streamable_http_app(**kwargs)  # type: ignore[arg-type]
+        auth = self.settings.auth
+        if auth is None or auth.resource_server_url is None:
+            return app
+        metadata_routes = create_protected_resource_routes(
+            resource_url=auth.resource_server_url,
+            authorization_servers=[auth.issuer_url],
+            scopes_supported=SUPPORTED_SCOPES,
+            resource_name="KYA Platform MCP",
+        )
+        metadata_paths = {route.path for route in metadata_routes}
+        app.routes[:] = [
+            route for route in app.routes if getattr(route, "path", None) not in metadata_paths
+        ]
+        app.routes.extend(metadata_routes)
+        return app
 
 
 def _tool(name: str):  # type: ignore[no-untyped-def]
-    return next(item for item in REGISTRY_TOOLS if item.name == name)
+    return next(item for item in ALL_TOOLS if item.name == name)
 
 
 class RegistryGuard:
@@ -150,6 +187,35 @@ class RegistryGuard:
         if not allowed:
             raise ToolError("not_authorized")
 
+    async def is_visible(self, name: str) -> bool:
+        """Hide Data tools unless the active unit grants their required relation."""
+        if name not in {item.name for item in DATA_TOOLS}:
+            return True
+        try:
+            token = self._token(name)
+            context, contextual_tuples = self._active_context(token)
+            active_unit = self.active_unit(name)
+            return await self._authorizer.is_allowed(
+                _tool(name),
+                ToolAccessContext(
+                    self._principal(token),
+                    frozenset(token.scopes),
+                    active_unit,
+                    context,
+                    contextual_tuples,
+                ),
+            )
+        except ToolError:
+            return False
+
+    def active_unit(self, name: str) -> str:
+        token = self._token(name)
+        claims = token.claims or {}
+        active_unit = claims.get("active_unit")
+        if not isinstance(active_unit, str) or not active_unit:
+            raise ToolError("active_unit_required")
+        return active_unit
+
     def principal_id(self, name: str) -> UUID:
         principal = self._principal(self._token(name)).removeprefix("user:")
         try:
@@ -179,21 +245,24 @@ def create_registry_server(
     issuer_url: str,
     resource_url: str,
     access_token_provider: AccessTokenProvider = get_access_token,
+    data_backend: DataMcpBackend | None = None,
+    data_audit: DataMcpAuditSink | None = None,
 ) -> MCPServer[None]:
     """Build the remote server; OAuth authenticates and KYA policy authorizes."""
 
     guard = RegistryGuard(authorization, access_token_provider)
     server: MCPServer[None] = ScopedRegistryServer(
-        "kya-registry",
-        title="KYA Registry MCP",
-        description="Catalogue gouverné des capacités numériques KYA",
-        version="0.1.0",
+        "kya-platform",
+        title="KYA Platform MCP",
+        description="Capacités et données gouvernées de KYA-Energy Group",
+        version="0.2.0",
         token_verifier=token_verifier,
         access_token_provider=access_token_provider,
+        tool_visibility=guard.is_visible,
         auth=AuthSettings(
             issuer_url=issuer_url,
             resource_server_url=resource_url,
-            required_scopes=["catalog:read"],
+            required_scopes=[],
         ),
     )
 
@@ -389,6 +458,13 @@ def create_registry_server(
                 confirmation=confirmation,
             )
         )
+
+    if (data_backend is None) != (data_audit is None):
+        raise ValueError("Data MCP backend and audit sink must be configured together")
+    if data_backend is not None and data_audit is not None:
+        from kya_platform.mcp.data.server import register_data_tools
+
+        register_data_tools(server, backend=data_backend, guard=guard, audit=data_audit)
 
     return server
 

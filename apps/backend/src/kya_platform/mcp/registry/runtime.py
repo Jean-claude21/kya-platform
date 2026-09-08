@@ -1,12 +1,15 @@
 """Late-bound adapters shared by the FastAPI and Registry MCP lifecycles."""
 
 from collections.abc import Sequence
+from datetime import UTC, datetime
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid7
 
 from mcp.server.mcpserver.exceptions import ToolError
 from starlette.datastructures import State
 
+from kya_platform.application.audit import AuditEvent, AuditWriter
+from kya_platform.application.data import DataService
 from kya_platform.auth import AuthenticatedIdentity, IdentityMappingPort
 from kya_platform.authorization import (
     AuthorizationDecision,
@@ -101,4 +104,91 @@ class StateRegistryBackend:
         return await self._backend().publish_candidate(*args, **kwargs)
 
 
-__all__ = ["StateAuthorizationPort", "StateIdentityMapping", "StateRegistryBackend"]
+class StateDataMcpBackend:
+    """Expose only the shared application service installed during lifespan."""
+
+    def __init__(self, state: State) -> None:
+        self._state = state
+
+    def _backend(self) -> DataService:
+        backend: DataService | None = self._state.data_service
+        if backend is None:
+            raise ToolError("data_service_unavailable")
+        return backend
+
+    async def search_assets(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+        return await self._backend().search_assets(*args, **kwargs)
+
+    async def get_asset(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+        return await self._backend().get_asset(*args, **kwargs)
+
+    async def get_contract(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+        return await self._backend().get_contract(*args, **kwargs)
+
+    async def list_snapshots(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+        return await self._backend().list_snapshots(*args, **kwargs)
+
+    async def trace_lineage(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+        return await self._backend().trace_lineage(*args, **kwargs)
+
+    async def get_pipeline(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+        return await self._backend().get_pipeline(*args, **kwargs)
+
+    async def start_run(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+        return await self._backend().start_run(*args, **kwargs)
+
+
+class StateDataMcpAuditSink:
+    """Record MCP decisions in the existing append-only audit trail."""
+
+    def __init__(self, state: State) -> None:
+        self._state = state
+
+    def _writer(self) -> AuditWriter:
+        writer: AuditWriter | None = self._state.audit_writer
+        if writer is None:
+            raise ToolError("audit_unavailable")
+        return writer
+
+    async def ensure_available(self) -> None:
+        self._writer()
+
+    async def record(
+        self,
+        *,
+        actor_id: UUID,
+        active_unit: str,
+        tool_name: str,
+        target_type: str,
+        target_id: str,
+        decision: str,
+        outcome: str,
+        correlation_id: UUID,
+    ) -> None:
+        settings = self._state.settings
+        await self._writer().append(
+            AuditEvent(
+                id=uuid7(),
+                occurred_at=datetime.now(UTC),
+                actor_id=actor_id,
+                actor_context={"active_unit": active_unit, "transport": "mcp"},
+                action=f"mcp.{tool_name}",
+                target_type=target_type,
+                target_id=target_id,
+                scope=f"workspace:{active_unit}",
+                environment=settings.environment,
+                decision=decision,
+                outcome=outcome,
+                correlation_id=correlation_id,
+                metadata={"protocol": "2026-07-28"},
+            )
+        )
+
+
+__all__ = [
+    "StateAuthorizationPort",
+    "StateDataMcpAuditSink",
+    "StateDataMcpBackend",
+    "StateIdentityMapping",
+    "StateRegistryBackend",
+]

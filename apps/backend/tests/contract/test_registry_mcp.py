@@ -496,4 +496,10 @@ def test_registry_http_uses_2026_stateless_request_metadata() -> None:
     assert "resource_metadata=" in unauthenticated.headers["WWW-Authenticate"]
     assert metadata.status_code == 200
     assert metadata.json()["resource"] == "https://registry.example.test/mcp"
-    assert metadata.json()["scopes_supported"] == ["catalog:read"]
+    assert metadata.json()["scopes_supported"] == [
+        "catalog:install",
+        "catalog:publish",
+        "catalog:read",
+        "data:ingest",
+        "data:read",
+    ]
