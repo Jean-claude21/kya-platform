@@ -10,6 +10,6 @@
 - [x] Ajouter les tests de contrat, sécurité et orchestration
 - [x] Valider la suite backend complète
 - [x] Valider le diagramme Mermaid et ses exports
-- [ ] Ouvrir et valider la PR vers `dev`
-- [ ] Appliquer la migration et déployer backend + worker sur `dev`
-- [ ] Exécuter une nouvelle collecte et vérifier la recherche réelle
+- [x] Ouvrir et valider les PR vers `dev`
+- [x] Appliquer la migration et déployer backend + worker sur `dev`
+- [x] Exécuter une nouvelle collecte et vérifier la recherche réelle
