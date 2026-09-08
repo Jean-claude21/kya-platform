@@ -6,5 +6,6 @@
 - [x] Enregistrer l'outil `get_ingestion_run`
 - [x] Ajouter les tests MCP et dépôt ciblés
 - [x] Valider la suite backend complète
+- [x] Valider la PR sur GitHub
 - [ ] Fusionner la PR vers `dev`
 - [ ] Vérifier l'outil sur le MCP déployé

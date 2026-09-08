@@ -10,3 +10,8 @@ Date : 2026-09-08
 - diagramme Mermaid validé et exporté avec Mermaid CLI 11.17.0
 
 La validation distante et le contrôle du MCP déployé seront ajoutés après fusion dans `dev`.
+
+## Validation distante
+
+PR #36 : contrôles GitHub réussis — politique de branche, autorisations, qualité frontend,
+qualité backend, preview Neon, validation du déploiement, dépendances/secrets, images et SBOM.
