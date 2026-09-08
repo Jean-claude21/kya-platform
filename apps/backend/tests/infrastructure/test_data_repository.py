@@ -2,6 +2,7 @@
 
 from collections.abc import Iterable
 from datetime import UTC, datetime
+from hashlib import sha256
 from typing import Self
 from uuid import UUID
 
@@ -13,6 +14,7 @@ from kya_platform.application.data import (
     DataReferenceError,
     RunCompletion,
 )
+from kya_platform.domain.content import ContentChunk, ContentDocument
 from kya_platform.domain.data import (
     DataAsset,
     DataAssetLayer,
@@ -35,6 +37,8 @@ from kya_platform.infrastructure.database.models import (
     CatalogArtifact,
     CatalogArtifactVersion,
     DataAssetRow,
+    DataContentChunkRow,
+    DataContentDocumentRow,
     DataContractVersionRow,
     DataIngestionRunRow,
     DataPipelineRow,
@@ -55,6 +59,8 @@ CONNECTOR_VERSION = UUID("01993480-0000-7000-8000-000000000007")
 PIPELINE = UUID("01993480-0000-7000-8000-000000000008")
 RUN = UUID("01993480-0000-7000-8000-000000000009")
 SNAPSHOT = UUID("01993480-0000-7000-8000-000000000010")
+DOCUMENT = UUID("01993480-0000-7000-8000-000000000012")
+CHUNK = UUID("01993480-0000-7000-8000-000000000013")
 NOW = datetime(2026, 9, 7, 14, tzinfo=UTC)
 
 
@@ -88,7 +94,9 @@ class Session:
         self.get_values = get_values or []
         self.execute_values = execute_values or []
         self.added: list[object] = []
+        self.added_batches: list[list[object]] = []
         self.flushes = 0
+        self.flush_added_counts: list[int] = []
 
     async def __aenter__(self) -> Self:
         return self
@@ -117,11 +125,13 @@ class Session:
 
     async def flush(self) -> None:
         self.flushes += 1
+        self.flush_added_counts.append(len(self.added))
 
     def add(self, value: object) -> None:
         self.added.append(value)
 
     def add_all(self, values: list[object]) -> None:
+        self.added_batches.append(values)
         self.added.extend(values)
 
 
@@ -607,6 +617,41 @@ async def test_completes_run_with_snapshot_quality_lineage_and_evidence() -> Non
     assert session.flushes == 1
     assert session.get_values == []
     assert any(isinstance(item, OutboxEvent) for item in session.added)
+
+
+@pytest.mark.asyncio
+@pytest.mark.unit
+async def test_flushes_content_documents_before_adding_their_chunks() -> None:
+    terminal = IngestionRun(
+        RUN, PIPELINE, ACTOR, RunStatus.COMPLETED, NOW, datetime(2026, 9, 7, 14, 1, tzinfo=UTC)
+    )
+    text = "Énergie solaire"
+    digest = sha256(text.encode()).hexdigest()
+    document = ContentDocument(
+        DOCUMENT,
+        SNAPSHOT,
+        0,
+        "https://kya-energy.com/fr",
+        "https://kya-energy.com/fr",
+        "KYA Energy",
+        "fr",
+        digest,
+        "untrusted_external_content",
+        (ContentChunk(CHUNK, 0, text, 0, len(text), digest),),
+    )
+    completion = RunCompletion(terminal, snapshot(), content_documents=(document,))
+    session = Session(
+        scalar_values=[UNIT, None],
+        get_values=[run_row(), pipeline_row(), contract_row()],
+    )
+
+    await repository(session).complete_run("direction-cvsi", completion, command=command())
+
+    assert session.flushes == 2
+    assert session.flush_added_counts == [1, 2]
+    assert len(session.added_batches) == 2
+    assert all(isinstance(item, DataContentDocumentRow) for item in session.added_batches[0])
+    assert any(isinstance(item, DataContentChunkRow) for item in session.added_batches[1])
 
 
 @pytest.mark.asyncio
