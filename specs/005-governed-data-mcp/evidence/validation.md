@@ -29,6 +29,15 @@ précédentes.
 - recherche et lignage limités au périmètre de l'unité active ;
 - métadonnées OAuth annonçant séparément catalogue, lecture Data et ingestion Data.
 
-## Validation distante
+## Validation distante — PR 31
 
-À compléter après passage de la PR vers `dev`.
+Les huit contrôles requis sont réussis sur le commit fonctionnel :
+
+- politique de branche ;
+- qualité backend ;
+- qualité frontend et documentaire sous Node 24 ;
+- modèle d'autorisation OpenFGA ;
+- validation de preview ;
+- validation de promotion ;
+- dépendances, secrets et configuration ;
+- conteneur et SBOM.

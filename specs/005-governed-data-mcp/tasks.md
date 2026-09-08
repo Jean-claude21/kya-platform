@@ -8,5 +8,5 @@
 - [x] Exiger confirmation et idempotence pour l'ingestion.
 - [x] Brancher l'audit append-only avec identifiant de corrélation.
 - [x] Ajouter les tests contractuels, runtime et dépôt.
-- [ ] Valider le diagramme, toute la qualité locale et la CI distante.
+- [x] Valider le diagramme, toute la qualité locale et la CI distante.
 - [ ] Fusionner la PR dans `dev` après tous les contrôles.
