@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from typing import cast
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -14,6 +14,7 @@ from kya_platform.application.data import (
     DataReferenceError,
     DataStateError,
     RunCompletion,
+    SnapshotLineage,
 )
 from kya_platform.domain.data import (
     DataAsset,
@@ -241,6 +242,41 @@ class SqlAlchemyDataRepository:
             )
             return tuple(_asset(row) for row in rows)
 
+    async def search_assets(self, unit_key: str, query: str, *, limit: int) -> Sequence[DataAsset]:
+        async with self._sessions() as session:
+            unit_id = await self._unit_id(session, unit_key)
+            if unit_id is None:
+                return ()
+            normalized = query.strip().casefold()
+            if not normalized:
+                return ()
+            rows = await session.scalars(
+                select(DataAssetRow)
+                .where(
+                    DataAssetRow.owner_unit_id == unit_id,
+                    or_(
+                        func.lower(DataAssetRow.key).contains(normalized, autoescape=True),
+                        func.lower(DataAssetRow.name).contains(normalized, autoescape=True),
+                    ),
+                )
+                .order_by(DataAssetRow.name, DataAssetRow.id)
+                .limit(limit)
+            )
+            return tuple(_asset(row) for row in rows)
+
+    async def get_asset(self, unit_key: str, asset_key: str) -> DataAsset | None:
+        async with self._sessions() as session:
+            unit_id = await self._unit_id(session, unit_key)
+            if unit_id is None:
+                return None
+            row = await session.scalar(
+                select(DataAssetRow).where(
+                    DataAssetRow.owner_unit_id == unit_id,
+                    DataAssetRow.key == asset_key,
+                )
+            )
+            return _asset(row) if row is not None else None
+
     async def create_asset(
         self, unit_key: str, asset: DataAsset, *, command: CommandMetadata
     ) -> DataAsset:
@@ -395,6 +431,44 @@ class SqlAlchemyDataRepository:
         except IntegrityError as error:
             raise DataConflictError("data pipeline key already exists") from error
         return pipeline
+
+    async def get_contract(
+        self, unit_key: str, asset_key: str, *, version: str | None = None
+    ) -> DataContract | None:
+        async with self._sessions() as session:
+            unit_id = await self._unit_id(session, unit_key)
+            if unit_id is None:
+                return None
+            statement = (
+                select(DataContractVersionRow)
+                .join(DataAssetRow, DataAssetRow.id == DataContractVersionRow.asset_id)
+                .where(
+                    DataAssetRow.owner_unit_id == unit_id,
+                    DataAssetRow.key == asset_key,
+                )
+            )
+            if version is not None:
+                statement = statement.where(DataContractVersionRow.version == version)
+            else:
+                statement = statement.order_by(
+                    DataContractVersionRow.created_at.desc(),
+                    DataContractVersionRow.id.desc(),
+                )
+            row = await session.scalar(statement.limit(1))
+            return _contract(row) if row is not None else None
+
+    async def get_pipeline(self, unit_key: str, pipeline_key: str) -> DataPipeline | None:
+        async with self._sessions() as session:
+            unit_id = await self._unit_id(session, unit_key)
+            if unit_id is None:
+                return None
+            row = await session.scalar(
+                select(DataPipelineRow).where(
+                    DataPipelineRow.owner_unit_id == unit_id,
+                    DataPipelineRow.key == pipeline_key,
+                )
+            )
+            return _pipeline(row) if row is not None else None
 
     async def start_run(
         self, unit_key: str, run: IngestionRun, *, command: CommandMetadata
@@ -573,6 +647,33 @@ class SqlAlchemyDataRepository:
                 .limit(limit)
             )
             return tuple(_snapshot(row) for row in rows)
+
+    async def trace_lineage(self, unit_key: str, snapshot_id: UUID) -> SnapshotLineage | None:
+        async with self._sessions() as session:
+            unit_id = await self._unit_id(session, unit_key)
+            if unit_id is None:
+                return None
+            snapshot_exists = await session.scalar(
+                select(DataSnapshotRow.id)
+                .join(DataAssetRow, DataAssetRow.id == DataSnapshotRow.asset_id)
+                .where(
+                    DataSnapshotRow.id == snapshot_id,
+                    DataAssetRow.owner_unit_id == unit_id,
+                )
+            )
+            if snapshot_exists is None:
+                return None
+            input_ids = await session.scalars(
+                select(DataLineageEdgeRow.input_snapshot_id)
+                .where(DataLineageEdgeRow.output_snapshot_id == snapshot_id)
+                .order_by(DataLineageEdgeRow.input_snapshot_id)
+            )
+            output_ids = await session.scalars(
+                select(DataLineageEdgeRow.output_snapshot_id)
+                .where(DataLineageEdgeRow.input_snapshot_id == snapshot_id)
+                .order_by(DataLineageEdgeRow.output_snapshot_id)
+            )
+            return SnapshotLineage(snapshot_id, tuple(input_ids), tuple(output_ids))
 
     @staticmethod
     async def _unit_id(session: AsyncSession, key: str) -> UUID | None:

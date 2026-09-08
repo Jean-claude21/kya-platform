@@ -1,5 +1,6 @@
 """Late-bound MCP adapters fail closed and delegate only after startup."""
 
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from uuid import UUID
 
@@ -11,6 +12,8 @@ from kya_platform.auth import AuthenticatedIdentity
 from kya_platform.authorization import CheckRequest, ListObjectsRequest
 from kya_platform.mcp.registry.runtime import (
     StateAuthorizationPort,
+    StateDataMcpAuditSink,
+    StateDataMcpBackend,
     StateIdentityMapping,
     StateRegistryBackend,
 )
@@ -88,3 +91,62 @@ async def test_state_registry_backend_fails_closed_then_delegates_every_operatio
     assert await adapter.manage_installation("request") == "manage"
     assert await adapter.get_operation("request") == "operation"
     assert await adapter.publish_candidate("request") == "publish"
+
+
+@pytest.mark.asyncio
+async def test_state_data_backend_fails_closed_then_delegates() -> None:
+    state = State()
+    state.data_service = None
+    adapter = StateDataMcpBackend(state)
+    with pytest.raises(ToolError, match="data_service_unavailable"):
+        await adapter.get_asset("direction-cvsi", "asset")
+
+    service = AsyncMock()
+    service.search_assets.return_value = "search"
+    service.get_asset.return_value = "asset"
+    service.get_contract.return_value = "contract"
+    service.list_snapshots.return_value = "snapshots"
+    service.trace_lineage.return_value = "lineage"
+    service.get_pipeline.return_value = "pipeline"
+    service.start_run.return_value = "run"
+    state.data_service = service
+
+    assert await adapter.search_assets("unit", "query", limit=2) == "search"
+    assert await adapter.get_asset("unit", "asset") == "asset"
+    assert await adapter.get_contract("unit", "asset") == "contract"
+    assert await adapter.list_snapshots("unit", "asset", limit=2) == "snapshots"
+    assert await adapter.trace_lineage("unit", "snapshot") == "lineage"
+    assert await adapter.get_pipeline("unit", "pipeline") == "pipeline"
+    assert await adapter.start_run("unit", "run", command="command") == "run"
+
+
+@pytest.mark.asyncio
+async def test_state_data_audit_is_append_only_and_fails_closed() -> None:
+    state = State()
+    state.audit_writer = None
+    state.settings = SimpleNamespace(environment="test")
+    audit = StateDataMcpAuditSink(state)
+    with pytest.raises(ToolError, match="audit_unavailable"):
+        await audit.ensure_available()
+
+    writer = AsyncMock()
+    state.audit_writer = writer
+    await audit.ensure_available()
+    correlation = UUID("01993480-0000-7000-8000-000000000099")
+    actor = UUID("01993480-0000-7000-8000-000000000002")
+    await audit.record(
+        actor_id=actor,
+        active_unit="direction-cvsi",
+        tool_name="get_data_asset",
+        target_type="data_asset",
+        target_id="market-prices",
+        decision="allowed",
+        outcome="succeeded",
+        correlation_id=correlation,
+    )
+
+    event = writer.append.await_args.args[0]
+    assert event.actor_id == actor
+    assert event.scope == "workspace:direction-cvsi"
+    assert event.action == "mcp.get_data_asset"
+    assert event.correlation_id == correlation

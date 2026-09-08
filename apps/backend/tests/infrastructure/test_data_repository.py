@@ -362,6 +362,49 @@ async def test_lists_sources_assets_runs_and_snapshots_in_unit_scope() -> None:
 
 @pytest.mark.asyncio
 @pytest.mark.unit
+async def test_searches_and_resolves_governed_data_metadata() -> None:
+    search_session = Session(scalar_values=[UNIT], scalar_rows=[[asset_row()]])
+    matches = await repository(search_session).search_assets("direction-cvsi", "prix", limit=10)
+    assert matches[0].key == "market-prices-raw"
+
+    asset_session = Session(scalar_values=[UNIT, asset_row()])
+    assert (
+        await repository(asset_session).get_asset("direction-cvsi", "market-prices-raw")
+    ) == asset()
+
+    contract_session = Session(scalar_values=[UNIT, contract_row()])
+    assert (
+        await repository(contract_session).get_contract(
+            "direction-cvsi", "market-prices-raw", version="1.0.0"
+        )
+    ) == contract()
+
+    pipeline_session = Session(scalar_values=[UNIT, pipeline_row()])
+    assert (
+        await repository(pipeline_session).get_pipeline("direction-cvsi", "collect-market-prices")
+    ) == pipeline()
+
+
+@pytest.mark.asyncio
+@pytest.mark.unit
+async def test_traces_only_a_snapshot_inside_the_active_unit() -> None:
+    upstream = UUID("01993480-0000-7000-8000-000000000011")
+    downstream = UUID("01993480-0000-7000-8000-000000000012")
+    session = Session(
+        scalar_values=[UNIT, SNAPSHOT],
+        scalar_rows=[[upstream], [downstream]],
+    )
+    lineage = await repository(session).trace_lineage("direction-cvsi", SNAPSHOT)
+    assert lineage is not None
+    assert lineage.input_snapshot_ids == (upstream,)
+    assert lineage.output_snapshot_ids == (downstream,)
+
+    absent = Session(scalar_values=[UNIT, None])
+    assert await repository(absent).trace_lineage("direction-cvsi", SNAPSHOT) is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.unit
 async def test_unknown_unit_lists_are_empty() -> None:
     assert await repository(Session(scalar_values=[None])).list_sources("unknown", limit=10) == ()
     assert await repository(Session(scalar_values=[None])).list_assets("unknown", limit=10) == ()
@@ -369,6 +412,18 @@ async def test_unknown_unit_lists_are_empty() -> None:
     assert (
         await repository(Session(scalar_values=[None])).list_snapshots("unknown", "asset", limit=10)
         == ()
+    )
+    assert (
+        await repository(Session(scalar_values=[None])).search_assets("unknown", "asset", limit=10)
+        == ()
+    )
+    assert await repository(Session(scalar_values=[None])).get_asset("unknown", "asset") is None
+    assert await repository(Session(scalar_values=[None])).get_contract("unknown", "asset") is None
+    assert (
+        await repository(Session(scalar_values=[None])).get_pipeline("unknown", "pipeline") is None
+    )
+    assert (
+        await repository(Session(scalar_values=[None])).trace_lineage("unknown", SNAPSHOT) is None
     )
 
 

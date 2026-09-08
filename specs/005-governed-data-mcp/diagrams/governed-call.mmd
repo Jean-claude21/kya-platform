@@ -1,0 +1,26 @@
+sequenceDiagram
+    autonumber
+    actor U as Collaborateur
+    participant C as Claude ou ChatGPT
+    participant M as KYA Platform MCP
+    participant O as OAuth KYA
+    participant F as OpenFGA
+    participant D as DataService
+    participant N as Neon
+    participant A as Audit append-only
+
+    U->>C: Demande métier sur les données
+    C->>M: tools/list + jeton
+    M->>O: Vérifier identité, portées et unité active
+    M->>F: Vérifier can_view ou can_manage
+    F-->>M: Décision par unité
+    M-->>C: Outils autorisés uniquement
+    C->>M: Appel outil structuré
+    M->>F: Revalider la permission
+    M->>D: Exécuter le cas d'usage borné
+    D->>N: Lire ou écrire les métadonnées gouvernées
+    N-->>D: Résultat scoped
+    D-->>M: Modèle métier
+    M->>A: Acteur + unité + décision + résultat
+    M-->>C: Projection sans secret ni chemin de stockage
+    C-->>U: Réponse et actions suivantes permises

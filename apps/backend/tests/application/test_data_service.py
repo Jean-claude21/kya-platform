@@ -6,7 +6,12 @@ from uuid import UUID
 
 import pytest
 
-from kya_platform.application.data import CommandMetadata, DataService, RunCompletion
+from kya_platform.application.data import (
+    CommandMetadata,
+    DataService,
+    RunCompletion,
+    SnapshotLineage,
+)
 from kya_platform.domain.data import (
     DataAsset,
     DataAssetLayer,
@@ -110,25 +115,36 @@ async def test_service_delegates_the_complete_data_protocol() -> None:
     repository.list_sources.return_value = (source,)
     repository.create_source.return_value = source
     repository.list_assets.return_value = (asset,)
+    repository.search_assets.return_value = (asset,)
+    repository.get_asset.return_value = asset
     repository.create_asset.return_value = asset
     repository.publish_contract.return_value = contract
+    repository.get_contract.return_value = contract
     repository.create_pipeline.return_value = pipeline
+    repository.get_pipeline.return_value = pipeline
     repository.start_run.return_value = started
     repository.get_run.return_value = started
     repository.complete_run.return_value = completion
     repository.fail_run.return_value = failed
     repository.list_snapshots.return_value = (snapshot,)
+    lineage = SnapshotLineage(IDENTIFIER, (IDENTIFIER,), ())
+    repository.trace_lineage.return_value = lineage
     service = DataService(repository)
     metadata = command()
 
     assert await service.list_sources("group", limit=10) == (source,)
     assert await service.create_source("group", source, command=metadata) == source
     assert await service.list_assets("group", limit=10) == (asset,)
+    assert await service.search_assets("group", "asset", limit=10) == (asset,)
+    assert await service.get_asset("group", "asset") == asset
     assert await service.create_asset("group", asset, command=metadata) == asset
     assert await service.publish_contract("group", contract, command=metadata) == contract
+    assert await service.get_contract("group", "asset", version="1.0.0") == contract
     assert await service.create_pipeline("group", pipeline, command=metadata) == pipeline
+    assert await service.get_pipeline("group", "pipeline") == pipeline
     assert await service.start_run("group", started, command=metadata) == started
     assert await service.get_run("group", IDENTIFIER) == started
     assert await service.complete_run("group", completion, command=metadata) == completion
     assert await service.fail_run("group", failed, command=metadata) == failed
     assert await service.list_snapshots("group", "asset", limit=10) == (snapshot,)
+    assert await service.trace_lineage("group", IDENTIFIER) == lineage

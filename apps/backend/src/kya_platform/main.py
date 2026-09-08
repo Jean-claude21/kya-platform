@@ -57,6 +57,8 @@ from kya_platform.infrastructure.openfga import OpenFgaHttpAdapter
 from kya_platform.mcp.bootstrap import create_bootstrap_server
 from kya_platform.mcp.registry.runtime import (
     StateAuthorizationPort,
+    StateDataMcpAuditSink,
+    StateDataMcpBackend,
     StateRegistryBackend,
 )
 from kya_platform.mcp.registry.server import create_registry_server
@@ -281,6 +283,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             token_verifier=ProviderTokenVerifier(oauth_broker),
             issuer_url=authorization_server_url,
             resource_url=resolved_settings.registry_mcp_resource_url,
+            data_backend=StateDataMcpBackend(application.state),
+            data_audit=StateDataMcpAuditSink(application.state),
         )
         registry_mcp_app = registry_mcp.streamable_http_app(
             streamable_http_path="/",

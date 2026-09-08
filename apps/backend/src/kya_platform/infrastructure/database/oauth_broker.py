@@ -28,7 +28,15 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from kya_platform.infrastructure.database.models import OAuthClient, OAuthGrant, OAuthTokenRecord
 
-VALID_SCOPES = frozenset({"catalog:read", "catalog:install", "catalog:publish"})
+VALID_SCOPES = frozenset(
+    {
+        "catalog:read",
+        "catalog:install",
+        "catalog:publish",
+        "data:read",
+        "data:ingest",
+    }
+)
 
 
 def _digest(value: str) -> str:

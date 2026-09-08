@@ -63,21 +63,38 @@ class RunCompletion:
             raise ValueError("lineage input snapshots must be unique")
 
 
+@dataclass(frozen=True, slots=True)
+class SnapshotLineage:
+    """Exact snapshot dependencies without exposing storage locations."""
+
+    snapshot_id: UUID
+    input_snapshot_ids: tuple[UUID, ...] = ()
+    output_snapshot_ids: tuple[UUID, ...] = ()
+
+
 class DataRepository(Protocol):
     async def list_sources(self, unit_key: str, *, limit: int) -> Sequence[DataSource]: ...
     async def create_source(
         self, unit_key: str, source: DataSource, *, command: CommandMetadata
     ) -> DataSource: ...
     async def list_assets(self, unit_key: str, *, limit: int) -> Sequence[DataAsset]: ...
+    async def search_assets(
+        self, unit_key: str, query: str, *, limit: int
+    ) -> Sequence[DataAsset]: ...
+    async def get_asset(self, unit_key: str, asset_key: str) -> DataAsset | None: ...
     async def create_asset(
         self, unit_key: str, asset: DataAsset, *, command: CommandMetadata
     ) -> DataAsset: ...
     async def publish_contract(
         self, unit_key: str, contract: DataContract, *, command: CommandMetadata
     ) -> DataContract: ...
+    async def get_contract(
+        self, unit_key: str, asset_key: str, *, version: str | None = None
+    ) -> DataContract | None: ...
     async def create_pipeline(
         self, unit_key: str, pipeline: DataPipeline, *, command: CommandMetadata
     ) -> DataPipeline: ...
+    async def get_pipeline(self, unit_key: str, pipeline_key: str) -> DataPipeline | None: ...
     async def start_run(
         self, unit_key: str, run: IngestionRun, *, command: CommandMetadata
     ) -> IngestionRun: ...
@@ -91,6 +108,7 @@ class DataRepository(Protocol):
     async def list_snapshots(
         self, unit_key: str, asset_key: str, *, limit: int
     ) -> Sequence[DataSnapshot]: ...
+    async def trace_lineage(self, unit_key: str, snapshot_id: UUID) -> SnapshotLineage | None: ...
 
 
 class DataService:
@@ -110,6 +128,12 @@ class DataService:
     async def list_assets(self, unit_key: str, *, limit: int) -> Sequence[DataAsset]:
         return await self._repository.list_assets(unit_key, limit=limit)
 
+    async def search_assets(self, unit_key: str, query: str, *, limit: int) -> Sequence[DataAsset]:
+        return await self._repository.search_assets(unit_key, query, limit=limit)
+
+    async def get_asset(self, unit_key: str, asset_key: str) -> DataAsset | None:
+        return await self._repository.get_asset(unit_key, asset_key)
+
     async def create_asset(
         self, unit_key: str, asset: DataAsset, *, command: CommandMetadata
     ) -> DataAsset:
@@ -120,10 +144,18 @@ class DataService:
     ) -> DataContract:
         return await self._repository.publish_contract(unit_key, contract, command=command)
 
+    async def get_contract(
+        self, unit_key: str, asset_key: str, *, version: str | None = None
+    ) -> DataContract | None:
+        return await self._repository.get_contract(unit_key, asset_key, version=version)
+
     async def create_pipeline(
         self, unit_key: str, pipeline: DataPipeline, *, command: CommandMetadata
     ) -> DataPipeline:
         return await self._repository.create_pipeline(unit_key, pipeline, command=command)
+
+    async def get_pipeline(self, unit_key: str, pipeline_key: str) -> DataPipeline | None:
+        return await self._repository.get_pipeline(unit_key, pipeline_key)
 
     async def start_run(
         self, unit_key: str, run: IngestionRun, *, command: CommandMetadata
@@ -148,6 +180,9 @@ class DataService:
     ) -> Sequence[DataSnapshot]:
         return await self._repository.list_snapshots(unit_key, asset_key, limit=limit)
 
+    async def trace_lineage(self, unit_key: str, snapshot_id: UUID) -> SnapshotLineage | None:
+        return await self._repository.trace_lineage(unit_key, snapshot_id)
+
 
 __all__ = [
     "CommandMetadata",
@@ -157,4 +192,5 @@ __all__ = [
     "DataService",
     "DataStateError",
     "RunCompletion",
+    "SnapshotLineage",
 ]
