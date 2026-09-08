@@ -99,9 +99,7 @@ async def test_synchronizes_exact_system_profile_membership_with_stable_ids() ->
     session = Session()
     repository = SqlAlchemyMcpProfileRegistry(Sessions(session))  # type: ignore[arg-type]
     tools = (tool("find"), tool("read"))
-    profiles = (
-        SystemProfileRegistration("data-reader", "Lecteur", "Lecture", ("find", "read")),
-    )
+    profiles = (SystemProfileRegistration("data-reader", "Lecteur", "Lecture", ("find", "read")),)
 
     await repository.synchronize(tools, profiles)
 
@@ -123,9 +121,7 @@ async def test_empty_registry_is_a_no_op() -> None:
     assert session.statements == []
 
 
-PREFERENCE = UserToolPreferenceKey(
-    UUID(int=10), "kya/togo/cvsi", "claude", "data.find"
-)
+PREFERENCE = UserToolPreferenceKey(UUID(int=10), "kya/togo/cvsi", "claude", "data.find")
 
 
 @pytest.mark.asyncio

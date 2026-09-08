@@ -218,7 +218,7 @@ class SqlAlchemyMcpProfileRegistry:
                         McpUserToolPreference.tool_id == tool_id,
                         McpUserToolPreference.revision == expected_revision,
                     )
-                )
+                ),
             )
             if result.rowcount != 1:
                 raise McpProfileConflictError("MCP preference revision is stale")

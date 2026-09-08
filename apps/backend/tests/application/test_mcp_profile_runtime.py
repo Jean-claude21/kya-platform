@@ -79,9 +79,7 @@ def runtime(
 async def test_shadow_records_difference_but_preserves_legacy_list() -> None:
     sink = Sink()
     policy = Policy(("mcp_tool:data.find",))
-    decision = await runtime(
-        ToolProfileMode.SHADOW, policy, Preferences(), sink
-    ).resolve(REQUEST)
+    decision = await runtime(ToolProfileMode.SHADOW, policy, Preferences(), sink).resolve(REQUEST)
     assert decision.advertised_tool_keys == ("data.find", "data.start")
     assert decision.effective_tool_keys == ("data.find",)
     assert decision.diverged
