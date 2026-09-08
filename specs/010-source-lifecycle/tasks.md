@@ -11,4 +11,4 @@
 - [x] T009 Ajouter worker ordonnanceur et tests de reprise
 - [x] T010 Exposer les capacités administratives MCP selon profils
 - [x] T011 Exécuter Ruff, mypy, pytest et tests de migration
-- [ ] T012 Migrer Neon dev, déployer API/worker et prouver le parcours réel
+- [x] T012 Migrer Neon dev, déployer API/worker et prouver le parcours réel
