@@ -75,6 +75,8 @@ def test_reliability_models_have_explicit_schema_ownership() -> None:
         "core.site",
         "core.work_relationship",
         "data.asset",
+        "data.content_chunk",
+        "data.content_document",
         "data.contract_version",
         "data.ingestion_run",
         "data.lineage_edge",

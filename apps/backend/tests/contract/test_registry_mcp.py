@@ -500,6 +500,7 @@ def test_registry_http_uses_2026_stateless_request_metadata() -> None:
         "catalog:install",
         "catalog:publish",
         "catalog:read",
+        "data:content:read",
         "data:ingest",
         "data:read",
     ]

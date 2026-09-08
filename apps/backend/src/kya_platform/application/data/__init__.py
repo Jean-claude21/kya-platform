@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
+from kya_platform.domain.content import ContentDocument
 from kya_platform.domain.data import (
     DataAsset,
     DataContract,
@@ -52,6 +53,7 @@ class RunCompletion:
     snapshot: DataSnapshot
     quality_results: tuple[QualityResult, ...] = ()
     input_snapshot_ids: tuple[UUID, ...] = ()
+    content_documents: tuple[ContentDocument, ...] = ()
 
     def __post_init__(self) -> None:
         if self.run.status.value != "completed":
@@ -61,6 +63,11 @@ class RunCompletion:
             raise ValueError("quality result rule keys must be unique")
         if len(self.input_snapshot_ids) != len(set(self.input_snapshot_ids)):
             raise ValueError("lineage input snapshots must be unique")
+        if any(document.snapshot_id != self.snapshot.id for document in self.content_documents):
+            raise ValueError("content documents must belong to the completed snapshot")
+        document_ordinals = [document.ordinal for document in self.content_documents]
+        if document_ordinals != list(range(len(self.content_documents))):
+            raise ValueError("content document ordinals must be contiguous")
 
 
 @dataclass(frozen=True, slots=True)

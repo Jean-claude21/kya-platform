@@ -31,6 +31,8 @@ from kya_platform.infrastructure.database.models.core import (
 )
 from kya_platform.infrastructure.database.models.data import (
     DataAssetRow,
+    DataContentChunkRow,
+    DataContentDocumentRow,
     DataContractVersionRow,
     DataIngestionRunRow,
     DataLineageEdgeRow,
@@ -78,6 +80,8 @@ __all__ = [
     "CoreSite",
     "CoreWorkRelationship",
     "DataAssetRow",
+    "DataContentChunkRow",
+    "DataContentDocumentRow",
     "DataContractVersionRow",
     "DataIngestionRunRow",
     "DataLineageEdgeRow",

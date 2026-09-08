@@ -9,6 +9,7 @@ from mcp.server.mcpserver.exceptions import ToolError
 from starlette.datastructures import State
 
 from kya_platform.application.audit import AuditEvent, AuditWriter
+from kya_platform.application.content import ContentService
 from kya_platform.application.data import DataService
 from kya_platform.auth import AuthenticatedIdentity, IdentityMappingPort
 from kya_platform.authorization import (
@@ -116,6 +117,12 @@ class StateDataMcpBackend:
             raise ToolError("data_service_unavailable")
         return backend
 
+    def _content(self) -> ContentService:
+        backend: ContentService | None = self._state.content_service
+        if backend is None:
+            raise ToolError("content_service_unavailable")
+        return backend
+
     async def search_assets(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
         return await self._backend().search_assets(*args, **kwargs)
 
@@ -136,6 +143,12 @@ class StateDataMcpBackend:
 
     async def get_run_report(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
         return await self._backend().get_run_report(*args, **kwargs)
+
+    async def search_public_content(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+        return await self._content().search_public_content(*args, **kwargs)
+
+    async def get_public_excerpt(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+        return await self._content().get_public_excerpt(*args, **kwargs)
 
     async def start_run(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
         return await self._backend().start_run(*args, **kwargs)

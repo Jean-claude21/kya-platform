@@ -6,15 +6,17 @@ from uuid import UUID
 
 from sqlalchemy import (
     CheckConstraint,
+    Computed,
     DateTime,
     ForeignKey,
     Index,
     Integer,
     String,
+    Text,
     UniqueConstraint,
     func,
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column
 
 from kya_platform.infrastructure.database.base import Base, new_id
@@ -241,8 +243,61 @@ class DataQualityResultRow(Base):
     observed: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
 
 
+class DataContentDocumentRow(Base):
+    __tablename__ = "content_document"
+    __table_args__ = (
+        UniqueConstraint("snapshot_id", "ordinal", name="uq_data_content_document_ordinal"),
+        UniqueConstraint("snapshot_id", "source_uri", name="uq_data_content_document_source"),
+        CheckConstraint("ordinal >= 0", name="valid_ordinal"),
+        CheckConstraint("content_trust = 'untrusted_external_content'", name="valid_content_trust"),
+        Index("ix_data_content_document_snapshot", "snapshot_id"),
+        {"schema": "data"},
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=new_id)
+    snapshot_id: Mapped[UUID] = mapped_column(
+        ForeignKey("data.snapshot.id", ondelete="CASCADE"), nullable=False
+    )
+    ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
+    source_uri: Mapped[str] = mapped_column(String(1200), nullable=False)
+    canonical_uri: Mapped[str | None] = mapped_column(String(1200), nullable=True)
+    title: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    language: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    body_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    content_trust: Mapped[str] = mapped_column(String(64), nullable=False)
+
+
+class DataContentChunkRow(Base):
+    __tablename__ = "content_chunk"
+    __table_args__ = (
+        UniqueConstraint("document_id", "ordinal", name="uq_data_content_chunk_ordinal"),
+        CheckConstraint("ordinal >= 0", name="valid_ordinal"),
+        CheckConstraint("char_start >= 0 AND char_end > char_start", name="valid_character_range"),
+        Index("ix_data_content_chunk_document", "document_id"),
+        Index("ix_data_content_chunk_search", "search_vector", postgresql_using="gin"),
+        {"schema": "data"},
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=new_id)
+    document_id: Mapped[UUID] = mapped_column(
+        ForeignKey("data.content_document.id", ondelete="CASCADE"), nullable=False
+    )
+    ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    char_start: Mapped[int] = mapped_column(Integer, nullable=False)
+    char_end: Mapped[int] = mapped_column(Integer, nullable=False)
+    content_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    search_vector: Mapped[object] = mapped_column(
+        TSVECTOR,
+        Computed("to_tsvector('simple', text)", persisted=True),
+        nullable=False,
+    )
+
+
 __all__ = [
     "DataAssetRow",
+    "DataContentChunkRow",
+    "DataContentDocumentRow",
     "DataContractVersionRow",
     "DataIngestionRunRow",
     "DataLineageEdgeRow",

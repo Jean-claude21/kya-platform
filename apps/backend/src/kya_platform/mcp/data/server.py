@@ -10,6 +10,7 @@ from mcp.server.mcpserver.exceptions import ToolError
 
 from kya_platform.application.data import CommandMetadata, IngestionRunReport, SnapshotLineage
 from kya_platform.application.reliability import canonical_request_hash
+from kya_platform.domain.content import ContentSearchHit
 from kya_platform.domain.data import (
     DataAsset,
     DataContract,
@@ -19,6 +20,9 @@ from kya_platform.domain.data import (
     RunStatus,
 )
 from kya_platform.mcp.data.contracts import (
+    ContentExcerptResult,
+    ContentHitDetail,
+    ContentSearchResult,
     DataAssetDetail,
     DataAssetSummary,
     DataContractDetail,
@@ -56,6 +60,19 @@ class DataMcpBackend(Protocol):
     async def get_pipeline(self, unit_key: str, pipeline_key: str) -> DataPipeline | None: ...
 
     async def get_run_report(self, unit_key: str, run_id: UUID) -> IngestionRunReport | None: ...
+
+    async def search_public_content(
+        self,
+        unit_key: str,
+        query: str,
+        *,
+        asset_keys: tuple[str, ...],
+        limit: int,
+    ) -> Sequence[ContentSearchHit]: ...
+
+    async def get_public_excerpt(
+        self, unit_key: str, chunk_id: UUID
+    ) -> ContentSearchHit | None: ...
 
     async def start_run(
         self, unit_key: str, run: IngestionRun, *, command: CommandMetadata
@@ -314,6 +331,66 @@ def register_data_tools(
             target_type="data_pipeline",
             target_id=pipeline_key,
             operation=start,
+        )
+
+    @server.tool(name="search_data_content", structured_output=True)
+    async def search_data_content(
+        query: str,
+        asset_keys: tuple[str, ...] = (),
+        limit: int = 5,
+    ) -> ContentSearchResult:
+        """Rechercher des passages publics KYA, cités et explicitement non fiables."""
+        normalized = query.strip()
+        if not 2 <= len(normalized) <= 300:
+            raise ToolError("query_length_invalid")
+        if not 1 <= limit <= 10:
+            raise ToolError("limit_invalid")
+        if len(asset_keys) > 10:
+            raise ToolError("asset_filter_limit_invalid")
+
+        async def search(unit: str, actor: UUID, correlation: UUID) -> ContentSearchResult:
+            del actor
+            hits = await backend.search_public_content(
+                unit,
+                normalized,
+                asset_keys=asset_keys,
+                limit=limit + 1,
+            )
+            return ContentSearchResult(
+                items=tuple(ContentHitDetail.from_domain(hit) for hit in hits[:limit]),
+                active_unit=unit,
+                search_mode="lexical",
+                has_more=len(hits) > limit,
+                correlation_id=correlation,
+            )
+
+        return await execution.run(
+            "search_data_content",
+            target_type="data_content",
+            target_id="public-index",
+            operation=search,
+        )
+
+    @server.tool(name="get_data_excerpt", structured_output=True)
+    async def get_data_excerpt(chunk_id: UUID) -> ContentExcerptResult:
+        """Relire exactement un passage public à partir de sa citation stable."""
+
+        async def get(unit: str, actor: UUID, correlation: UUID) -> ContentExcerptResult:
+            del actor
+            hit = await backend.get_public_excerpt(unit, chunk_id)
+            if hit is None:
+                raise ToolError("data_content_excerpt_not_found")
+            return ContentExcerptResult(
+                item=ContentHitDetail.from_domain(hit),
+                active_unit=unit,
+                correlation_id=correlation,
+            )
+
+        return await execution.run(
+            "get_data_excerpt",
+            target_type="data_content_chunk",
+            target_id=str(chunk_id),
+            operation=get,
         )
 
     @server.tool(name="get_ingestion_run", structured_output=True)
