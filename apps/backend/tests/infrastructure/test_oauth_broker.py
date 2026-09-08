@@ -87,6 +87,32 @@ def broker(session: Session) -> OAuthBroker:
     )
 
 
+@pytest.mark.asyncio
+async def test_reads_latest_live_connector_scopes_without_token_material() -> None:
+    session = Session()
+    session.scalar_result = ["catalog:read", "data:read"]
+
+    scopes = await broker(session).get_active_grant_scopes(
+        principal_id=PRINCIPAL,
+        active_unit_id="direction-cvsi",
+        client_id="claude",
+    )
+
+    assert scopes == frozenset({"catalog:read", "data:read"})
+
+
+@pytest.mark.asyncio
+async def test_missing_live_connector_grant_returns_none() -> None:
+    assert (
+        await broker(Session()).get_active_grant_scopes(
+            principal_id=PRINCIPAL,
+            active_unit_id="direction-cvsi",
+            client_id="claude",
+        )
+        is None
+    )
+
+
 def client(secret: str = "client-credential") -> OAuthClientInformationFull:  # noqa: S107
     return OAuthClientInformationFull(
         client_id="client-1",

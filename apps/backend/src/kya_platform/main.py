@@ -25,7 +25,7 @@ from kya_platform.application.audit import AuditQueryService, AuditWriter
 from kya_platform.application.content import ContentService
 from kya_platform.application.core import CoreService
 from kya_platform.application.data import DataService
-from kya_platform.application.mcp_profiles import McpProfileService
+from kya_platform.application.mcp_profiles import McpPreferenceService, McpProfileService
 from kya_platform.application.mcp_profiles.runtime import (
     McpToolProfileRuntime,
     ToolProfileMode,
@@ -183,6 +183,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             mcp_profile_repository = SqlAlchemyMcpProfileRegistry(session_factory)
             app.state.mcp_profile_service = McpProfileService(mcp_profile_repository)
             app.state.mcp_profile_repository = mcp_profile_repository
+            app.state.mcp_preference_service = McpPreferenceService(mcp_profile_repository)
             if resolved_settings.environment != "test":
                 await app.state.mcp_profile_service.synchronize(
                     TOOL_REGISTRATIONS,
@@ -338,6 +339,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.state.registry_mcp_backend = None
     application.state.mcp_profile_service = None
     application.state.mcp_profile_repository = None
+    application.state.mcp_preference_service = None
     application.state.mcp_tool_profile_runtime = None
     application.state.oauth_broker = oauth_broker
     configure_security_runtime(application.state, resolved_settings)
