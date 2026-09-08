@@ -1,6 +1,7 @@
 """Application contracts for the MCP tool control plane."""
 
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
@@ -56,6 +57,24 @@ class UserToolPreferenceKey:
             raise ValueError("unit and tool keys are required")
 
 
+@dataclass(frozen=True, slots=True)
+class McpPreferenceCommand:
+    actor_id: UUID
+    correlation_id: UUID
+    idempotency_key: str
+    request_hash: str
+    expires_at: datetime
+    environment: str
+
+    def __post_init__(self) -> None:
+        if not 16 <= len(self.idempotency_key) <= 200:
+            raise ValueError("idempotency key must contain 16 to 200 characters")
+        if len(self.request_hash) != 64:
+            raise ValueError("request hash must be a SHA-256 digest")
+        if self.expires_at.tzinfo is None:
+            raise ValueError("idempotency expiry must be timezone-aware")
+
+
 class McpProfilePreferencePort(Protocol):
     async def list_disabled_tools(
         self,
@@ -69,7 +88,7 @@ class McpProfilePreferencePort(Protocol):
         self,
         key: UserToolPreferenceKey,
         *,
-        actor_id: UUID,
+        command: McpPreferenceCommand,
         expected_revision: int,
     ) -> int: ...
 
@@ -77,6 +96,7 @@ class McpProfilePreferencePort(Protocol):
         self,
         key: UserToolPreferenceKey,
         *,
+        command: McpPreferenceCommand,
         expected_revision: int,
     ) -> None: ...
 
@@ -111,14 +131,14 @@ class McpPreferenceService:
         self,
         key: UserToolPreferenceKey,
         *,
-        actor_id: UUID,
+        command: McpPreferenceCommand,
         expected_revision: int,
     ) -> int:
         if expected_revision < 0:
             raise ValueError("expected revision must be nonnegative")
         return await self._repository.disable_tool(
             key,
-            actor_id=actor_id,
+            command=command,
             expected_revision=expected_revision,
         )
 
@@ -126,14 +146,20 @@ class McpPreferenceService:
         self,
         key: UserToolPreferenceKey,
         *,
+        command: McpPreferenceCommand,
         expected_revision: int,
     ) -> None:
         if expected_revision < 1:
             raise ValueError("an inherited preference must replace an existing revision")
-        await self._repository.inherit_tool(key, expected_revision=expected_revision)
+        await self._repository.inherit_tool(
+            key,
+            command=command,
+            expected_revision=expected_revision,
+        )
 
 
 __all__ = [
+    "McpPreferenceCommand",
     "McpPreferenceService",
     "McpProfileConflictError",
     "McpProfilePreferencePort",

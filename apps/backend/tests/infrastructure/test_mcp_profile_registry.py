@@ -1,5 +1,6 @@
 """The MCP control-plane seed is deterministic and transactionally synchronized."""
 
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from typing import Self
 from uuid import UUID
@@ -7,6 +8,7 @@ from uuid import UUID
 import pytest
 
 from kya_platform.application.mcp_profiles import (
+    McpPreferenceCommand,
     McpProfileConflictError,
     McpProfileReferenceError,
     SystemProfileRegistration,
@@ -122,6 +124,14 @@ async def test_empty_registry_is_a_no_op() -> None:
 
 
 PREFERENCE = UserToolPreferenceKey(UUID(int=10), "kya/togo/cvsi", "claude", "data.find")
+COMMAND = McpPreferenceCommand(
+    UUID(int=10),
+    UUID(int=11),
+    "preference-test-0001",
+    "a" * 64,
+    datetime.now(UTC) + timedelta(hours=1),
+    "test",
+)
 
 
 @pytest.mark.asyncio
@@ -138,53 +148,71 @@ async def test_lists_global_and_client_specific_disabled_tools() -> None:
 
 @pytest.mark.asyncio
 async def test_disables_new_preference_at_revision_one() -> None:
-    session = MutationSession([UUID(int=20), None])
+    session = MutationSession([None, UUID(int=20), None])
     repository = SqlAlchemyMcpProfileRegistry(MutationSessions(session))  # type: ignore[arg-type]
-    revision = await repository.disable_tool(
-        PREFERENCE, actor_id=PREFERENCE.principal_id, expected_revision=0
-    )
+    revision = await repository.disable_tool(PREFERENCE, command=COMMAND, expected_revision=0)
     assert revision == 1
-    assert len(session.added) == 1
+    assert len(session.added) == 3
 
 
 @pytest.mark.asyncio
 async def test_updates_preference_only_from_current_revision() -> None:
     row = SimpleNamespace(revision=2, updated_by=UUID(int=0))
-    session = MutationSession([UUID(int=20), row])
+    session = MutationSession([None, UUID(int=20), row])
     repository = SqlAlchemyMcpProfileRegistry(MutationSessions(session))  # type: ignore[arg-type]
-    revision = await repository.disable_tool(
-        PREFERENCE, actor_id=PREFERENCE.principal_id, expected_revision=2
-    )
+    revision = await repository.disable_tool(PREFERENCE, command=COMMAND, expected_revision=2)
     assert revision == 3
     assert row.updated_by == PREFERENCE.principal_id
 
 
 @pytest.mark.asyncio
+async def test_replays_same_idempotent_preference_without_mutation() -> None:
+    evidence = SimpleNamespace(request_hash="a" * 64, response_body={"revision": 4})
+    session = MutationSession([evidence])
+    repository = SqlAlchemyMcpProfileRegistry(MutationSessions(session))  # type: ignore[arg-type]
+
+    revision = await repository.disable_tool(PREFERENCE, command=COMMAND, expected_revision=3)
+
+    assert revision == 4
+    assert session.added == []
+
+
+@pytest.mark.asyncio
+async def test_rejects_reused_idempotency_key_for_different_request() -> None:
+    evidence = SimpleNamespace(request_hash="b" * 64, response_body={"revision": 4})
+    repository = SqlAlchemyMcpProfileRegistry(  # type: ignore[arg-type]
+        MutationSessions(MutationSession([evidence]))
+    )
+    with pytest.raises(McpProfileConflictError, match="another request"):
+        await repository.disable_tool(PREFERENCE, command=COMMAND, expected_revision=3)
+
+
+@pytest.mark.asyncio
 async def test_rejects_unknown_tool_and_stale_preference_revision() -> None:
     missing = SqlAlchemyMcpProfileRegistry(  # type: ignore[arg-type]
-        MutationSessions(MutationSession([None]))
+        MutationSessions(MutationSession([None, None]))
     )
     with pytest.raises(McpProfileReferenceError):
-        await missing.disable_tool(PREFERENCE, actor_id=UUID(int=10), expected_revision=0)
+        await missing.disable_tool(PREFERENCE, command=COMMAND, expected_revision=0)
     stale = SqlAlchemyMcpProfileRegistry(  # type: ignore[arg-type]
-        MutationSessions(MutationSession([UUID(int=20), SimpleNamespace(revision=2)]))
+        MutationSessions(MutationSession([None, UUID(int=20), SimpleNamespace(revision=2)]))
     )
     with pytest.raises(McpProfileConflictError):
-        await stale.disable_tool(PREFERENCE, actor_id=UUID(int=10), expected_revision=1)
+        await stale.disable_tool(PREFERENCE, command=COMMAND, expected_revision=1)
 
 
 @pytest.mark.asyncio
 async def test_inherits_only_the_expected_preference_revision() -> None:
-    session = MutationSession([UUID(int=20)])
+    session = MutationSession([None, UUID(int=20)])
     repository = SqlAlchemyMcpProfileRegistry(MutationSessions(session))  # type: ignore[arg-type]
-    await repository.inherit_tool(PREFERENCE, expected_revision=3)
+    await repository.inherit_tool(PREFERENCE, command=COMMAND, expected_revision=3)
     stale = SqlAlchemyMcpProfileRegistry(  # type: ignore[arg-type]
-        MutationSessions(MutationSession([UUID(int=20)], rowcount=0))
+        MutationSessions(MutationSession([None, UUID(int=20)], rowcount=0))
     )
     with pytest.raises(McpProfileConflictError):
-        await stale.inherit_tool(PREFERENCE, expected_revision=3)
+        await stale.inherit_tool(PREFERENCE, command=COMMAND, expected_revision=3)
     missing = SqlAlchemyMcpProfileRegistry(  # type: ignore[arg-type]
-        MutationSessions(MutationSession([None]))
+        MutationSessions(MutationSession([None, None]))
     )
     with pytest.raises(McpProfileReferenceError):
-        await missing.inherit_tool(PREFERENCE, expected_revision=3)
+        await missing.inherit_tool(PREFERENCE, command=COMMAND, expected_revision=3)

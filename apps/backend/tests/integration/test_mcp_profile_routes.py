@@ -59,10 +59,12 @@ def test_disables_then_restores_a_tool_with_optimistic_revision() -> None:
         disabled = client.put(
             "/api/v1/mcp/me/tool-preferences/search_data_assets",
             json={"expected_revision": 0, "client_id": "claude"},
+            headers={"Idempotency-Key": "disable-data-assets-0001"},
         )
         inherited = client.delete(
             "/api/v1/mcp/me/tool-preferences/search_data_assets"
-            "?expected_revision=1&client_id=claude"
+            "?expected_revision=1&client_id=claude",
+            headers={"Idempotency-Key": "inherit-data-assets-0001"},
         )
 
     assert disabled.status_code == 200

@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from kya_platform.application.mcp_profiles import (
+    McpPreferenceCommand,
     McpProfileConflictError,
     McpProfileReferenceError,
     SystemProfileRegistration,
@@ -17,6 +18,8 @@ from kya_platform.application.mcp_profiles import (
     UserToolPreferenceKey,
 )
 from kya_platform.infrastructure.database.models import (
+    AuditEvent,
+    IdempotencyRecord,
     McpToolDefinition,
     McpToolProfile,
     McpToolProfileItem,
@@ -151,11 +154,15 @@ class SqlAlchemyMcpProfileRegistry:
         self,
         key: UserToolPreferenceKey,
         *,
-        actor_id: UUID,
+        command: McpPreferenceCommand,
         expected_revision: int,
     ) -> int:
         try:
             async with self._sessions() as session, session.begin():
+                scope = self._preference_scope("disable", key)
+                replay = await self._replay_revision(session, scope, command)
+                if replay is not None:
+                    return replay
                 tool_id = await session.scalar(
                     select(McpToolDefinition.id).where(McpToolDefinition.key == key.tool_key)
                 )
@@ -186,12 +193,14 @@ class SqlAlchemyMcpProfileRegistry:
                             **identity,
                             state="disabled",
                             revision=1,
-                            updated_by=actor_id,
+                            updated_by=command.actor_id,
                         )
                     )
+                    self._remember_preference(session, scope, command, key, 1, "disabled")
                     return 1
                 row.revision += 1
-                row.updated_by = actor_id
+                row.updated_by = command.actor_id
+                self._remember_preference(session, scope, command, key, row.revision, "disabled")
                 return row.revision
         except IntegrityError as error:
             raise McpProfileConflictError("MCP preference was created concurrently") from error
@@ -200,9 +209,14 @@ class SqlAlchemyMcpProfileRegistry:
         self,
         key: UserToolPreferenceKey,
         *,
+        command: McpPreferenceCommand,
         expected_revision: int,
     ) -> None:
         async with self._sessions() as session, session.begin():
+            scope = self._preference_scope("inherit", key)
+            replay = await self._replay_revision(session, scope, command)
+            if replay is not None:
+                return
             tool_id = await session.scalar(
                 select(McpToolDefinition.id).where(McpToolDefinition.key == key.tool_key)
             )
@@ -222,6 +236,72 @@ class SqlAlchemyMcpProfileRegistry:
             )
             if result.rowcount != 1:
                 raise McpProfileConflictError("MCP preference revision is stale")
+            self._remember_preference(session, scope, command, key, 0, "inherited")
+
+    @staticmethod
+    def _preference_scope(action: str, key: UserToolPreferenceKey) -> str:
+        return (
+            f"mcp:preference:{action}:{key.principal_id}:"
+            f"{key.active_unit_key}:{key.client_id}:{key.tool_key}"
+        )[:255]
+
+    @staticmethod
+    async def _replay_revision(
+        session: AsyncSession,
+        scope: str,
+        command: McpPreferenceCommand,
+    ) -> int | None:
+        record = await session.scalar(
+            select(IdempotencyRecord).where(
+                IdempotencyRecord.scope == scope,
+                IdempotencyRecord.idempotency_key == command.idempotency_key,
+            )
+        )
+        if record is None:
+            return None
+        if record.request_hash != command.request_hash:
+            raise McpProfileConflictError("idempotency key belongs to another request")
+        revision = record.response_body.get("revision")
+        if not isinstance(revision, int):
+            raise McpProfileConflictError("idempotency evidence is invalid")
+        return revision
+
+    @staticmethod
+    def _remember_preference(
+        session: AsyncSession,
+        scope: str,
+        command: McpPreferenceCommand,
+        key: UserToolPreferenceKey,
+        revision: int,
+        state: str,
+    ) -> None:
+        session.add(
+            IdempotencyRecord(
+                scope=scope,
+                idempotency_key=command.idempotency_key,
+                request_hash=command.request_hash,
+                response_status=200 if state == "disabled" else 204,
+                response_body={"revision": revision},
+                expires_at=command.expires_at,
+            )
+        )
+        session.add(
+            AuditEvent(
+                actor_id=command.actor_id,
+                action=f"mcp.preference.{state}",
+                target_type="mcp_tool",
+                target_id=key.tool_key,
+                scope=f"workspace:{key.active_unit_key}",
+                environment=command.environment,
+                decision="allowed",
+                outcome="succeeded",
+                correlation_id=command.correlation_id,
+                event_metadata={
+                    "client_id": key.client_id or "all",
+                    "revision": revision,
+                },
+            )
+        )
 
 
 __all__ = ["SqlAlchemyMcpProfileRegistry"]

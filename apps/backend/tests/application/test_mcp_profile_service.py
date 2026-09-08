@@ -1,10 +1,12 @@
 """MCP system profile synchronization validates every bounded reference."""
 
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 import pytest
 
 from kya_platform.application.mcp_profiles import (
+    McpPreferenceCommand,
     McpPreferenceService,
     McpProfileService,
     SystemProfileRegistration,
@@ -104,12 +106,20 @@ class Preferences:
 async def test_preference_service_only_accepts_valid_optimistic_revisions() -> None:
     service = McpPreferenceService(Preferences())  # type: ignore[arg-type]
     key = UserToolPreferenceKey(UUID(int=1), "kya/togo", "claude", "data.find")
-    assert await service.disable_tool(key, actor_id=UUID(int=1), expected_revision=0) == 1
-    await service.inherit_tool(key, expected_revision=1)
+    command = McpPreferenceCommand(
+        UUID(int=1),
+        UUID(int=2),
+        "preference-test-0001",
+        "a" * 64,
+        datetime.now(UTC) + timedelta(hours=1),
+        "test",
+    )
+    assert await service.disable_tool(key, command=command, expected_revision=0) == 1
+    await service.inherit_tool(key, command=command, expected_revision=1)
     with pytest.raises(ValueError, match="nonnegative"):
-        await service.disable_tool(key, actor_id=UUID(int=1), expected_revision=-1)
+        await service.disable_tool(key, command=command, expected_revision=-1)
     with pytest.raises(ValueError, match="existing"):
-        await service.inherit_tool(key, expected_revision=0)
+        await service.inherit_tool(key, command=command, expected_revision=0)
 
 
 def test_preference_key_requires_unit_and_tool() -> None:

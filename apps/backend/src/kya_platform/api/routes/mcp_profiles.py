@@ -1,12 +1,16 @@
 """User-facing MCP tool profile inspection and restrictive preferences."""
 
+from collections.abc import Mapping
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Protocol
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Header, Query, Request
 from pydantic import BaseModel, Field
 
 from kya_platform.api.security import AuthorizedPrincipal, active_principal
 from kya_platform.application.mcp_profiles import (
+    McpPreferenceCommand,
     McpPreferenceService,
     McpProfileConflictError,
     McpProfileReferenceError,
@@ -16,6 +20,7 @@ from kya_platform.application.mcp_profiles.runtime import (
     McpToolProfileRuntime,
     ToolProfileRequest,
 )
+from kya_platform.application.reliability import JsonValue, canonical_request_hash
 from kya_platform.observability import ApiError
 
 router = APIRouter(prefix="/mcp", tags=["mcp-profiles"])
@@ -74,6 +79,22 @@ def _preferences(request: Request) -> McpPreferenceService:
     return service
 
 
+def _command(
+    request: Request,
+    principal: AuthorizedPrincipal,
+    idempotency_key: str,
+    payload: Mapping[str, JsonValue],
+) -> McpPreferenceCommand:
+    return McpPreferenceCommand(
+        actor_id=principal.principal_id,
+        correlation_id=UUID(request.state.correlation_id),
+        idempotency_key=idempotency_key,
+        request_hash=canonical_request_hash(payload),
+        expires_at=datetime.now(UTC) + timedelta(hours=24),
+        environment=request.app.state.settings.environment,
+    )
+
+
 @router.get("/me/effective-profile", response_model=EffectiveProfileResponse)
 async def effective_profile(
     request: Request,
@@ -128,6 +149,7 @@ async def disable_tool(
     payload: PreferenceRequest,
     request: Request,
     principal: Annotated[AuthorizedPrincipal, Depends(active_principal)],
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=16, max_length=200)],
 ) -> PreferenceResponse:
     """Disable one inherited tool globally or for a selected OAuth client."""
 
@@ -140,7 +162,17 @@ async def disable_tool(
     try:
         revision = await _preferences(request).disable_tool(
             key,
-            actor_id=principal.principal_id,
+            command=_command(
+                request,
+                principal,
+                idempotency_key,
+                {
+                    "action": "disable",
+                    "tool_key": tool_key,
+                    "client_id": payload.client_id,
+                    "expected_revision": payload.expected_revision,
+                },
+            ),
             expected_revision=payload.expected_revision,
         )
     except McpProfileConflictError as error:
@@ -156,6 +188,7 @@ async def inherit_tool(
     request: Request,
     principal: Annotated[AuthorizedPrincipal, Depends(active_principal)],
     expected_revision: Annotated[int, Query(ge=1)],
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=16, max_length=200)],
     client_id: Annotated[str, Query(max_length=128)] = "",
 ) -> None:
     """Delete a restrictive preference and return to inherited behavior."""
@@ -167,7 +200,21 @@ async def inherit_tool(
         tool_key,
     )
     try:
-        await _preferences(request).inherit_tool(key, expected_revision=expected_revision)
+        await _preferences(request).inherit_tool(
+            key,
+            command=_command(
+                request,
+                principal,
+                idempotency_key,
+                {
+                    "action": "inherit",
+                    "tool_key": tool_key,
+                    "client_id": client_id,
+                    "expected_revision": expected_revision,
+                },
+            ),
+            expected_revision=expected_revision,
+        )
     except McpProfileConflictError as error:
         raise ApiError(409, "revision_conflict", "Conflit de révision", str(error)) from error
     except McpProfileReferenceError as error:
