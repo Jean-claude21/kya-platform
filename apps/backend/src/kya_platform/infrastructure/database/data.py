@@ -13,6 +13,7 @@ from kya_platform.application.data import (
     DataConflictError,
     DataReferenceError,
     DataStateError,
+    IngestionRunReport,
     RunCompletion,
     SnapshotLineage,
 )
@@ -27,7 +28,9 @@ from kya_platform.domain.data import (
     DataSourceKind,
     DataStatus,
     IngestionRun,
+    QualityResult,
     QualityRule,
+    QualityStatus,
     RunStatus,
     StorageObject,
 )
@@ -549,6 +552,49 @@ class SqlAlchemyDataRepository:
                 )
             )
             return _run(row) if row is not None else None
+
+    async def get_run_report(self, unit_key: str, run_id: UUID) -> IngestionRunReport | None:
+        async with self._sessions() as session:
+            unit_id = await self._unit_id(session, unit_key)
+            if unit_id is None:
+                return None
+            record = (
+                await session.execute(
+                    select(DataIngestionRunRow, DataPipelineRow)
+                    .join(DataPipelineRow, DataPipelineRow.id == DataIngestionRunRow.pipeline_id)
+                    .where(
+                        DataIngestionRunRow.id == run_id,
+                        DataPipelineRow.owner_unit_id == unit_id,
+                    )
+                )
+            ).first()
+            if record is None:
+                return None
+            run_row, pipeline_row = record
+            snapshot_row = await session.scalar(
+                select(DataSnapshotRow).where(DataSnapshotRow.run_id == run_id)
+            )
+            quality_results: tuple[QualityResult, ...] = ()
+            if snapshot_row is not None:
+                quality_rows = await session.scalars(
+                    select(DataQualityResultRow)
+                    .where(DataQualityResultRow.snapshot_id == snapshot_row.id)
+                    .order_by(DataQualityResultRow.rule_key)
+                )
+                quality_results = tuple(
+                    QualityResult(
+                        row.rule_key,
+                        QualityStatus(row.status),
+                        cast(dict[str, object] | None, row.observed),
+                    )
+                    for row in quality_rows
+                )
+            return IngestionRunReport(
+                run=_run(run_row),
+                pipeline_key=pipeline_row.key,
+                snapshot=_snapshot(snapshot_row) if snapshot_row is not None else None,
+                quality_results=quality_results,
+            )
 
     async def complete_run(
         self, unit_key: str, completion: RunCompletion, *, command: CommandMetadata

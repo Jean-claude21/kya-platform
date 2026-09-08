@@ -9,7 +9,7 @@ import pytest
 from mcp import Client
 from mcp.server.auth.provider import AccessToken
 
-from kya_platform.application.data import CommandMetadata, SnapshotLineage
+from kya_platform.application.data import CommandMetadata, IngestionRunReport, SnapshotLineage
 from kya_platform.authorization import AuthorizationDecision, CheckRequest, ListObjectsRequest
 from kya_platform.authorization.service import AuthorizationService
 from kya_platform.domain.data import (
@@ -21,7 +21,10 @@ from kya_platform.domain.data import (
     DataSnapshot,
     DataStatus,
     IngestionRun,
+    QualityResult,
     QualityRule,
+    QualityStatus,
+    RunStatus,
     StorageObject,
 )
 from kya_platform.mcp.data.contracts import DATA_TOOLS
@@ -149,6 +152,39 @@ class DataBackend:
     async def get_pipeline(self, unit: str, key: str) -> DataPipeline | None:
         return self.pipeline if unit == "direction-cvsi" and key == self.pipeline.key else None
 
+    async def get_run_report(self, unit: str, run_id: UUID) -> IngestionRunReport | None:
+        if unit != "direction-cvsi" or run_id != UUID(int=30):
+            return None
+        run = IngestionRun(
+            run_id,
+            PIPELINE,
+            ACTOR,
+            RunStatus.COMPLETED,
+            NOW,
+            NOW,
+        )
+        snapshot = DataSnapshot(
+            SNAPSHOT,
+            ASSET,
+            run_id,
+            CONTRACT,
+            StorageObject("neon", "private", "secret/capture.json", "v1"),
+            "c" * 64,
+            "application/json",
+            NOW,
+            25,
+            4096,
+        )
+        return IngestionRunReport(
+            run,
+            self.pipeline.key,
+            snapshot,
+            (
+                QualityResult("pages-present", QualityStatus.PASSED, {"count": 25}),
+                QualityResult("fetch-complete", QualityStatus.WARNING, {"issues": 7}),
+            ),
+        )
+
     async def start_run(
         self, unit: str, run: IngestionRun, *, command: CommandMetadata
     ) -> IngestionRun:
@@ -266,6 +302,32 @@ async def test_asset_contract_and_lineage_are_structured_and_correlated() -> Non
     assert contract.structured_content["quality_rules"][0]["key"] == "price-required"
     assert lineage.structured_content["input_snapshot_ids"] == [str(UUID(int=1))]
     assert len({event["correlation_id"] for event in audit.events}) == 3
+
+
+@pytest.mark.asyncio
+async def test_ingestion_run_reports_status_quality_and_no_storage_location() -> None:
+    run_id = UUID(int=30)
+    audit = Audit()
+    data_server = server(
+        policy=Policy(True),
+        backend=DataBackend(),
+        audit=audit,
+        access_token=token("data:read"),
+    )
+    async with Client(data_server) as client:
+        result = await client.call_tool("get_ingestion_run", {"run_id": str(run_id)})
+
+    serialized = str(result.structured_content)
+    assert result.is_error is False
+    assert result.structured_content["status"] == "completed"
+    assert result.structured_content["snapshot"]["row_count"] == 25
+    assert result.structured_content["quality_results"][1] == {
+        "rule_key": "fetch-complete",
+        "status": "warning",
+        "observed": {"issues": 7},
+    }
+    assert "secret/capture.json" not in serialized
+    assert audit.events[-1]["target_type"] == "data_run"
 
 
 @pytest.mark.asyncio

@@ -72,6 +72,22 @@ class SnapshotLineage:
     output_snapshot_ids: tuple[UUID, ...] = ()
 
 
+@dataclass(frozen=True, slots=True)
+class IngestionRunReport:
+    """Governed operational view of one ingestion run and its evidence."""
+
+    run: IngestionRun
+    pipeline_key: str
+    snapshot: DataSnapshot | None = None
+    quality_results: tuple[QualityResult, ...] = ()
+
+    def __post_init__(self) -> None:
+        if self.snapshot is None and self.quality_results:
+            raise ValueError("quality results require a snapshot")
+        if self.snapshot is not None and self.snapshot.run_id != self.run.id:
+            raise ValueError("snapshot does not belong to the ingestion run")
+
+
 class DataRepository(Protocol):
     async def list_sources(self, unit_key: str, *, limit: int) -> Sequence[DataSource]: ...
     async def create_source(
@@ -99,6 +115,7 @@ class DataRepository(Protocol):
         self, unit_key: str, run: IngestionRun, *, command: CommandMetadata
     ) -> IngestionRun: ...
     async def get_run(self, unit_key: str, run_id: UUID) -> IngestionRun | None: ...
+    async def get_run_report(self, unit_key: str, run_id: UUID) -> IngestionRunReport | None: ...
     async def complete_run(
         self, unit_key: str, completion: RunCompletion, *, command: CommandMetadata
     ) -> RunCompletion: ...
@@ -165,6 +182,9 @@ class DataService:
     async def get_run(self, unit_key: str, run_id: UUID) -> IngestionRun | None:
         return await self._repository.get_run(unit_key, run_id)
 
+    async def get_run_report(self, unit_key: str, run_id: UUID) -> IngestionRunReport | None:
+        return await self._repository.get_run_report(unit_key, run_id)
+
     async def complete_run(
         self, unit_key: str, completion: RunCompletion, *, command: CommandMetadata
     ) -> RunCompletion:
@@ -191,6 +211,7 @@ __all__ = [
     "DataRepository",
     "DataService",
     "DataStateError",
+    "IngestionRunReport",
     "RunCompletion",
     "SnapshotLineage",
 ]
