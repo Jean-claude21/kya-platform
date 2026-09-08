@@ -8,4 +8,4 @@
 - [x] Handler Data/worker
 - [x] Tests unitaires, sécurité et intégration
 - [x] Diagramme et preuve de validation
-- [ ] PR vers `dev`
+- [x] PR vers `dev`

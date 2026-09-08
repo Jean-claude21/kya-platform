@@ -22,6 +22,8 @@ Le digest représente cette observation et changera légitimement lorsque le con
 - rendu Mermaid SVG/PNG généré et contrôlé visuellement ;
 - stockage testé sur succès, rejeu immuable et collision de digest ;
 - worker testé de l'événement jusqu'au snapshot Data.
+- CI PR #32 : qualité, backend, migration Neon éphémère, sécurité des dépendances,
+  conteneurs/SBOM, modèle d'autorisation et politique de branche réussis.
 
 ## Activation restante
 
