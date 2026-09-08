@@ -616,7 +616,14 @@ async def test_completes_run_with_snapshot_quality_lineage_and_evidence() -> Non
     assert result.snapshot.id == SNAPSHOT
     assert session.flushes == 1
     assert session.get_values == []
-    assert any(isinstance(item, OutboxEvent) for item in session.added)
+    event = next(
+        item
+        for item in session.added
+        if isinstance(item, OutboxEvent) and item.topic == "kya.data.run.completed.v1"
+    )
+    assert event.payload["unit_key"] == "direction-cvsi"
+    assert event.payload["snapshot_id"] == str(SNAPSHOT)
+    assert event.payload["asset_id"] == str(ASSET)
 
 
 @pytest.mark.asyncio

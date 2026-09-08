@@ -6,12 +6,16 @@ from datetime import UTC, datetime
 import httpx
 from pydantic import SecretStr
 
+from kya_platform.application.content import ContentService
 from kya_platform.application.data import DataService
+from kya_platform.application.intelligence import IntelligenceService
 from kya_platform.config import Settings, get_settings
 from kya_platform.connectors.web_capture import WebCaptureConnector
 from kya_platform.connectors.web_capture.client import HttpResourceFetcher
 from kya_platform.connectors.web_capture.storage import S3ImmutableObjectStore, S3StorageConfig
+from kya_platform.infrastructure.database.content import SqlAlchemyContentRepository
 from kya_platform.infrastructure.database.data import SqlAlchemyDataRepository
+from kya_platform.infrastructure.database.intelligence import SqlAlchemyIntelligenceRepository
 from kya_platform.infrastructure.database.session import create_engine, create_session_factory
 from kya_platform.infrastructure.infisical import (
     HttpxInfisicalTransport,
@@ -19,6 +23,7 @@ from kya_platform.infrastructure.infisical import (
     InfisicalSecretResolver,
 )
 from kya_platform.infrastructure.workers import DatabaseOutboxQueue
+from kya_platform.workers.intelligence_evaluation import IntelligenceEvaluationWorker
 from kya_platform.workers.runner import WorkerRunner
 from kya_platform.workers.web_capture import WebCaptureWorker
 
@@ -106,14 +111,26 @@ async def serve() -> None:
     engine = create_engine(settings.database_url)
     sessions = create_session_factory(engine)
     data = DataService(SqlAlchemyDataRepository(sessions))
-    handler = WebCaptureWorker(
+    capture_handler = WebCaptureWorker(
         data=data,
         connector=WebCaptureConnector(HttpResourceFetcher()),
         storage=S3ImmutableObjectStore(storage_config),
     )
+    intelligence_handler = IntelligenceEvaluationWorker(
+        IntelligenceService(
+            SqlAlchemyIntelligenceRepository(sessions),
+            ContentService(SqlAlchemyContentRepository(sessions)),
+        )
+    )
     runner = WorkerRunner(
-        queue=DatabaseOutboxQueue(sessions, topics=frozenset({"kya.data.run.started.v1"})),
-        handlers={"kya.data.run.started.v1": handler.handle},
+        queue=DatabaseOutboxQueue(
+            sessions,
+            topics=frozenset({"kya.data.run.started.v1", "kya.data.run.completed.v1"}),
+        ),
+        handlers={
+            "kya.data.run.started.v1": capture_handler.handle,
+            "kya.data.run.completed.v1": intelligence_handler.handle,
+        },
         owner="web-capture-worker",
         batch_size=5,
     )
