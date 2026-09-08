@@ -8,6 +8,7 @@ dependencies = []
 dev = [
   "mypy>=1.15",
   "httpx2>=0.1",
+  "jsonschema>=4.26",
   "pytest>=8.3",
   "pytest-asyncio>=0.25",
   "pytest-cov>=6.0",
@@ -55,5 +56,5 @@ packages = ["kya_platform"]
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["uvicorn.*"]
+module = ["aioboto3.*", "botocore.*", "uvicorn.*"]
 ignore_missing_imports = true
