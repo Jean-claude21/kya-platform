@@ -30,10 +30,10 @@ versionnée et approuvée.
 
 ## Outils
 
-| Outil | Portée OAuth | Autorisation | Résultat |
-| --- | --- | --- | --- |
+| Outil                 | Portée OAuth        | Autorisation        | Résultat                          |
+| --------------------- | ------------------- | ------------------- | --------------------------------- |
 | `search_data_content` | `data:content:read` | `org_unit.can_view` | passages publics classés et cités |
-| `get_data_excerpt` | `data:content:read` | `org_unit.can_view` | passage exact d'une citation |
+| `get_data_excerpt`    | `data:content:read` | `org_unit.can_view` | passage exact d'une citation      |
 
 ## Hors périmètre v0.1
 
