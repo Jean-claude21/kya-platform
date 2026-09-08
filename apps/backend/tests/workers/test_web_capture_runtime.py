@@ -94,13 +94,26 @@ async def test_runtime_wires_dedicated_topic_and_disposes_engine(
     monkeypatch.setattr(web_capture_runtime, "create_engine", lambda value: engine)
     monkeypatch.setattr(web_capture_runtime, "create_session_factory", lambda value: object())
     monkeypatch.setattr(web_capture_runtime, "SqlAlchemyDataRepository", lambda value: object())
+    monkeypatch.setattr(web_capture_runtime, "SqlAlchemyContentRepository", lambda value: object())
+    monkeypatch.setattr(
+        web_capture_runtime, "SqlAlchemyIntelligenceRepository", lambda value: object()
+    )
     monkeypatch.setattr(web_capture_runtime, "DataService", lambda value: object())
+    monkeypatch.setattr(web_capture_runtime, "ContentService", lambda value: object())
+    monkeypatch.setattr(
+        web_capture_runtime, "IntelligenceService", lambda *args, **kwargs: object()
+    )
     monkeypatch.setattr(
         web_capture_runtime, "DatabaseOutboxQueue", lambda *args, **kwargs: object()
     )
     monkeypatch.setattr(web_capture_runtime, "WorkerRunner", Runner)
     monkeypatch.setattr(
         web_capture_runtime, "WebCaptureWorker", lambda **kwargs: SimpleNamespace(handle=None)
+    )
+    monkeypatch.setattr(
+        web_capture_runtime,
+        "IntelligenceEvaluationWorker",
+        lambda *args, **kwargs: SimpleNamespace(handle=None),
     )
     monkeypatch.setattr(web_capture_runtime, "WebCaptureConnector", lambda value: object())
     monkeypatch.setattr(web_capture_runtime, "HttpResourceFetcher", lambda: object())
@@ -109,4 +122,7 @@ async def test_runtime_wires_dedicated_topic_and_disposes_engine(
     await web_capture_runtime.serve()
 
     assert engine.disposed is True
-    assert set(captured["handlers"]) == {"kya.data.run.started.v1"}  # type: ignore[arg-type]
+    assert set(captured["handlers"]) == {  # type: ignore[arg-type]
+        "kya.data.run.started.v1",
+        "kya.data.run.completed.v1",
+    }

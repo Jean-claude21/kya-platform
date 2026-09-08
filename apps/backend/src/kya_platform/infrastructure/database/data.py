@@ -152,6 +152,7 @@ def _event(
     aggregate_id: UUID,
     scope_unit_id: UUID,
     command: CommandMetadata,
+    extra: dict[str, object] | None = None,
 ) -> OutboxEvent:
     return OutboxEvent(
         topic=topic,
@@ -164,6 +165,7 @@ def _event(
             "scope_unit_id": str(scope_unit_id),
             "actor_id": str(command.actor_id),
             "correlation_id": str(command.correlation_id),
+            **(extra or {}),
         },
     )
 
@@ -707,7 +709,18 @@ class SqlAlchemyDataRepository:
                             for document in completion.content_documents
                             for chunk in document.chunks
                         ),
-                        _event("kya.data.run.completed.v1", "data_run", row.id, unit_id, command),
+                        _event(
+                            "kya.data.run.completed.v1",
+                            "data_run",
+                            row.id,
+                            unit_id,
+                            command,
+                            {
+                                "unit_key": unit_key,
+                                "snapshot_id": str(snapshot.id),
+                                "asset_id": str(snapshot.asset_id),
+                            },
+                        ),
                     ]
                 )
                 self._remember(session, scope, command, snapshot.id)
