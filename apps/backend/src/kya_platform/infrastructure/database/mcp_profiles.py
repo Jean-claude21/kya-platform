@@ -1,19 +1,26 @@
 """Idempotent PostgreSQL synchronization for MCP tools and system profiles."""
 
+from typing import Any, cast
 from uuid import NAMESPACE_URL, UUID, uuid5
 
-from sqlalchemy import delete
+from sqlalchemy import delete, or_, select
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.engine import CursorResult
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from kya_platform.application.mcp_profiles import (
+    McpProfileConflictError,
+    McpProfileReferenceError,
     SystemProfileRegistration,
     ToolRegistration,
+    UserToolPreferenceKey,
 )
 from kya_platform.infrastructure.database.models import (
     McpToolDefinition,
     McpToolProfile,
     McpToolProfileItem,
+    McpUserToolPreference,
 )
 
 SYSTEM_ACTOR = UUID(int=0)
@@ -113,6 +120,108 @@ class SqlAlchemyMcpProfileRegistry:
                             set_={"state": "enabled", "sort_order": order},
                         )
                     )
+
+    async def list_disabled_tools(
+        self,
+        *,
+        principal_id: UUID,
+        active_unit_key: str,
+        client_id: str,
+    ) -> frozenset[str]:
+        async with self._sessions() as session:
+            result = await session.scalars(
+                select(McpToolDefinition.key)
+                .join(
+                    McpUserToolPreference,
+                    McpUserToolPreference.tool_id == McpToolDefinition.id,
+                )
+                .where(
+                    McpUserToolPreference.principal_id == principal_id,
+                    McpUserToolPreference.active_unit_key == active_unit_key,
+                    or_(
+                        McpUserToolPreference.client_id == "",
+                        McpUserToolPreference.client_id == client_id,
+                    ),
+                )
+                .order_by(McpToolDefinition.key)
+            )
+            return frozenset(result)
+
+    async def disable_tool(
+        self,
+        key: UserToolPreferenceKey,
+        *,
+        actor_id: UUID,
+        expected_revision: int,
+    ) -> int:
+        try:
+            async with self._sessions() as session, session.begin():
+                tool_id = await session.scalar(
+                    select(McpToolDefinition.id).where(McpToolDefinition.key == key.tool_key)
+                )
+                if tool_id is None:
+                    raise McpProfileReferenceError("MCP tool does not exist")
+                identity = {
+                    "principal_id": key.principal_id,
+                    "active_unit_key": key.active_unit_key,
+                    "client_id": key.client_id,
+                    "tool_id": tool_id,
+                }
+                row = await session.scalar(
+                    select(McpUserToolPreference)
+                    .where(
+                        *(
+                            getattr(McpUserToolPreference, name) == value
+                            for name, value in identity.items()
+                        )
+                    )
+                    .with_for_update()
+                )
+                current_revision = 0 if row is None else row.revision
+                if current_revision != expected_revision:
+                    raise McpProfileConflictError("MCP preference revision is stale")
+                if row is None:
+                    session.add(
+                        McpUserToolPreference(
+                            **identity,
+                            state="disabled",
+                            revision=1,
+                            updated_by=actor_id,
+                        )
+                    )
+                    return 1
+                row.revision += 1
+                row.updated_by = actor_id
+                return row.revision
+        except IntegrityError as error:
+            raise McpProfileConflictError("MCP preference was created concurrently") from error
+
+    async def inherit_tool(
+        self,
+        key: UserToolPreferenceKey,
+        *,
+        expected_revision: int,
+    ) -> None:
+        async with self._sessions() as session, session.begin():
+            tool_id = await session.scalar(
+                select(McpToolDefinition.id).where(McpToolDefinition.key == key.tool_key)
+            )
+            if tool_id is None:
+                raise McpProfileReferenceError("MCP tool does not exist")
+            result = cast(
+                CursorResult[Any],
+                await session.execute(
+                    delete(McpUserToolPreference).where(
+                        McpUserToolPreference.principal_id == key.principal_id,
+                        McpUserToolPreference.active_unit_key == key.active_unit_key,
+                        McpUserToolPreference.client_id == key.client_id,
+                        McpUserToolPreference.tool_id == tool_id,
+                        McpUserToolPreference.revision == expected_revision,
+                    )
+                )
+            )
+            if result.rowcount != 1:
+                raise McpProfileConflictError("MCP preference revision is stale")
 
 
 __all__ = ["SqlAlchemyMcpProfileRegistry"]

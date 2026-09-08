@@ -4,8 +4,8 @@
 - [x] T002 Ajouter migration `20260908_0014` et modèles SQLAlchemy
 - [x] T003 Ajouter le seed idempotent des outils et profils système
 - [x] T004 Implémenter et tester `EffectiveToolResolver`
-- [ ] T005 Implémenter le dépôt et la révision optimiste
-- [ ] T006 Étendre et valider le modèle OpenFGA
+- [x] T005 Implémenter le dépôt et la révision optimiste
+- [x] T006 Étendre et valider le modèle OpenFGA
 - [ ] T007 Ajouter le shadow mode et la preuve de non-divergence
 - [ ] T008 Appliquer le profil à `tools/list` et `tools/call`
 - [ ] T009 Ajouter les API de lecture et de préférence restrictive

@@ -35,6 +35,9 @@ tuples:
   - user: workspace:platform
     relation: workspace
     object: mcp_tool:registry-search
+  - user: workspace:platform
+    relation: workspace
+    object: mcp_profile:data-reader
   - user: user:diana
     relation: assignee
     object: role:communication-publisher
@@ -162,3 +165,22 @@ tests:
         assertions:
           can_discover: false
           can_invoke: false
+
+  - name: Les profils MCP sont administrés comme des ressources gouvernées
+    tuples:
+      - user: user:alice
+        relation: user_in_context
+        object: org_unit:direction-cvsi
+    check:
+      - user: user:alice
+        object: mcp_profile:data-reader
+        assertions:
+          can_view: true
+          can_edit: true
+          can_manage: true
+      - user: user:sam
+        object: mcp_profile:data-reader
+        assertions:
+          can_view: true
+          can_edit: false
+          can_manage: false

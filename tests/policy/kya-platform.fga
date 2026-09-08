@@ -56,6 +56,17 @@ type mcp_tool
     define can_discover: can_view from workspace but not blocked
     define can_invoke: invoker but not blocked
 
+type mcp_profile
+  relations
+    define workspace: [workspace]
+    define viewer: [user, team#member, role#assignee, user with active_grant]
+    define editor: [user, team#member, role#assignee, user with active_grant]
+    define manager: [user, team#member, role#assignee, user with active_grant]
+    define blocked: [user, team#member]
+    define can_view: (viewer or editor or manager or can_view from workspace) but not blocked
+    define can_edit: (editor or manager or can_edit from workspace) but not blocked
+    define can_manage: (manager or can_manage from workspace) but not blocked
+
 condition active_grant(current_time: timestamp, starts_at: timestamp, expires_at: timestamp) {
   current_time >= starts_at && current_time < expires_at
 }

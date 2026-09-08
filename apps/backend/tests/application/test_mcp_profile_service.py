@@ -1,11 +1,15 @@
 """MCP system profile synchronization validates every bounded reference."""
 
+from uuid import UUID
+
 import pytest
 
 from kya_platform.application.mcp_profiles import (
+    McpPreferenceService,
     McpProfileService,
     SystemProfileRegistration,
     ToolRegistration,
+    UserToolPreferenceKey,
 )
 
 
@@ -83,3 +87,31 @@ async def test_rejects_profiles_over_the_limit() -> None:
     )
     with pytest.raises(ValueError, match="24-tool"):
         await McpProfileService(Registry()).synchronize(tools, (profile,))
+
+
+class Preferences:
+    async def list_disabled_tools(self, **kwargs: object) -> frozenset[str]:
+        return frozenset()
+
+    async def disable_tool(self, key: object, **kwargs: object) -> int:
+        return 1
+
+    async def inherit_tool(self, key: object, **kwargs: object) -> None:
+        return None
+
+
+@pytest.mark.asyncio
+async def test_preference_service_only_accepts_valid_optimistic_revisions() -> None:
+    service = McpPreferenceService(Preferences())  # type: ignore[arg-type]
+    key = UserToolPreferenceKey(UUID(int=1), "kya/togo", "claude", "data.find")
+    assert await service.disable_tool(key, actor_id=UUID(int=1), expected_revision=0) == 1
+    await service.inherit_tool(key, expected_revision=1)
+    with pytest.raises(ValueError, match="nonnegative"):
+        await service.disable_tool(key, actor_id=UUID(int=1), expected_revision=-1)
+    with pytest.raises(ValueError, match="existing"):
+        await service.inherit_tool(key, expected_revision=0)
+
+
+def test_preference_key_requires_unit_and_tool() -> None:
+    with pytest.raises(ValueError, match="required"):
+        UserToolPreferenceKey(UUID(int=1), "", "", "data.find")
