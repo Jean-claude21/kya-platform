@@ -130,7 +130,7 @@ class SkillFactory:
             "source": {
                 "repository": blueprint.repository,
                 "commit": blueprint.commit,
-                "path": f"skills/{blueprint.slug}",
+                "path": f"catalog/sources/skills/{blueprint.slug}",
             },
             "integrity": {"algorithm": "sha256", "digest": digest},
             "compatibility": {"codex": ">=2026-09", "claude-code": ">=1"},

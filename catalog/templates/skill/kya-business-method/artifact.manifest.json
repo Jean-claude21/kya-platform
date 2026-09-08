@@ -13,7 +13,7 @@
   "source": {
     "repository": "https://github.com/kya-energy/replace-me",
     "commit": "0000000000000000000000000000000000000000",
-    "path": "skills/kya-business-method"
+    "path": "catalog/sources/skills/kya-business-method"
   },
   "integrity": {
     "algorithm": "sha256",

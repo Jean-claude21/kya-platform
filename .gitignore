@@ -3,6 +3,7 @@ node_modules/
 .turbo/
 .output/
 dist/
+site/
 coverage/
 .coverage
 .venv/

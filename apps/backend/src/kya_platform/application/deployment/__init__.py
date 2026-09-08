@@ -1,10 +1,43 @@
-"""Provider-neutral promotion and rollback orchestration."""
+"""Provider-neutral deployment contracts and orchestration."""
 
-from kya_platform.infrastructure.deployment import (
-    DeploymentProvider,
-    DeploymentRecord,
-    DeploymentRequest,
-)
+from dataclasses import dataclass
+from typing import Protocol
+
+
+class DeploymentError(RuntimeError):
+    """A provider rejected a deployment operation."""
+
+
+@dataclass(frozen=True, slots=True)
+class DeploymentRequest:
+    application: str
+    commit_sha: str
+    environment: str
+    image_digest: str | None = None
+    previous_commit_sha: str | None = None
+
+    def __post_init__(self) -> None:
+        if not self.application or not self.commit_sha:
+            raise ValueError("application and commit_sha are required")
+        if self.environment not in {"preview", "staging", "production"}:
+            raise ValueError("unsupported deployment environment")
+
+
+@dataclass(frozen=True, slots=True)
+class DeploymentRecord:
+    id: str
+    provider: str
+    request: DeploymentRequest
+    status: str
+    url: str | None = None
+
+
+class DeploymentProvider(Protocol):
+    name: str
+
+    async def deploy(self, request: DeploymentRequest) -> DeploymentRecord: ...
+
+    async def rollback(self, deployment_id: str) -> DeploymentRecord: ...
 
 
 class PromotionService:
@@ -24,4 +57,10 @@ class PromotionService:
         return await adapter.rollback(deployment_id)
 
 
-__all__ = ["PromotionService"]
+__all__ = [
+    "DeploymentError",
+    "DeploymentProvider",
+    "DeploymentRecord",
+    "DeploymentRequest",
+    "PromotionService",
+]

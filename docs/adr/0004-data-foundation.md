@@ -1,28 +1,26 @@
-# ADR 0004 — Séparer contrôle, contenu et exécution des données
+# ADR 0004 — Separate data control, content and execution
 
-## Statut
+- **Status:** accepted
+- **Date:** 2026-09-07
 
-Accepté — 7 septembre 2026.
+## Decision
 
-## Décision
+KYA Data Foundation stores sources, assets, contracts, pipelines, runs, quality evidence and lineage
+in Neon PostgreSQL. Large content is stored as immutable objects; PostgreSQL stores its reference
+and digest.
 
-KYA Data Foundation conserve dans Neon PostgreSQL les sources, actifs, contrats, pipelines,
-exécutions, preuves qualité et lignée. Les contenus volumineux sont stockés comme objets
-immuables ; PostgreSQL ne conserve que leur référence et leur digest.
+Connectors are governed catalog artifacts. Every pipeline pins an exact connector version. Secret
+identifiers are opaque and their values remain in Infisical.
 
-Les connecteurs sont des artefacts gouvernés du catalogue et chaque pipeline épingle une
-version précise. Les identifiants de secrets sont opaques et leur valeur reste dans Infisical.
+## Rationale
 
-## Pourquoi
+This separation makes acquisition replayable and auditable, avoids a dedicated interface for every
+need, and allows applications and AI environments to use the same reliable data. It also supports a
+progressive transition away from Frappe without abruptly migrating existing workflows.
 
-Cette séparation rend les acquisitions rejouables et auditables, évite les interfaces dédiées
-à chaque besoin et permet aux applications comme aux environnements IA d'exploiter une même
-donnée fiable. Elle autorise aussi une migration progressive hors de Frappe sans migration
-brutale des usages existants.
+## Consequences
 
-## Conséquences
-
-- le scraping est une famille de connecteurs, pas une route web générique ;
-- l'IA ne devient pas responsable des garanties déterministes ;
-- toute donnée publiée possède un contrat, une provenance et une preuve de qualité ;
-- changer de stockage ou de système source n'altère pas l'identité des actifs.
+- Scraping is a connector family, not a generic Web route.
+- AI does not own deterministic guarantees.
+- Every published dataset has a contract, provenance and quality evidence.
+- Replacing storage or a source system does not change asset identity.

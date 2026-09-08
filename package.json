@@ -24,6 +24,8 @@
     "backend:typecheck": "uv run mypy",
     "backend:test": "uv run pytest",
     "backend:check": "pnpm backend:lint && pnpm backend:typecheck && pnpm backend:test",
+    "docs:serve": "uv run mkdocs serve",
+    "docs:build": "uv run mkdocs build --strict",
     "check:all": "pnpm check && pnpm backend:check",
     "clean": "turbo run clean && rimraf node_modules"
   },
