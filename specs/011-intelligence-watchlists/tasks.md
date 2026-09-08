@@ -9,5 +9,6 @@
 - [x] T007 Exposer cinq outils MCP gouvernés et profilables.
 - [x] T008 Tester domaine, application, API, persistance et MCP.
 - [x] T009 Exécuter la suite complète et atteindre les portes de qualité.
-- [ ] T010 Déployer sur `dev`, migrer Neon et réaliser le pilote `solaire`.
-- [ ] T011 Consigner les preuves de validation et fusionner sur `dev`.
+- [x] T010 Déployer sur `dev`, migrer Neon et vérifier le corpus pilote `solaire`.
+- [ ] T011 Réaliser le pilote avec l'identité utilisateur via KYA-Platform MCP.
+- [x] T012 Consigner les preuves techniques de validation.
