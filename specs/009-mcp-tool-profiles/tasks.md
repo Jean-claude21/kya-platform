@@ -10,6 +10,6 @@
 - [x] T008 Appliquer le profil à `tools/list` et `tools/call`
 - [x] T009 Ajouter les API de lecture et de préférence restrictive
 - [x] T010 Ajouter audit, idempotence et cas de panne fail-closed
-- [ ] T011 Exécuter la suite complète et valider le diagramme
+- [x] T011 Exécuter la suite complète et valider le diagramme
 - [ ] T012 Ouvrir la PR, migrer Neon dev et déployer
 - [ ] T013 Tester avec le compte pilote sans reconnecter le MCP
