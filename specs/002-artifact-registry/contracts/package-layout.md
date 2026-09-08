@@ -5,6 +5,7 @@ artifact-root/
 ├── artifact.manifest.json       obligatoire
 ├── capability.manifest.json     si contenu exécutable
 ├── SKILL.md                     obligatoire pour type skill
+├── agents/openai.yaml           métadonnées de découverte optionnelles
 ├── scripts/                     optionnel, classifié exécutable
 ├── references/                  optionnel
 ├── templates/                   optionnel
@@ -21,6 +22,7 @@ sockets, chemins absolus et segments `..` sont interdits dans le profil portable
 ## Classification
 
 - `instruction`: Markdown lu par l'agent.
+- `metadata`: métadonnées d'interface et de découverte non exécutables.
 - `reference`: connaissance factuelle chargée à la demande.
 - `template`: document ou squelette copié sans exécution.
 - `schema`: contrat validable.

@@ -54,7 +54,7 @@ class ValidatedArchive:
     archive_digest: str
 
 
-def _payload_digest(files: list[PackageFile]) -> str:
+def calculate_payload_digest(files: list[PackageFile]) -> str:
     """Digest content without the self-referential artifact manifest."""
 
     inventory = [
@@ -73,6 +73,7 @@ def _kind(path: str) -> PackageFileKind:
         return PackageFileKind.INSTRUCTION
     prefix = PurePosixPath(path).parts[0]
     mapping = {
+        "agents": PackageFileKind.METADATA,
         "references": PackageFileKind.REFERENCE,
         "templates": PackageFileKind.TEMPLATE,
         "schemas": PackageFileKind.SCHEMA,
@@ -223,7 +224,7 @@ class ArtifactArchiveValidator:
             )
         except ValidationError as error:
             raise ArchiveValidationError(f"invalid package contract: {error}") from error
-        expected_digest = _payload_digest(files)
+        expected_digest = calculate_payload_digest(files)
         if manifest.integrity.digest.casefold() != expected_digest:
             raise ArchiveValidationError("manifest content digest does not match the archive")
         if manifest.artifact_type is ArtifactType.SKILL:
@@ -264,4 +265,5 @@ __all__ = [
     "ArchiveValidationError",
     "ArtifactArchiveValidator",
     "ValidatedArchive",
+    "calculate_payload_digest",
 ]

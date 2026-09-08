@@ -23,6 +23,7 @@ class StrictPackageContract(BaseModel):
 
 class PackageFileKind(StrEnum):
     INSTRUCTION = "instruction"
+    METADATA = "metadata"
     REFERENCE = "reference"
     TEMPLATE = "template"
     SCHEMA = "schema"
