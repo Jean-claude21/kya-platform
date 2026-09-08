@@ -176,8 +176,11 @@ class Settings(BaseSettings):
             self.object_storage_endpoint_url = self.object_storage_endpoint_url.rstrip("/")
             if not self.object_storage_endpoint_url.startswith("https://"):
                 raise ValueError("Object storage endpoint must use HTTPS")
-        if self.web_capture_enabled and (self.database_url is None or not all(storage)):
-            raise ValueError("Enabled web capture requires database and object storage")
+        storage_available = all(storage) or self.has_infisical_configuration
+        if self.web_capture_enabled and (self.database_url is None or not storage_available):
+            raise ValueError(
+                "Enabled web capture requires database and object storage or Infisical"
+            )
             if self.registry_mcp_authorization_server_url != self.oauth_issuer_url:
                 raise ValueError("Registry MCP authorization server must be the KYA OAuth issuer")
         bootstrap = (self.bootstrap_owner_email, self.bootstrap_claim_code_hash)
@@ -224,15 +227,19 @@ class Settings(BaseSettings):
 
     @property
     def has_web_capture_configuration(self) -> bool:
-        return self.web_capture_enabled and all(
+        inline_storage = all(
             (
-                self.database_url,
                 self.object_storage_endpoint_url,
                 self.object_storage_region,
                 self.object_storage_bucket,
                 self.object_storage_access_key_id,
                 self.object_storage_secret_access_key,
             )
+        )
+        return bool(
+            self.web_capture_enabled
+            and self.database_url
+            and (inline_storage or self.has_infisical_configuration)
         )
 
 
