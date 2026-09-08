@@ -20,6 +20,8 @@ from kya_platform.domain.data import (
     DataContract,
     DataPipeline,
     DataSnapshot,
+    DataSource,
+    DataSourceKind,
     DataStatus,
     IngestionRun,
     QualityResult,
@@ -27,6 +29,12 @@ from kya_platform.domain.data import (
     QualityStatus,
     RunStatus,
     StorageObject,
+)
+from kya_platform.domain.source_lifecycle import (
+    IngestionSchedule,
+    SourceFlow,
+    SourceFlowDraft,
+    SourceFlowHealth,
 )
 from kya_platform.mcp.data.contracts import DATA_TOOLS
 from kya_platform.mcp.registry.server import create_registry_server
@@ -101,6 +109,27 @@ class DataBackend:
             ASSET,
             DataStatus.ACTIVE,
         )
+        self.flow = SourceFlow(
+            "collect-market-prices",
+            self._source(),
+            self.asset,
+            DataContract(CONTRACT, ASSET, "1.0.0", {"type": "object"}, "b" * 64),
+            self.pipeline,
+            1,
+        )
+
+    def _source(self) -> DataSource:
+        return DataSource(
+            UUID("01993480-0000-7000-8000-000000000010"),
+            "market-source",
+            "Market source",
+            DataSourceKind.API,
+            UNIT,
+            status=DataStatus.ACTIVE,
+        )
+
+    async def resolve_unit_id(self, unit: str) -> UUID | None:
+        return UNIT if unit == "direction-cvsi" else None
 
     def content_hit(self) -> ContentSearchHit:
         text = "Lampadaires solaires intelligents"
@@ -230,6 +259,118 @@ class DataBackend:
         assert unit == "direction-cvsi"
         self.commands.append(command)
         return run
+
+    async def configure_source_flow(
+        self,
+        unit: str,
+        draft: SourceFlowDraft,
+        *,
+        schedule: IngestionSchedule | None,
+        command: CommandMetadata,
+    ) -> SourceFlow:
+        assert unit == "direction-cvsi"
+        self.commands.append(command)
+        pipeline = DataPipeline(
+            draft.pipeline.id,
+            draft.pipeline.key,
+            draft.pipeline.name,
+            draft.pipeline.owner_unit_id,
+            draft.pipeline.source_id,
+            self.pipeline.connector_version_id,
+            draft.pipeline.output_asset_id,
+            draft.pipeline.status,
+        )
+        self.flow = SourceFlow(
+            pipeline.key,
+            draft.source,
+            draft.asset,
+            draft.contract,
+            pipeline,
+            1,
+            schedule,
+        )
+        return self.flow
+
+    async def get_source_flow_health(self, unit: str, flow_key: str) -> SourceFlowHealth | None:
+        return (
+            SourceFlowHealth(self.flow)
+            if unit == "direction-cvsi" and flow_key == self.flow.key
+            else None
+        )
+
+    async def transition_source_flow(
+        self,
+        unit: str,
+        flow_key: str,
+        status: DataStatus,
+        *,
+        expected_revision: int,
+        command: CommandMetadata,
+    ) -> SourceFlow:
+        assert unit == "direction-cvsi" and flow_key == self.flow.key
+        self.commands.append(command)
+        source = self.flow.source.__class__(
+            self.flow.source.id,
+            self.flow.source.key,
+            self.flow.source.name,
+            self.flow.source.kind,
+            self.flow.source.owner_unit_id,
+            self.flow.source.system_artifact_id,
+            self.flow.source.secret_reference,
+            status,
+            self.flow.source.configuration,
+        )
+        asset = self.flow.asset.__class__(
+            self.flow.asset.id,
+            self.flow.asset.key,
+            self.flow.asset.name,
+            self.flow.asset.owner_unit_id,
+            self.flow.asset.layer,
+            self.flow.asset.classification,
+            status,
+        )
+        pipeline = self.flow.pipeline.__class__(
+            self.flow.pipeline.id,
+            self.flow.pipeline.key,
+            self.flow.pipeline.name,
+            self.flow.pipeline.owner_unit_id,
+            self.flow.pipeline.source_id,
+            self.flow.pipeline.connector_version_id,
+            self.flow.pipeline.output_asset_id,
+            status,
+        )
+        self.flow = SourceFlow(
+            flow_key,
+            source,
+            asset,
+            self.flow.contract,
+            pipeline,
+            expected_revision + 1,
+            self.flow.schedule,
+        )
+        return self.flow
+
+    async def schedule_source_flow(
+        self,
+        unit: str,
+        flow_key: str,
+        schedule: IngestionSchedule,
+        *,
+        expected_revision: int,
+        command: CommandMetadata,
+    ) -> SourceFlow:
+        assert unit == "direction-cvsi" and flow_key == self.flow.key
+        self.commands.append(command)
+        self.flow = SourceFlow(
+            flow_key,
+            self.flow.source,
+            self.flow.asset,
+            self.flow.contract,
+            self.flow.pipeline,
+            expected_revision + 1,
+            schedule,
+        )
+        return self.flow
 
 
 def token(*scopes: str) -> AccessToken:
@@ -458,6 +599,89 @@ async def test_controlled_ingestion_requires_scope_confirmation_and_idempotency(
     assert backend.commands[0].actor_id == ACTOR
     assert backend.commands[0].idempotency_key == "collect-market-20260907"
     assert audit.events[-1]["target_type"] == "data_pipeline"
+
+
+@pytest.mark.asyncio
+async def test_source_flow_tools_are_profiled_secret_free_and_controlled() -> None:
+    backend = DataBackend()
+    audit = Audit()
+    data_server = server(
+        policy=Policy(True),
+        backend=backend,
+        audit=audit,
+        access_token=token("data:ingest", "data:read"),
+    )
+    definition = {
+        "key": "public-web",
+        "name": "Site public",
+        "source_kind": "web",
+        "source_configuration": {"seed_url": "https://kya-energy.com"},
+        "secret_reference": "infisical:data/public-web",
+        "connector": {"key": "kya-owned-web-connector", "version": "0.1.0"},
+        "classification": "public",
+        "schema_document": {"type": "object"},
+        "quality_rules": [
+            {
+                "key": "pages-present",
+                "kind": "minimum-count",
+                "expression": "count > 0",
+            }
+        ],
+    }
+    async with Client(data_server) as client:
+        listed = await client.list_tools()
+        created = await client.call_tool(
+            "configure_source_flow",
+            {
+                "definition": definition,
+                "idempotency_key": "configure-public-web-0001",
+                "confirmation": {"confirmed": True},
+            },
+        )
+        health = await client.call_tool("get_source_flow_health", {"flow_key": "public-web"})
+        scheduled = await client.call_tool(
+            "schedule_source_flow",
+            {
+                "flow_key": "public-web",
+                "schedule": {
+                    "interval_minutes": 1440,
+                    "next_run_at": "2026-09-09T06:00:00Z",
+                    "enabled": True,
+                },
+                "expected_revision": 1,
+                "idempotency_key": "schedule-public-web-0001",
+                "confirmation": {"confirmed": True},
+            },
+        )
+        paused = await client.call_tool(
+            "set_source_flow_state",
+            {
+                "flow_key": "public-web",
+                "target_state": "paused",
+                "expected_revision": 2,
+                "idempotency_key": "pause-public-web-000001",
+                "confirmation": {"confirmed": True},
+            },
+        )
+
+    names = {item.name for item in listed.tools}
+    assert {
+        "configure_source_flow",
+        "get_source_flow_health",
+        "schedule_source_flow",
+        "set_source_flow_state",
+    } <= names
+    assert created.structured_content["has_credentials"] is True
+    assert "infisical" not in str(created.structured_content)
+    assert health.structured_content["flow"]["key"] == "public-web"
+    assert scheduled.structured_content["revision"] == 2
+    assert paused.structured_content["status"] == "paused"
+    assert [event["target_type"] for event in audit.events[-4:]] == [
+        "source_flow",
+        "source_flow",
+        "source_flow",
+        "source_flow",
+    ]
 
 
 @pytest.mark.asyncio

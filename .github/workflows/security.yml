@@ -44,6 +44,10 @@ jobs:
         run: docker build --file infra/containers/Dockerfile.backend --tag kya-platform-backend:scan .
       - name: Build web image
         run: docker build --file infra/containers/Dockerfile.web --tag kya-platform-web:scan .
+      - name: Build source scheduler image
+        run: >-
+          docker build --file infra/containers/Dockerfile.source-scheduler
+          --tag kya-platform-source-scheduler:scan .
       - name: Scan backend image
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
@@ -57,6 +61,15 @@ jobs:
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: kya-platform-web:scan
+          scanners: vuln,secret,misconfig
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+          format: table
+      - name: Scan source scheduler image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: kya-platform-source-scheduler:scan
           scanners: vuln,secret,misconfig
           severity: HIGH,CRITICAL
           ignore-unfixed: true
@@ -76,12 +89,20 @@ jobs:
           format: cyclonedx
           output: sbom-web.cdx.json
           exit-code: '0'
+      - name: Generate source scheduler CycloneDX SBOM
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: kya-platform-source-scheduler:scan
+          format: cyclonedx
+          output: sbom-source-scheduler.cdx.json
+          exit-code: '0'
       - name: Upload SBOM artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: kya-platform-sbom-${{ github.sha }}
           path: |
             sbom-backend.cdx.json
+            sbom-source-scheduler.cdx.json
             sbom-web.cdx.json
           if-no-files-found: error
           retention-days: 30

@@ -7,10 +7,11 @@ Les processus sont déployés séparément :
 
 - `kya-platform-web` expose l'interface utilisateur ;
 - `kya-platform-backend` expose l'API et MCP ;
+- `kya-platform-source-scheduler` réclame les échéances et crée les runs, sans collecter les données ;
 - `kya-platform-web-capture-worker` consomme uniquement les événements
   `kya.data.run.started.v1` et ne possède aucun domaine public.
 
-Le worker reçoit sa connexion à la base et son identité Infisical. Les secrets du stockage objet
+Les deux processus internes reçoivent leur connexion à la base et leur identité Infisical. Les secrets du stockage objet
 restent dans Infisical et sont résolus au démarrage ; ils ne sont pas recopiés dans Coolify.
 
 Variables attendues côté secret manager : `COOLIFY_API_URL`, `COOLIFY_API_TOKEN`,

@@ -12,11 +12,13 @@ from starlette.datastructures import State
 
 from kya_platform.application.audit import AuditEvent, AuditWriter
 from kya_platform.application.content import ContentService
+from kya_platform.application.core import CoreService
 from kya_platform.application.data import DataService
 from kya_platform.application.mcp_profiles.runtime import (
     McpToolProfileRuntime,
     ToolProfileRequest,
 )
+from kya_platform.application.source_lifecycle import SourceLifecycleService
 from kya_platform.auth import AuthenticatedIdentity, IdentityMappingPort
 from kya_platform.authorization import (
     AuthorizationDecision,
@@ -162,6 +164,22 @@ class StateDataMcpBackend:
             raise ToolError("content_service_unavailable")
         return backend
 
+    def _core(self) -> CoreService:
+        backend: CoreService | None = self._state.core_service
+        if backend is None:
+            raise ToolError("core_service_unavailable")
+        return backend
+
+    def _lifecycle(self) -> SourceLifecycleService:
+        backend: SourceLifecycleService | None = self._state.source_lifecycle_service
+        if backend is None:
+            raise ToolError("source_lifecycle_unavailable")
+        return backend
+
+    async def resolve_unit_id(self, unit_key: str) -> UUID | None:
+        unit = await self._core().get_unit(unit_key)
+        return unit.id if unit is not None else None
+
     async def search_assets(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
         return await self._backend().search_assets(*args, **kwargs)
 
@@ -191,6 +209,18 @@ class StateDataMcpBackend:
 
     async def start_run(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
         return await self._backend().start_run(*args, **kwargs)
+
+    async def configure_source_flow(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+        return await self._lifecycle().configure(*args, **kwargs)
+
+    async def get_source_flow_health(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+        return await self._lifecycle().get_health(*args, **kwargs)
+
+    async def transition_source_flow(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+        return await self._lifecycle().transition(*args, **kwargs)
+
+    async def schedule_source_flow(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+        return await self._lifecycle().put_schedule(*args, **kwargs)
 
 
 class StateDataMcpAuditSink:

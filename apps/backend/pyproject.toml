@@ -23,6 +23,7 @@ dependencies = [
 [project.scripts]
 kya-api = "kya_platform.main:run"
 kya-web-capture-worker = "kya_platform.workers.web_capture_runtime:run"
+kya-source-scheduler = "kya_platform.workers.source_scheduler_runtime:run"
 
 [build-system]
 requires = ["hatchling"]

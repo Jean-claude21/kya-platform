@@ -175,6 +175,35 @@ async def test_state_data_backend_fails_closed_then_delegates() -> None:
     assert await adapter.get_pipeline("unit", "pipeline") == "pipeline"
     assert await adapter.start_run("unit", "run", command="command") == "run"
 
+    core = AsyncMock()
+    core.get_unit.return_value = SimpleNamespace(id=UUID(int=42))
+    lifecycle = AsyncMock()
+    lifecycle.configure.return_value = "configured"
+    lifecycle.get_health.return_value = "health"
+    lifecycle.transition.return_value = "transitioned"
+    lifecycle.put_schedule.return_value = "scheduled"
+    state.core_service = core
+    state.source_lifecycle_service = lifecycle
+
+    assert await adapter.resolve_unit_id("unit") == UUID(int=42)
+    assert (
+        await adapter.configure_source_flow("unit", "draft", schedule="schedule", command="command")
+        == "configured"
+    )
+    assert await adapter.get_source_flow_health("unit", "flow") == "health"
+    assert (
+        await adapter.transition_source_flow(
+            "unit", "flow", "paused", expected_revision=1, command="command"
+        )
+        == "transitioned"
+    )
+    assert (
+        await adapter.schedule_source_flow(
+            "unit", "flow", "schedule", expected_revision=2, command="command"
+        )
+        == "scheduled"
+    )
+
 
 @pytest.mark.asyncio
 async def test_state_data_audit_is_append_only_and_fails_closed() -> None:
