@@ -4,6 +4,16 @@ import { Icon, StatusBadge } from '@kya/design-system';
 
 const artifacts = [
   {
+    id: 'frappe',
+    name: 'Frappe / ERPNext',
+    type: 'App',
+    version: 'Référence actuelle',
+    owner: 'CVSI · Groupe',
+    summary: 'Système métier existant référencé avec une frontière d’autorité explicite.',
+    state: 'Référencé',
+    tone: 'healthy' as const,
+  },
+  {
     id: 'business-method',
     name: 'Méthode métier KYA',
     type: 'Skill',
@@ -35,19 +45,39 @@ const artifacts = [
   },
 ] as const;
 
-export function CatalogWorkbench() {
-  const [query, setQuery] = useState('');
-  const [selectedId, setSelectedId] = useState<string>(artifacts[0].id);
+type ArtifactType = (typeof artifacts)[number]['type'];
+
+export function CatalogWorkbench({
+  typeFilter,
+  initialQuery = '',
+}: {
+  typeFilter?: ArtifactType;
+  initialQuery?: string;
+}) {
+  const [query, setQuery] = useState(initialQuery);
+  const [activeType, setActiveType] = useState<ArtifactType | 'Tous'>(typeFilter ?? 'Tous');
+  const initialArtifact =
+    artifacts.find((artifact) => artifact.type === typeFilter) ?? artifacts[0];
+  const [selectedId, setSelectedId] = useState<string>(initialArtifact.id);
   const visible = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase('fr');
-    if (!normalized) return artifacts;
-    return artifacts.filter((artifact) =>
-      `${artifact.name} ${artifact.type} ${artifact.owner}`
-        .toLocaleLowerCase('fr')
-        .includes(normalized),
+    return artifacts.filter(
+      (artifact) =>
+        (activeType === 'Tous' || artifact.type === activeType) &&
+        (!normalized ||
+          `${artifact.name} ${artifact.type} ${artifact.owner}`
+            .toLocaleLowerCase('fr')
+            .includes(normalized)),
     );
-  }, [query]);
-  const selected = artifacts.find((artifact) => artifact.id === selectedId) ?? artifacts[0];
+  }, [activeType, query]);
+  const selected =
+    visible.find((artifact) => artifact.id === selectedId) ?? visible[0] ?? initialArtifact;
+
+  function selectType(next: ArtifactType | 'Tous') {
+    setActiveType(next);
+    const nextArtifact = artifacts.find((artifact) => next === 'Tous' || artifact.type === next);
+    if (nextArtifact) setSelectedId(nextArtifact.id);
+  }
 
   return (
     <main className="catalog-page">
@@ -82,14 +112,33 @@ export function CatalogWorkbench() {
           />
         </label>
         <div className="catalog-facets">
-          <button aria-pressed="true" type="button">
-            Tous <span>3</span>
+          <button
+            aria-pressed={activeType === 'Tous'}
+            type="button"
+            onClick={() => { selectType('Tous'); }}
+          >
+            Tous <span>{artifacts.length}</span>
           </button>
-          <button type="button">
+          <button
+            aria-pressed={activeType === 'Skill'}
+            type="button"
+            onClick={() => { selectType('Skill'); }}
+          >
             Skills <span>2</span>
           </button>
-          <button type="button">
+          <button
+            aria-pressed={activeType === 'MCP'}
+            type="button"
+            onClick={() => { selectType('MCP'); }}
+          >
             MCP <span>1</span>
+          </button>
+          <button
+            aria-pressed={activeType === 'App'}
+            type="button"
+            onClick={() => { selectType('App'); }}
+          >
+            Apps <span>1</span>
           </button>
         </div>
         <div className="catalog-access-note">
@@ -117,7 +166,15 @@ export function CatalogWorkbench() {
               }}
             >
               <span className="artifact-type">
-                <Icon name={artifact.type === 'Skill' ? 'skill' : 'network'} />
+                <Icon
+                  name={
+                    artifact.type === 'Skill'
+                      ? 'skill'
+                      : artifact.type === 'MCP'
+                        ? 'network'
+                        : 'apps'
+                  }
+                />
                 {artifact.type}
               </span>
               <strong>{artifact.name}</strong>

@@ -56,7 +56,7 @@ export function SecretAccessWorkbench() {
         <header>
           <div>
             <h2 id="secret-detail-title">Accès Frappe — lecture clients</h2>
-            <p>Référence Infisical uniquement. La valeur n’entre jamais dans KYA Platform.</p>
+            <p>Référence Infisical uniquement. La valeur n’entre jamais dans KYA-Platform.</p>
           </div>
           <StatusBadge tone="attention">Expire bientôt</StatusBadge>
         </header>

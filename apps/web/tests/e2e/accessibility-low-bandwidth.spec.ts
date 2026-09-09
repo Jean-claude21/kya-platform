@@ -17,7 +17,7 @@ test('critical system journey remains semantic and keyboard reachable', async ({
     page.getByRole('heading', { level: 1, name: 'Où se trouve la donnée qui fait foi ?' }),
   ).toBeVisible();
   await expect(page.getByRole('table', { name: 'Autorités de données' })).toBeVisible();
-  await expect(page.getByText('KYA Platform', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('KYA-Platform', { exact: true }).first()).toBeVisible();
 });
 
 test('mobile layout does not create page-level horizontal overflow', async ({ page }) => {

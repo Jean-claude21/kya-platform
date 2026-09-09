@@ -1,0 +1,62 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>KYA-Platform — Catalogue</title><link rel="stylesheet" href="styles.css"></head><body>
+<!-- THESIS: the catalogue explains a capability before it is installed; provenance, authority and permission are read before the button. OWN-WORLD: teal frame, white plane, hairline result table, permanent inspector. STORY: narrow, compare, understand, install. FIRST VIEWPORT: facets, dense results, inspector with facts and permissions. FORM: KYA Instrument. FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md -->
+<div class="frame">
+<aside class="rail">
+<a class="rail__mark" href="index.html"><img src="assets/kya-energy-group-logo.png" alt=""><div><b>KYA-Platform</b><span>KYA-Energy Group</span></div></a>
+<p class="rail__label">Travailler</p><nav><a class="nav" href="index.html"><svg class="i"><use href="icons.svg#home"/></svg><span>Accueil</span></a><a class="nav" href="catalog.html" aria-current="page"><svg class="i"><use href="icons.svg#grid"/></svg><span>Catalogue</span></a><a class="nav" href="catalog.html"><svg class="i"><use href="icons.svg#cube"/></svg><span>Applications</span></a><a class="nav" href="catalog.html"><svg class="i"><use href="icons.svg#link"/></svg><span>Connecteurs MCP</span></a><a class="nav" href="studio.html"><svg class="i"><use href="icons.svg#spark"/></svg><span>Méthodes</span></a><a class="nav" href="index.html"><svg class="i"><use href="icons.svg#folder"/></svg><span>Espaces</span></a></nav>
+<p class="rail__label">Gouverner</p><nav><a class="nav" href="organization.html"><svg class="i"><use href="icons.svg#org"/></svg><span>Organisation</span></a><a class="nav" href="organization.html"><svg class="i"><use href="icons.svg#users"/></svg><span>Identités & accès</span></a><a class="nav" href="studio.html"><svg class="i"><use href="icons.svg#shield"/></svg><span>Publication</span></a></nav>
+<div class="rail__foot"><span class="av">JC</span><div class="who"><b>Jean-Claude M.</b><span>Direction des Systèmes</span></div></div>
+</aside>
+<main class="plane">
+<header class="bar">
+<button class="scope"><span class="live"></span>KYA-Energy Group <em>· Groupe</em></button>
+<label class="find"><svg class="i"><use href="icons.svg#search"/></svg><input placeholder="Rechercher une capacité, une personne, une méthode…" aria-label="Recherche"><kbd>Ctrl K</kbd></label>
+<div class="bar__end"><button class="ico" data-count="3" aria-label="Notifications"><svg class="i"><use href="icons.svg#bell"/></svg></button><button class="ico" aria-label="Aide"><svg class="i"><use href="icons.svg#help"/></svg></button><span class="av">JC</span></div>
+</header>
+<div class="work work--3">
+
+<div class="col col--l">
+  <div class="col__hd"><h2>Filtres</h2><a class="more" href="#">Réinitialiser</a></div>
+  <div class="col__body">
+    <div class="facet"><h3>Type</h3><label class="opt"><input type="checkbox">Applications<span class="n num">26</span></label><label class="opt"><input type="checkbox">Connecteurs MCP<span class="n num">12</span></label><label class="opt"><input type="checkbox">Méthodes (Skills)<span class="n num">38</span></label><label class="opt"><input type="checkbox">API<span class="n num">52</span></label><label class="opt"><input type="checkbox">Jeux de données<span class="n num">24</span></label></div>
+    <div class="facet"><h3>État</h3><label class="opt"><input type="checkbox" checked>Disponible<span class="n num">97</span></label><label class="opt"><input type="checkbox">En bêta<span class="n num">14</span></label><label class="opt"><input type="checkbox">Restreint<span class="n num">8</span></label><label class="opt"><input type="checkbox">Déprécié<span class="n num">3</span></label></div>
+    <div class="facet"><h3>Compatible avec</h3><label class="opt"><input type="checkbox">Claude<span class="n num">68</span></label><label class="opt"><input type="checkbox">ChatGPT<span class="n num">61</span></label><label class="opt"><input type="checkbox">Codex<span class="n num">49</span></label></div>
+    <div class="facet"><h3>Provenance</h3><label class="opt"><input type="checkbox">Interne KYA<span class="n num">84</span></label><label class="opt"><input type="checkbox">Partenaire<span class="n num">29</span></label></div>
+  </div>
+</div>
+
+<div class="col">
+  <div class="col__hd">
+    <label class="find" style="max-width:340px"><svg class="i"><use href="icons.svg#search"/></svg><input placeholder="Filtrer les résultats…" aria-label="Filtrer"></label>
+    <span class="sub num" style="margin-left:auto">126 capacités autorisées</span>
+    <button class="btn"><svg class="i"><use href="icons.svg#filter"/></svg>Pertinence</button>
+  </div>
+  <div class="col__body">
+    <table class="tbl"><thead><tr><th>Capacité</th><th>Type</th><th>Propriétaire</th><th>Version</th><th>État</th><th class="r">Provenance</th></tr></thead><tbody><tr aria-selected="true"><td><div class="cell"><span class="glyph"><svg class="i"><use href="icons.svg#spark"/></svg></span><span><b>KYA Design System</b><span>Composants, règles et modèles de marque KYA.</span></span></div></td><td><span class="kind kind--skill">Skill</span></td><td class="sub">Communication + CVSI</td><td class="sub num">2.1.0</td><td><span class="st ">Disponible</span></td><td class="sub r">Interne</td></tr><tr><td><div class="cell"><span class="glyph"><svg class="i"><use href="icons.svg#link"/></svg></span><span><b>KYA Knowledge Search</b><span>Recherche gouvernée dans la connaissance du Groupe.</span></span></div></td><td><span class="kind kind--mcp">MCP</span></td><td class="sub">CVSI</td><td class="sub num">1.4.2</td><td><span class="st ">Disponible</span></td><td class="sub r">Interne</td></tr><tr><td><div class="cell"><span class="glyph"><svg class="i"><use href="icons.svg#cube"/></svg></span><span><b>KYA Core</b><span>Référentiel Groupe : unités, clients, projets.</span></span></div></td><td><span class="kind kind--app">App</span></td><td class="sub">Direction des Systèmes</td><td class="sub num">0.4.0</td><td><span class="st ">Disponible</span></td><td class="sub r">Interne</td></tr><tr><td><div class="cell"><span class="glyph"><svg class="i"><use href="icons.svg#link"/></svg></span><span><b>Business API</b><span>Opérations métier gouvernées et auditées.</span></span></div></td><td><span class="kind kind--mcp">API</span></td><td class="sub">CVSI</td><td class="sub num">3.0.1</td><td><span class="st ">Disponible</span></td><td class="sub r">Interne</td></tr><tr><td><div class="cell"><span class="glyph"><svg class="i"><use href="icons.svg#spark"/></svg></span><span><b>Documents KYA</b><span>Méthode documentaire et gabarits officiels.</span></span></div></td><td><span class="kind kind--skill">Skill</span></td><td class="sub">Communication</td><td class="sub num">1.6.0</td><td><span class="st ">Disponible</span></td><td class="sub r">Interne</td></tr><tr><td><div class="cell"><span class="glyph"><svg class="i"><use href="icons.svg#cube"/></svg></span><span><b>Rapports ESG</b><span>Produit les rapports selon la méthode validée.</span></span></div></td><td><span class="kind kind--app">App</span></td><td class="sub">RSE</td><td class="sub num">1.3.0</td><td><span class="st ">Disponible</span></td><td class="sub r">Interne</td></tr><tr><td><div class="cell"><span class="glyph"><svg class="i"><use href="icons.svg#cube"/></svg></span><span><b>Analyse Contrats</b><span>Analyse et résume les contrats fournisseurs.</span></span></div></td><td><span class="kind kind--app">App</span></td><td class="sub">Juridique</td><td class="sub num">1.2.0</td><td><span class="st st--wait">En bêta</span></td><td class="sub r">Interne</td></tr><tr><td><div class="cell"><span class="glyph"><svg class="i"><use href="icons.svg#doc"/></svg></span><span><b>Données Marchés Énergie</b><span>Séries de marché historiques et temps réel.</span></span></div></td><td><span class="kind kind--data">Donnée</span></td><td class="sub">Stratégie</td><td class="sub num">2.0.0</td><td><span class="st st--limit">Restreint</span></td><td class="sub r">Partenaire</td></tr><tr><td><div class="cell"><span class="glyph"><svg class="i"><use href="icons.svg#link"/></svg></span><span><b>Veille Réglementaire</b><span>Surveille les évolutions énergie et climat.</span></span></div></td><td><span class="kind kind--mcp">MCP</span></td><td class="sub">Stratégie</td><td class="sub num">0.9.3</td><td><span class="st st--wait">En bêta</span></td><td class="sub r">Partenaire</td></tr></tbody></table>
+  </div>
+</div>
+
+<div class="col col--r">
+  <div class="col__hd"><span class="glyph"><svg class="i"><use href="icons.svg#spark"/></svg></span><div style="margin-right:auto"><h2>KYA Design System</h2><p class="sub">Communication + CVSI · Groupe</p></div><button class="ico"><svg class="i"><use href="icons.svg#more"/></svg></button></div>
+  <div class="col__body">
+    <div class="facts">
+      <div class="fact"><span>Version</span><b class="num">2.1.0</b></div>
+      <div class="fact"><span>Confiance</span><b>Élevée</b></div>
+      <div class="fact"><span>État</span><b>Disponible</b></div>
+    </div>
+    <div class="detail"><h3>Objet</h3><p>Fournit les composants de marque, les règles d’usage et les gabarits nécessaires pour produire des interfaces et des documents conformes à l’identité de KYA-Energy Group.</p></div>
+    <div class="detail"><h3>Compatibilité</h3><div class="chips"><span class="kind">Claude</span><span class="kind">ChatGPT</span><span class="kind">Codex</span></div></div>
+    <div class="detail"><h3>Permissions accordées</h3><ul><li>Lecture des composants, guides et gabarits</li><li>Aucune donnée sensible exposée</li><li>Portée recalculée selon le contexte actif</li></ul></div>
+    <div class="detail"><h3>Dépendances</h3><ul><li>Aucune dépendance obligatoire</li><li>Recommandé : Documents KYA (≥ 1.5)</li></ul></div>
+    <div class="detail"><h3>Historique</h3>
+      <div class="row"><div style="flex:1"><b>2.1.0 · publiée</b><span>Consolidation du système et accessibilité</span></div><span class="sub num">12 sept.</span></div>
+      <div class="row"><div style="flex:1"><b>2.0.0</b><span>Refonte du shell et des surfaces opérationnelles</span></div><span class="sub num">15 oct.</span></div>
+    </div>
+  </div>
+  <div class="col__foot"><button class="btn btn--primary"><svg class="i"><use href="icons.svg#down"/></svg>Installer</button><button class="btn">Documentation</button></div>
+</div>
+
+</div>
+</main>
+</div>
+</body></html>

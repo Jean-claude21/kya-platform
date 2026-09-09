@@ -7,7 +7,7 @@ describe('system authority workbench', () => {
   it('makes ownership, authority and no-copy semantics explicit', () => {
     const html = renderToStaticMarkup(<SystemAuthorityWorkbench />);
 
-    expect(html).toContain('KYA Platform');
+    expect(html).toContain('KYA-Platform');
     expect(html).toContain('Source qui fait foi');
     expect(html).toContain('limitée aux données du Hub');
     expect(html).toContain('bloquerait la publication');

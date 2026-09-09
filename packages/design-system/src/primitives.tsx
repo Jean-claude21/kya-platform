@@ -5,8 +5,9 @@ import type { IconName, StatusTone } from './types';
 
 export function KyaMark() {
   return (
-    <span className="kya-mark" aria-label="KYA Platform">
-      KYA <strong>Platform</strong>
+    <span className="kya-mark" aria-label="KYA-Platform">
+      <img className="kya-mark__logo" src="/brand/kya-energy-group-logo.png" alt="KYA-Energy Group" />
+      <strong>KYA-Platform</strong>
     </span>
   );
 }

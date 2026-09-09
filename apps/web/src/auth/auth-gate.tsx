@@ -51,7 +51,7 @@ export function AuthGate({ children }: Readonly<{ children: ReactNode }>) {
           },
         );
         if (!bootstrapResponse.ok) {
-          throw new Error('L’état d’initialisation de KYA Platform est indisponible.');
+          throw new Error('L’état d’initialisation de KYA-Platform est indisponible.');
         }
         setBootstrap((await bootstrapResponse.json()) as BootstrapStatus);
         setAccountLinked(true);
@@ -144,7 +144,7 @@ export function AuthGate({ children }: Readonly<{ children: ReactNode }>) {
         <section className="bootstrap-story" aria-labelledby="bootstrap-title">
           <KyaMark />
           <div>
-            <h1 id="bootstrap-title">Établir le premier propriétaire de KYA Platform.</h1>
+            <h1 id="bootstrap-title">Établir le premier propriétaire de KYA-Platform.</h1>
             <p>
               Cette opération relie votre identité au rôle d’administration Groupe, une seule fois,
               puis ferme définitivement l’initialisation.
@@ -171,7 +171,7 @@ export function AuthGate({ children }: Readonly<{ children: ReactNode }>) {
               <div>
                 <h2 id="bootstrap-form-title">Valider la prise de propriété</h2>
                 <p>
-                  Saisissez le code à usage unique conservé dans le coffre KYA Platform Secrets.
+                  Saisissez le code à usage unique conservé dans le coffre KYA-Platform Secrets.
                 </p>
               </div>
               <form
@@ -232,28 +232,27 @@ export function AuthGate({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <main className="auth-page">
       <section className="auth-story" aria-labelledby="auth-title">
-        <KyaMark />
-        <div>
-          <h1 id="auth-title">Le patrimoine numérique KYA, accessible au bon rôle.</h1>
-          <p>
-            Retrouvez les Skills, MCP, applications et modèles validés pour votre Direction et votre
-            contexte de travail.
-          </p>
+        <img
+          src={
+            mode === 'sign-up'
+              ? '/images/auth/registration-team.png'
+              : '/images/auth/sign-in-solar.png'
+          }
+          alt={
+            mode === 'sign-up'
+              ? 'Équipe KYA collaborant dans un environnement de travail moderne'
+              : 'Technicienne KYA inspectant une installation solaire'
+          }
+        />
+        <div className="auth-story-overlay">
+          <KyaMark />
+          <div>
+            <span>Socle numérique gouverné</span>
+            <h1 id="auth-title">Vos capacités KYA, au bon endroit et avec les bons droits.</h1>
+            <p>Applications, MCP, Skills et données de référence dans un contexte unique.</p>
+          </div>
+          <small>KYA-Energy Group · Un avenir énergétique durable</small>
         </div>
-        <ol aria-label="Fonctionnement de la plateforme">
-          <li>
-            <strong>Découvrez</strong>
-            <span>les capacités autorisées pour vous</span>
-          </li>
-          <li>
-            <strong>Comprenez</strong>
-            <span>leur provenance et leurs conditions d’usage</span>
-          </li>
-          <li>
-            <strong>Utilisez</strong>
-            <span>depuis KYA Platform ou votre environnement IA</span>
-          </li>
-        </ol>
       </section>
 
       <section className="auth-panel" aria-labelledby="auth-form-title">
@@ -281,7 +280,7 @@ export function AuthGate({ children }: Readonly<{ children: ReactNode }>) {
         </div>
         <div className="auth-copy">
           <h2 id="auth-form-title">
-            {mode === 'sign-up' ? 'Créer votre accès KYA' : 'Bienvenue sur KYA Platform'}
+            {mode === 'sign-up' ? 'Créer votre accès KYA' : 'Bienvenue sur KYA-Platform'}
           </h2>
           <p>
             {mode === 'sign-up'
@@ -328,7 +327,7 @@ export function AuthGate({ children }: Readonly<{ children: ReactNode }>) {
           </button>
         </form>
         <p className="auth-boundary">
-          L’identité confirme qui vous êtes. KYA Platform vérifie ensuite, action par action, ce que
+          L’identité confirme qui vous êtes. KYA-Platform vérifie ensuite, action par action, ce que
           votre rôle permet dans le contexte actif.
         </p>
       </section>

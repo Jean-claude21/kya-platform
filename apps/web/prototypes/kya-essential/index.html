@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KYA-Platform — Mon espace</title>
+  <link rel="stylesheet" href="styles.css"><script src="app.js" defer></script>
+</head>
+<body>
+<!-- THESIS: A personal capability workspace, not a business dashboard. OWN-WORLD: white work plane, mineral navigation, precise typography, KYA green and restrained amber. STORY: choose context, find a capability, inspect and act. FIRST VIEWPORT: compact global context, quiet navigation, flat capability list, dismissible inspector. FORM: approved third image, exec-1f99d620-65a5-4acd-8ccf-b57707eb7eb0.png. FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md -->
+<a class="skip" href="#main">Aller au contenu</a>
+<header class="topbar">
+  <button class="icon-button mobile-menu" aria-label="Ouvrir le menu" aria-expanded="false" id="menu"><i data-icon="grid"></i></button>
+  <a class="brand" href="index.html"><img src="../kya-command/assets/kya-energy-group-logo.png" alt="KYA-Energy Group"><span>KYA-Platform</span></a>
+  <div class="context">
+    <label class="entity"><span>Entité</span><select id="entity" aria-label="Entité active"><option>KYA-Energy Group</option><option>KYA — Entité de démonstration</option></select></label>
+    <label class="unit"><span class="sr-only">Unité active</span><select id="unit"><option>Direction des Systèmes</option><option>Communication</option><option>Espace stagiaires</option></select></label>
+  </div>
+  <label class="search"><i data-icon="search"></i><input id="search" type="search" placeholder="Rechercher…" aria-label="Rechercher une capacité"><kbd>Ctrl K</kbd></label>
+  <button class="icon-button notification" data-info="requests" aria-label="Voir les demandes"><i data-icon="bell"></i><b></b></button>
+  <button class="avatar" data-info="profile" aria-label="Profil de Jean-Claude">JC</button>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="navigation" aria-label="Navigation principale">
+    <nav>
+      <p class="nav-label">Espace personnel</p>
+      <button class="nav active" data-page="home" aria-current="page"><i data-icon="home"></i>Accueil</button>
+      <button class="nav" data-page="capabilities"><i data-icon="grid"></i>Mes capacités</button>
+      <button class="nav" data-page="catalog"><i data-icon="book"></i>Catalogue</button>
+      <button class="nav" data-page="connections"><i data-icon="link"></i>Connexions</button>
+      <button class="nav" data-info="requests"><i data-icon="doc"></i>Demandes<span class="badge">2</span></button>
+      <div class="nav-section"><p class="nav-label">Création</p><button class="nav" data-info="studio"><i data-icon="edit"></i>Studio</button><button class="nav" data-info="publications"><i data-icon="send"></i>Publications</button></div>
+    </nav>
+    <div class="nav-bottom"><button class="nav administration" data-info="admin"><i data-icon="shield"></i>Administration<i class="end" data-icon="right"></i></button><div class="profile"><span class="avatar">JC</span><div><strong>Jean-Claude</strong><small id="role">Profil CVSI</small></div><button class="icon-button" data-info="help" aria-label="Aide sur le prototype"><i data-icon="help"></i></button></div></div>
+  </aside>
+  <main id="main">
+    <div class="page-heading"><div><p class="greeting">Bonjour Jean-Claude.</p><h1 id="page-title">Mon espace</h1><p class="subtitle">Vos outils et méthodes, dans votre contexte de travail.</p></div><button class="button add" id="add"><i data-icon="plus"></i>Ajouter une capacité</button></div>
+    <button class="attention" data-info="requests"><span class="dot amber"></span><strong>2 éléments à examiner</strong><span class="attention-description">Une mise à jour · Une demande d’accès</span><span class="text-link">Voir<i data-icon="arrow"></i></span></button>
+    <section class="pinned-section" aria-labelledby="pinned-title"><div class="section-heading"><h2 id="pinned-title">Épinglés</h2><button class="quiet" id="organize">Organiser</button></div><div class="pinned" id="pinned"></div></section>
+    <section class="capabilities" aria-labelledby="list-title"><div class="section-heading"><h2 id="list-title">Mes capacités <span id="count">5</span></h2><button class="text-link" id="all">Voir tout<i data-icon="arrow"></i></button></div><div class="tabs" role="tablist" aria-label="Type de capacité"><button role="tab" aria-selected="true" data-filter="all">Tout</button><button role="tab" aria-selected="false" data-filter="App">Apps</button><button role="tab" aria-selected="false" data-filter="MCP">MCP</button><button role="tab" aria-selected="false" data-filter="Skill">Skills</button><button role="tab" aria-selected="false" data-filter="Données">Données</button></div><div id="resources" role="tabpanel" aria-label="Capacités disponibles"></div><div class="empty" id="empty" hidden><h3>Aucune capacité trouvée</h3><p>Essayez un autre terme ou un autre type.</p><button class="button" id="reset">Réinitialiser les filtres</button></div></section>
+    <section class="connections" id="connections"><h2>Mes connexions IA</h2><p>Utilisez vos capacités depuis votre environnement.</p><div class="clients"><button data-info="claude"><span class="client-icon claude"><svg aria-hidden="true" viewBox="0 0 32 32"><path d="M16 2v28M2 16h28M6 6l20 20M6 26 26 6M10 3l12 26M3 22 29 10M3 10l26 12M10 29 22 3"/></svg></span><span><strong>Claude</strong><small class="connected"><span class="dot"></span>Connecté</small></span></button><button data-info="chatgpt"><span class="client-icon"><i data-icon="chat"></i></span><span><strong>ChatGPT</strong><small>Connecter<i data-icon="external"></i></small></span></button><button data-info="codex"><span class="client-icon"><i data-icon="code"></i></span><span><strong>Codex</strong><small>Connecter<i data-icon="external"></i></small></span></button></div></section>
+    <footer>Maquette interactive · Données et connexions simulées</footer>
+  </main>
+  <aside class="inspector" id="inspector" aria-label="Détail de la capacité"><button class="icon-button close" id="close" aria-label="Fermer le détail"><i data-icon="x"></i></button><div id="detail"></div></aside>
+</div>
+<div class="scrim" id="scrim" hidden></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
