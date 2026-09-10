@@ -46,14 +46,30 @@ button:disabled { cursor: not-allowed; }
 .signature-content:focus { outline: none; }
 .signature-back { margin: 14px 28px 0; padding: 8px 0; color: var(--kya-muted); background: transparent; border: 0; font-size: 13px; }
 .signature-home { min-width: 0; }
-.signature-content > main.signature-home,
-.signature-content > main.signature-studio {
+/* Each Signature page owns its layout; legacy global main styles must not leak in. */
+.signature-content > main {
   display: block;
   grid-template-columns: none;
   max-width: none;
   margin: 0;
   padding: 0;
   gap: 0;
+}
+.signature-content > main:is(.catalog-page, .workspace-page, .publication-page) {
+  display: grid;
+  gap: 16px;
+  max-width: 1560px;
+  margin: 0 auto;
+  padding: 28px clamp(16px, 2vw, 40px) 48px;
+}
+.signature-content > main.catalog-page { grid-template-columns: 230px minmax(0, 1fr) 340px; }
+.signature-content > main.workspace-page { grid-template-columns: 290px minmax(0, 1fr); }
+.signature-content > main.publication-page { grid-template-columns: 300px minmax(0, 1fr); }
+@media (max-width: 1180px) {
+  .signature-content > main.catalog-page { grid-template-columns: 220px minmax(0, 1fr); }
+}
+@media (max-width: 900px) {
+  .signature-content > main:is(.catalog-page, .workspace-page, .publication-page) { grid-template-columns: minmax(0, 1fr); }
 }
 .signature-hero { height: 268px; position: relative; overflow: hidden; border-bottom: 1px solid var(--kya-line); }
 .signature-hero > img { position: absolute; right: 0; top: 0; width: 66%; height: 100%; object-fit: cover; object-position: 60% 55%; mask-image: linear-gradient(to right, transparent, black 30%); }
