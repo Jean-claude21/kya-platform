@@ -24,12 +24,22 @@ PRINCIPAL = UUID("01991fb0-6c00-7000-8000-000000000030")
 
 
 class Result:
-    def __init__(self, *, row: object | None = None, rowcount: int = 1) -> None:
+    def __init__(
+        self,
+        *,
+        row: object | None = None,
+        rows: tuple[tuple[object, ...], ...] = (),
+        rowcount: int = 1,
+    ) -> None:
         self.row = row
+        self.rows = rows
         self.rowcount = rowcount
 
     def one_or_none(self) -> object | None:
         return self.row
+
+    def __iter__(self):  # type: ignore[no-untyped-def]
+        return iter(self.rows)
 
 
 class Session:
@@ -111,6 +121,46 @@ async def test_missing_live_connector_grant_returns_none() -> None:
         )
         is None
     )
+
+
+@pytest.mark.asyncio
+async def test_lists_the_latest_active_grant_per_registered_client() -> None:
+    session = Session()
+    now = datetime.now(UTC)
+    session.execute_result = Result(
+        rows=(
+            (
+                "client-1",
+                {"client_name": "Claude Desktop", "redirect_uris": ["https://private"]},
+                ["data:read", "catalog:read"],
+                now,
+                now + timedelta(days=30),
+            ),
+            (
+                "client-1",
+                {"client_name": "Claude Desktop"},
+                ["catalog:read"],
+                now - timedelta(days=1),
+                now + timedelta(days=29),
+            ),
+            (
+                "client-2",
+                {"client_name": "ChatGPT"},
+                ["catalog:read"],
+                now,
+                now + timedelta(days=30),
+            ),
+        )
+    )
+
+    connectors = await broker(session).list_active_connectors(
+        principal_id=PRINCIPAL,
+        active_unit_id="direction-cvsi",
+    )
+
+    assert [item.client_name for item in connectors] == ["ChatGPT", "Claude Desktop"]
+    assert connectors[1].scopes == ("catalog:read", "data:read")
+    assert not hasattr(connectors[1], "redirect_uris")
 
 
 def client(secret: str = "client-credential") -> OAuthClientInformationFull:  # noqa: S107

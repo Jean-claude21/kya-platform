@@ -56,6 +56,15 @@ class ConsentRequest:
     expires_at: datetime
 
 
+@dataclass(frozen=True, slots=True)
+class ActiveConnectorGrant:
+    client_id: str
+    client_name: str
+    scopes: tuple[str, ...]
+    connected_at: datetime
+    expires_at: datetime
+
+
 class BrokerAuthorizationCode(AuthorizationCode):
     grant_id: UUID
     principal_id: UUID
@@ -140,6 +149,55 @@ class OAuthBroker:
                 .limit(1)
             )
             return frozenset(scopes) if scopes is not None else None
+
+    async def list_active_connectors(
+        self,
+        *,
+        principal_id: UUID,
+        active_unit_id: str,
+    ) -> tuple[ActiveConnectorGrant, ...]:
+        """Return the latest live grant for each client without exposing credentials."""
+
+        now = datetime.now(UTC)
+        async with self._sessions() as session:
+            rows = await session.execute(
+                select(
+                    OAuthTokenRecord.client_id,
+                    OAuthClient.client_metadata,
+                    OAuthTokenRecord.scopes,
+                    OAuthTokenRecord.created_at,
+                    OAuthTokenRecord.expires_at,
+                )
+                .join(OAuthClient, OAuthClient.client_id == OAuthTokenRecord.client_id)
+                .where(
+                    OAuthTokenRecord.principal_id == principal_id,
+                    OAuthTokenRecord.active_unit_id == active_unit_id,
+                    OAuthTokenRecord.kind == "refresh",
+                    OAuthTokenRecord.revoked_at.is_(None),
+                    OAuthTokenRecord.expires_at > now,
+                )
+                .order_by(
+                    OAuthTokenRecord.client_id,
+                    OAuthTokenRecord.created_at.desc(),
+                )
+            )
+
+        connectors: list[ActiveConnectorGrant] = []
+        seen_clients: set[str] = set()
+        for client_id, metadata, scopes, connected_at, expires_at in rows:
+            if client_id in seen_clients:
+                continue
+            seen_clients.add(client_id)
+            connectors.append(
+                ActiveConnectorGrant(
+                    client_id=client_id,
+                    client_name=str(metadata.get("client_name") or client_id),
+                    scopes=tuple(sorted(scopes)),
+                    connected_at=connected_at,
+                    expires_at=expires_at,
+                )
+            )
+        return tuple(sorted(connectors, key=lambda item: item.client_name.casefold()))
 
     async def register_client(self, client_info: OAuthClientInformationFull) -> None:
         scopes = set((client_info.scope or "").split())
@@ -489,4 +547,4 @@ class OAuthBroker:
         )
 
 
-__all__ = ["VALID_SCOPES", "ConsentRequest", "OAuthBroker"]
+__all__ = ["VALID_SCOPES", "ActiveConnectorGrant", "ConsentRequest", "OAuthBroker"]

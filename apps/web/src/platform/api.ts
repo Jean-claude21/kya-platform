@@ -12,10 +12,15 @@ export async function platformRequest<T>(path: string, init?: RequestInit): Prom
   const headers = new Headers(init?.headers);
   headers.set('Authorization', `Bearer ${token}`);
   headers.set('X-KYA-Unit-ID', 'group');
-  const response = await fetch(`${apiUrl.replace(/\/$/, '')}/api/v1${path}`, {
-    ...(init ?? {}),
-    headers,
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${apiUrl.replace(/\/$/, '')}/api/v1${path}`, {
+      ...(init ?? {}),
+      headers,
+    });
+  } catch {
+    throw new Error('L’API KYA-Platform est momentanément inaccessible. Réessayez.');
+  }
   if (!response.ok) {
     const problem = (await response.json().catch(() => null)) as {
       detail?: string;

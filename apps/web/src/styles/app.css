@@ -3969,6 +3969,12 @@ th {
 .connection-list small {
   color: var(--kya-muted);
 }
+.connection-list-empty {
+  margin: 0;
+  padding: 12px 8px;
+  color: var(--kya-muted);
+  font-size: 13px;
+}
 .ai-monogram {
   display: grid;
   width: 32px;
@@ -4090,6 +4096,7 @@ th {
   margin: 0;
   font-size: 12px;
   font-weight: 700;
+  overflow-wrap: anywhere;
 }
 .empty-state {
   display: grid;

@@ -1,5 +1,6 @@
 """MCP profile HTTP routes expose live grants and restrictive preferences."""
 
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from uuid import UUID
@@ -26,6 +27,16 @@ def app_client() -> tuple[TestClient, object, object]:
     app = create_app(Settings(_env_file=None, environment="test"))
     app.dependency_overrides[active_principal] = principal
     broker = AsyncMock()
+    now = datetime.now(UTC)
+    broker.list_active_connectors.return_value = (
+        SimpleNamespace(
+            client_id="generated-client-id",
+            client_name="Claude Desktop",
+            scopes=("catalog:read", "data:read"),
+            connected_at=now,
+            expires_at=now + timedelta(days=30),
+        ),
+    )
     broker.get_active_grant_scopes.return_value = frozenset({"data:read"})
     runtime = AsyncMock()
     runtime.resolve.return_value = SimpleNamespace(
@@ -39,6 +50,30 @@ def app_client() -> tuple[TestClient, object, object]:
     app.state.mcp_tool_profile_runtime = runtime
     app.state.mcp_preference_service = preferences
     return TestClient(app), runtime, preferences
+
+
+def test_lists_only_sanitized_live_connectors_for_the_active_context() -> None:
+    client, _runtime, _preferences = app_client()
+    with client:
+        response = client.get("/api/v1/mcp/me/connectors")
+
+    assert response.status_code == 200
+    connector = response.json()[0]
+    assert connector["client_id"] == "generated-client-id"
+    assert connector["client_name"] == "Claude Desktop"
+    assert connector["scopes"] == ["catalog:read", "data:read"]
+    assert set(connector) == {
+        "client_id",
+        "client_name",
+        "scopes",
+        "connected_at",
+        "expires_at",
+    }
+    broker = client.app.state.oauth_broker
+    broker.list_active_connectors.assert_awaited_once_with(
+        principal_id=PRINCIPAL_ID,
+        active_unit_id="direction-cvsi",
+    )
 
 
 def test_reads_effective_profile_from_the_live_connector_grant() -> None:
