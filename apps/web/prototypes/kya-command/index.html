@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>KYA-Platform — Vue de contrôle</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<!-- THESIS: KYA-Platform is the Group's governed control plane, not another business dashboard and not an embedded AI assistant. OWN-WORLD: a precise operational console with a deep-teal structural rail, white control plane, fine rules, restrained KYA semantic colors, and a visible central spine. STORY: confirm context, read the foundation, resolve human decisions, reach authorized capabilities, trace change. FIRST VIEWPORT: identity and context above a wide control-plane map paired with a narrow decision queue; capability distribution and audit continue below. FORM: Central Control Plane, the established KYA precision world. FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md -->
+<div class="shell">
+  <aside class="rail">
+    <a class="rail__mark" href="index.html">
+      <img src="assets/kya-energy-group-logo.png" alt="Logo KYA-Energy Group">
+      <div><b>KYA-Platform</b><span>Nœud numérique du Groupe</span></div>
+    </a>
+    <div class="rail__grp">
+      <p class="rail__lbl">Piloter</p>
+      <a class="nav" href="index.html" aria-current="page"><svg class="i"><use href="icons.svg#home"/></svg><span>Vue de contrôle</span></a>
+      <a class="nav" href="#"><svg class="i"><use href="icons.svg#grid"/></svg><span>Catalogue</span></a>
+      <a class="nav" href="#"><svg class="i"><use href="icons.svg#folder"/></svg><span>Espaces</span></a>
+    </div>
+    <div class="rail__grp">
+      <p class="rail__lbl">Distribuer</p>
+      <a class="nav" href="#"><svg class="i"><use href="icons.svg#cube"/></svg><span>Applications</span></a>
+      <a class="nav" href="#"><svg class="i"><use href="icons.svg#link"/></svg><span>MCP</span></a>
+      <a class="nav" href="#"><svg class="i"><use href="icons.svg#spark"/></svg><span>Skills</span></a>
+      <a class="nav" href="#"><svg class="i"><use href="icons.svg#doc"/></svg><span>Données & API</span></a>
+    </div>
+    <div class="rail__grp">
+      <p class="rail__lbl">Gouverner</p>
+      <a class="nav" href="#"><svg class="i"><use href="icons.svg#org"/></svg><span>Organisation</span></a>
+      <a class="nav" href="#"><svg class="i"><use href="icons.svg#users"/></svg><span>Identités & accès</span></a>
+      <a class="nav" href="#"><svg class="i"><use href="icons.svg#shield"/></svg><span>Administration</span></a>
+    </div>
+    <div class="rail__end"><span class="av">JC</span><div><b>Jean-Claude M.</b><span>Direction des Systèmes</span></div></div>
+  </aside>
+
+  <main class="main">
+    <header class="bar">
+      <button class="scope" aria-label="Changer de contexte">
+        <span class="scope__icon"><svg class="i"><use href="icons.svg#org"/></svg></span>
+        <span><b>Direction des Systèmes</b><em>KYA-Energy Group · Togo</em></span>
+        <svg class="i scope__chev"><use href="icons.svg#down"/></svg>
+      </button>
+      <label class="find"><svg class="i"><use href="icons.svg#search"/></svg><input type="search" placeholder="Rechercher une capacité, une donnée, une personne ou une action…"><kbd>CTRL K</kbd></label>
+      <div class="bar__e"><button class="ico" data-c="2" aria-label="Notifications"><svg class="i"><use href="icons.svg#bell"/></svg></button><button class="ico" aria-label="Aide"><svg class="i"><use href="icons.svg#help"/></svg></button><span class="av">JC</span></div>
+    </header>
+
+    <div class="scroll">
+      <div class="preview-note"><b>Aperçu de conception</b><span>Les états et contenus ci-dessous sont illustratifs, pas des données de production.</span></div>
+      <div class="page">
+        <header class="page-head">
+          <div><p class="eyebrow">Vue Groupe · mercredi 9 septembre 2026</p><h1>Le système numérique<br><em>sous contrôle.</em></h1></div>
+          <div class="identity-proof">
+            <span class="proof-icon"><svg class="i"><use href="icons.svg#shield"/></svg></span>
+            <span><b>Contexte vérifié</b><small>Rôle effectif : administrateur du socle</small></span>
+            <button>Voir mes droits <svg class="i"><use href="icons.svg#right"/></svg></button>
+          </div>
+        </header>
+
+        <div class="control-grid">
+          <section class="plane" aria-labelledby="plane-title">
+            <div class="section-head"><span class="section-index">01</span><div><h2 id="plane-title">État du nœud central</h2><p>Les fondations communes qui contrôlent et relient le système.</p></div><span class="status status--ok">Socle opérationnel</span></div>
+            <div class="spine" aria-label="Chaîne de contrôle de KYA-Platform">
+              <article class="spine-item"><span class="spine-num">01</span><span class="spine-icon"><svg class="i"><use href="icons.svg#org"/></svg></span><div><h3>Organisation & identité</h3><p>Qui agit, dans quelle unité, avec quelle affectation.</p></div><span class="status status--ok">Vérifié</span><button aria-label="Ouvrir Organisation et identité"><svg class="i"><use href="icons.svg#right"/></svg></button></article>
+              <article class="spine-item spine-item--attention"><span class="spine-num">02</span><span class="spine-icon"><svg class="i"><use href="icons.svg#shield"/></svg></span><div><h3>Politiques & autorisations</h3><p>Ce que chaque identité peut voir, utiliser ou valider.</p></div><span class="status status--attention">À vérifier</span><button aria-label="Ouvrir Politiques et autorisations"><svg class="i"><use href="icons.svg#right"/></svg></button></article>
+              <article class="spine-item"><span class="spine-num">03</span><span class="spine-icon"><svg class="i"><use href="icons.svg#grid"/></svg></span><div><h3>Registre & versions</h3><p>La référence des apps, MCP, Skills, API et données.</p></div><span class="status status--ok">Opérationnel</span><button aria-label="Ouvrir Registre et versions"><svg class="i"><use href="icons.svg#right"/></svg></button></article>
+              <article class="spine-item"><span class="spine-num">04</span><span class="spine-icon"><svg class="i"><use href="icons.svg#link"/></svg></span><div><h3>Distribution & connexions</h3><p>La bonne capacité, au bon utilisateur et au bon environnement.</p></div><span class="status status--ok">Disponible</span><button aria-label="Ouvrir Distribution et connexions"><svg class="i"><use href="icons.svg#right"/></svg></button></article>
+              <article class="spine-item"><span class="spine-num">05</span><span class="spine-icon"><svg class="i"><use href="icons.svg#clock"/></svg></span><div><h3>Déploiements & audit</h3><p>Ce qui change, qui l’autorise et comment le vérifier.</p></div><span class="status status--ok">Tracé</span><button aria-label="Ouvrir Déploiements et audit"><svg class="i"><use href="icons.svg#right"/></svg></button></article>
+            </div>
+            <div class="flow-map">
+              <div class="flow-map__side"><span>Systèmes reliés</span><b>Neon · Frappe · sources externes</b></div>
+              <div class="flow-map__core"><span>KYA-Platform</span><b>contrôle · gouvernance · distribution</b></div>
+              <div class="flow-map__side flow-map__side--right"><span>Usages gouvernés</span><b>Apps · MCP · Skills · environnements IA</b></div>
+            </div>
+          </section>
+
+          <aside class="decisions" aria-labelledby="decision-title">
+            <div class="section-head section-head--compact"><span class="section-index">02</span><div><h2 id="decision-title">À décider</h2><p>Ce que le logiciel ne décide pas seul.</p></div><span class="count">2</span></div>
+            <article class="decision"><div class="decision__meta"><span class="status status--review">Approbation</span><time>Soumis hier</time></div><h3>Extension du référentiel clients</h3><p>Ajouter les clients au périmètre partagé de KYA Core. Trois capacités déclarent cette dépendance.</p><dl><div><dt>Propriétaire</dt><dd>Équipe Data</dd></div><div><dt>Impact</dt><dd>Groupe</dd></div></dl><div class="decision__actions"><button class="btn btn--secondary">Examiner</button><button class="btn btn--review">Approuver</button></div></article>
+            <article class="decision"><div class="decision__meta"><span class="status status--restricted">Accès externe</span><time>Expire dans 36 jours</time></div><h3>Accès MCP — partenaire</h3><p>Lecture limitée à un jeu de données autorisé, avec révocation et journalisation.</p><dl><div><dt>Propriétaire</dt><dd>CVSI</dd></div><div><dt>Portée</dt><dd>Lecture</dd></div></dl><div class="decision__actions"><button class="btn btn--secondary">Examiner</button><button class="btn btn--review">Approuver</button></div></article>
+            <a class="all-link" href="#">Voir toutes les décisions <svg class="i"><use href="icons.svg#right"/></svg></a>
+          </aside>
+        </div>
+
+        <section class="distribution" aria-labelledby="distribution-title">
+          <div class="section-head"><span class="section-index">03</span><div><h2 id="distribution-title">Capacités distribuées dans ce contexte</h2><p>Une seule vue des ressources que vos droits permettent réellement d’utiliser.</p></div><a class="all-link" href="#">Explorer le catalogue <svg class="i"><use href="icons.svg#right"/></svg></a></div>
+          <div class="capability-rows">
+            <a class="capability" href="#"><span class="capability__type">APP</span><span class="capability__icon"><svg class="i"><use href="icons.svg#cube"/></svg></span><span class="capability__name"><b>KYA Core</b><small>Référentiels partagés du Groupe</small></span><span class="status status--ok">Disponible</span><span class="capability__action">Ouvrir <svg class="i"><use href="icons.svg#right"/></svg></span></a>
+            <a class="capability" href="#"><span class="capability__type">MCP</span><span class="capability__icon"><svg class="i"><use href="icons.svg#link"/></svg></span><span class="capability__name"><b>KYA Knowledge Search</b><small>Recherche autorisée dans les contenus indexés</small></span><span class="status status--ok">Connecté</span><span class="capability__action">Configurer <svg class="i"><use href="icons.svg#right"/></svg></span></a>
+            <a class="capability" href="#"><span class="capability__type">SKILL</span><span class="capability__icon"><svg class="i"><use href="icons.svg#spark"/></svg></span><span class="capability__name"><b>KYA Design System</b><small>Méthodes, composants et médias de marque</small></span><span class="status status--attention">Mise à jour</span><span class="capability__action">Examiner <svg class="i"><use href="icons.svg#right"/></svg></span></a>
+            <a class="capability" href="#"><span class="capability__type">SYSTÈME</span><span class="capability__icon capability__icon--coffee"><svg class="i"><use href="icons.svg#doc"/></svg></span><span class="capability__name"><b>Frappe / ERPNext</b><small>Système métier référencé</small></span><span class="status status--restricted">Accès contrôlé</span><span class="capability__action">Ouvrir <svg class="i"><use href="icons.svg#right"/></svg></span></a>
+          </div>
+        </section>
+
+        <section class="audit" aria-labelledby="audit-title">
+          <div class="section-head section-head--audit"><span class="section-index">04</span><div><h2 id="audit-title">Derniers changements significatifs</h2><p>La trace commune des actions humaines et automatisées.</p></div><a class="all-link" href="#">Ouvrir l’audit <svg class="i"><use href="icons.svg#right"/></svg></a></div>
+          <div class="audit-grid">
+            <article><time>08:12</time><span class="audit-mark audit-mark--ok"></span><div><b>Contrat de données validé</b><p>Référentiel projets · version 0.2.0</p></div><small>Équipe Data</small></article>
+            <article><time>Hier</time><span class="audit-mark audit-mark--review"></span><div><b>Publication en attente</b><p>KYA Design System · version 2.2.0</p></div><small>Studio</small></article>
+            <article><time>7 sept.</time><span class="audit-mark audit-mark--ok"></span><div><b>Profil MCP recalculé</b><p>Contexte Direction des Systèmes</p></div><small>Service d’autorisation</small></article>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

@@ -3,8 +3,10 @@ import { useState } from 'react';
 import { Icon, StatusBadge } from '@kya/design-system';
 
 export type WorkspaceSummary = {
+  entity: string;
   key: string;
   name: string;
+  unit: string;
   scope: string;
   role: string;
   classification: 'Interne' | 'Restreint';
@@ -39,16 +41,17 @@ export function WorkspaceControl({
         }}
       >
         <span>
-          <small>Contexte actif</small>
-          {active?.scope} · {active?.name}
+          <small>Entité active</small>
+          <strong>{active?.entity}</strong>
+          <em>{active?.unit} · {active?.role}</em>
         </span>
         <Icon name="chevron" />
       </button>
       {isOpen && (
         <div className="workspace-menu" role="listbox" aria-label="Choisir un espace de travail">
           <header>
-            <strong>Changer d’espace</strong>
-            <span>Les droits sont recalculés à chaque changement.</span>
+            <strong>Changer de contexte</strong>
+            <span>L’entité, l’unité et les droits sont recalculés ensemble.</span>
           </header>
           {workspaces.map((workspace) => (
             <button
@@ -63,9 +66,9 @@ export function WorkspaceControl({
             >
               <Icon name={workspace.classification === 'Restreint' ? 'shield' : 'people'} />
               <span>
-                <strong>{workspace.name}</strong>
+                <strong>{workspace.entity}</strong>
                 <small>
-                  {workspace.scope} · {workspace.role}
+                  {workspace.unit} · {workspace.name} · {workspace.role}
                 </small>
               </span>
               {workspace.key === activeKey && <Icon name="check" />}

@@ -8,7 +8,7 @@ web
 
 ## Stack
 
-TanStack Start, React 19 et TypeScript strict dans le monorepo KYA Platform. Le backend métier est
+TanStack Start, React 19 et TypeScript strict dans le monorepo KYA-Platform. Le backend métier est
 FastAPI ; le navigateur n'accède directement ni à Neon, ni à OpenFGA, ni aux secrets.
 
 ## Users
@@ -21,7 +21,7 @@ FastAPI ; le navigateur n'accède directement ni à Neon, ni à OpenFGA, ni aux 
 
 ## Product Purpose
 
-KYA Platform rend le patrimoine numérique du Groupe identifiable, gouverné, partageable et
+KYA-Platform rend le patrimoine numérique du Groupe identifiable, gouverné, partageable et
 réutilisable : systèmes, applications, API, données, MCP, Skills, modèles, Design Systems et
 templates. Le succès signifie qu'une personne trouve et utilise rapidement la bonne capacité sans
 contourner les droits, les validations, la provenance ou l'audit.
@@ -53,7 +53,7 @@ conserve les secrets.
 
 ## Brand Commitments
 
-Nom : KYA Platform, pour KYA-Energy Group. Le ton est institutionnel, direct, précis et positif. La
+Nom : KYA-Platform, pour KYA-Energy Group. Le ton est institutionnel, direct, précis et positif. La
 palette de marque à préserver associe vert, orange, blanc, jaune et café. Aucun logo exploitable n'est
 encore présent dans le dépôt ; l'interface ne doit pas en inventer un.
 

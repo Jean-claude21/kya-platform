@@ -1,0 +1,10 @@
+interface:
+  display_name: "KYA Design System"
+  short_description: "Apply the official KYA-Platform design system."
+  icon_small: "./assets/brand/kya-energy-group-logo.png"
+  icon_large: "./assets/brand/kya-energy-group-logo.png"
+  brand_color: "#1CA18C"
+  default_prompt: "Use $kya-design-system to design or review this deliverable with the official KYA-Platform system."
+
+policy:
+  allow_implicit_invocation: true

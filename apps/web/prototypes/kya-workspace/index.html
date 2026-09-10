@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>KYA-Platform — Votre espace de travail</title>
+  <meta name="description" content="Proposition de design KYA-Platform : capacités, connexions et administration dans un espace de travail unifié.">
+  <link rel="stylesheet" href="styles.css"><script src="app.js" defer></script>
+</head>
+<body>
+<!-- THESIS: Make the governed capabilities usable from one calm workspace. OWN-WORLD: mineral white, pale green navigation, precise humanist typography, authentic KYA teal and measured orange. STORY: choose an entity, find a capability, inspect its permissions, open it in the appropriate environment. FIRST VIEWPORT: quiet sidebar, contextual toolbar, shared capability list and a connection/decision rail. FORM: capability library with an on-demand inspector; surface seed 937be5e7, candidate 4. FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md -->
+<a class="skip" href="#main">Aller au contenu</a>
+<div class="shell">
+  <aside class="sidebar" aria-label="Navigation principale">
+    <a class="brand" href="index.html"><img src="../kya-command/assets/kya-energy-group-logo.png" alt="KYA-Energy Group"><span>KYA-Platform<small>L’espace numérique du Groupe</small></span></a>
+    <button class="scope-button" id="scope-button" aria-haspopup="dialog"><span class="scope-icon"><svg><use href="../kya-command/icons.svg#org"/></svg></span><span><strong id="scope-name">KYA-Energy Group</strong><small id="scope-unit">Groupe · CVSI</small></span><svg class="chevron"><use href="../kya-command/icons.svg#right"/></svg></button>
+    <nav class="navigation">
+      <button class="nav active" data-view="all" aria-current="page"><svg><use href="../kya-command/icons.svg#home"/></svg><span>Mon espace</span></button>
+      <button class="nav" data-view="catalog"><svg><use href="../kya-command/icons.svg#grid"/></svg><span>Catalogue</span><svg class="nav-end"><use href="../kya-command/icons.svg#right"/></svg></button>
+      <button class="nav" data-view="favorite"><svg><use href="../kya-command/icons.svg#pin"/></svg><span>Mes favoris</span><small id="favorite-count">2</small></button>
+      <div class="nav-label">Capacités</div>
+      <button class="nav" data-view="App"><svg><use href="../kya-command/icons.svg#cube"/></svg><span>Applications</span></button>
+      <button class="nav" data-view="MCP"><svg><use href="../kya-command/icons.svg#link"/></svg><span>MCP & connexions</span></button>
+      <button class="nav" data-view="Skill"><svg><use href="../kya-command/icons.svg#spark"/></svg><span>Skills</span></button>
+      <button class="nav" data-view="Donnée"><svg><use href="../kya-command/icons.svg#doc"/></svg><span>Données</span></button>
+      <div class="nav-label">Construire & administrer</div>
+      <button class="nav" data-detail="studio"><svg><use href="../kya-command/icons.svg#code"/></svg><span>Studio</span><span class="tag-new">Créer</span></button>
+      <button class="nav" id="admin-nav"><svg><use href="../kya-command/icons.svg#shield"/></svg><span>Administration</span></button>
+    </nav>
+    <div class="sidebar-bottom"><button class="help" data-detail="help"><svg><use href="../kya-command/icons.svg#help"/></svg>Aide & documentation<svg class="nav-end"><use href="../kya-command/icons.svg#right"/></svg></button><button class="profile" data-detail="profile"><span class="avatar">JM</span><span><strong>Jean-Claude Messan</strong><small id="profile-role">Administrateur du socle</small></span><svg class="chevron"><use href="../kya-command/icons.svg#more"/></svg></button></div>
+  </aside>
+
+  <div class="workspace">
+    <header class="topbar"><button class="menu-button icon-button" id="menu-button" aria-label="Ouvrir la navigation" aria-expanded="false"><svg><use href="../kya-command/icons.svg#grid"/></svg></button><div class="breadcrumb">Espace de travail <span>/</span> <strong id="breadcrumb-page">Mon espace</strong></div><button class="search-launch" id="search-launch"><svg><use href="../kya-command/icons.svg#search"/></svg><span>Rechercher dans KYA-Platform</span><kbd>Ctrl K</kbd></button><span class="prototype-label">Prototype</span><button class="icon-button notification" data-detail="notifications" aria-label="Voir les 2 demandes"><svg><use href="../kya-command/icons.svg#bell"/></svg><i></i></button></header>
+    <main id="main">
+      <header class="page-heading"><div><h1 id="page-title">Votre espace de travail.</h1><p id="page-description">Les bonnes capacités, dans le bon contexte.</p></div><button class="button primary" id="connect-button"><svg><use href="../kya-command/icons.svg#link"/></svg>Connecter mon IA<svg><use href="../kya-command/icons.svg#right"/></svg></button></header>
+
+      <section class="context-bar" aria-label="Contexte actif"><span class="context-symbol"><svg><use href="../kya-command/icons.svg#shield"/></svg></span><span><strong id="context-title">Vous travaillez au niveau Groupe</strong><small id="context-description">CVSI · Administrateur du socle</small></span><button class="text-button" id="change-context">Changer de contexte<svg><use href="../kya-command/icons.svg#right"/></svg></button></section>
+
+      <div class="workspace-grid">
+        <section class="capabilities" aria-labelledby="capabilities-title">
+          <header class="section-heading"><h2 id="capabilities-title">Mes capacités</h2><span class="muted" id="result-count">5 ressources</span><button class="icon-button" id="list-settings" aria-label="À propos des capacités"><svg><use href="../kya-command/icons.svg#more"/></svg></button></header>
+          <div class="list-toolbar"><div class="tabs" aria-label="Type de capacité"><button class="selected" data-filter="all" aria-pressed="true">Tout</button><button data-filter="App" aria-pressed="false">Apps</button><button data-filter="MCP" aria-pressed="false">MCP</button><button data-filter="Skill" aria-pressed="false">Skills</button><button data-filter="Donnée" aria-pressed="false">Données</button></div><label class="filter"><svg><use href="../kya-command/icons.svg#search"/></svg><input id="filter" type="search" placeholder="Filtrer…" aria-label="Filtrer les capacités"></label></div>
+          <div class="list-columns" aria-hidden="true"><span>Capacité</span><span>État</span><span></span></div>
+          <div id="capability-list"></div>
+          <div class="empty" id="empty" hidden><svg><use href="../kya-command/icons.svg#search"/></svg><h3>Aucune capacité trouvée</h3><p>Essayez un autre nom ou réinitialisez les filtres.</p><button class="button" id="reset">Réinitialiser</button></div>
+          <footer class="list-footer"><svg><use href="../kya-command/icons.svg#shield"/></svg><span>Les accès dépendent de votre entité et de votre rôle.</span><button class="text-button" id="catalog-button">Explorer le catalogue<svg><use href="../kya-command/icons.svg#right"/></svg></button></footer>
+        </section>
+
+        <aside class="right-rail">
+          <section class="connection-panel"><header class="section-heading"><h2>Mes environnements IA</h2><svg><use href="../kya-command/icons.svg#link"/></svg></header><p>Vos outils KYA, là où vous travaillez.</p><button class="client-row" data-client="Claude"><span class="client-logo claude">C</span><span><strong>Claude</strong><small>Profil personnel</small></span><span class="state"><i></i>Connecté</span><svg><use href="../kya-command/icons.svg#right"/></svg></button><button class="client-row" data-client="ChatGPT"><span class="client-logo chatgpt">G</span><span><strong>ChatGPT</strong><small>À configurer</small></span><span class="client-action">Connecter</span><svg><use href="../kya-command/icons.svg#right"/></svg></button><button class="client-row" data-client="Codex"><span class="client-logo codex"><svg><use href="../kya-command/icons.svg#code"/></svg></span><span><strong>Codex</strong><small>Environnement de développement</small></span><svg><use href="../kya-command/icons.svg#right"/></svg></button><div class="connection-note">L’analyse se fait dans votre IA.<br>Les accès sont gouvernés par KYA-Platform.</div></section>
+          <section class="requests"><header class="section-heading"><h2>À votre attention</h2><span class="count">2</span></header><button class="request" data-detail="review"><span class="request-icon"><svg><use href="../kya-command/icons.svg#spark"/></svg></span><span><small>Validation de publication</small><strong>KYA Design System</strong><span>Une nouvelle version à examiner.</span></span><svg><use href="../kya-command/icons.svg#right"/></svg></button><button class="request" data-detail="access"><span class="request-icon coffee"><svg><use href="../kya-command/icons.svg#users"/></svg></span><span><small>Demande d’accès</small><strong>Référentiel projets</strong><span>Équipe Solutions & Technologies</span></span><svg><use href="../kya-command/icons.svg#right"/></svg></button></section>
+        </aside>
+      </div>
+
+      <section class="foundation" id="foundation"><header><span class="foundation-icon"><svg><use href="../kya-command/icons.svg#org"/></svg></span><div><h2>Le socle commun</h2><p>Les fondations qui relient vos équipes, vos données et vos outils.</p></div><button class="text-button" id="foundation-toggle" aria-expanded="false">Administrer le socle<svg><use href="../kya-command/icons.svg#right"/></svg></button></header><div class="foundation-links"><button data-detail="organization"><svg><use href="../kya-command/icons.svg#org"/></svg>Organisation & équipes<svg><use href="../kya-command/icons.svg#right"/></svg></button><button data-detail="permissions"><svg><use href="../kya-command/icons.svg#shield"/></svg>Identités & accès<svg><use href="../kya-command/icons.svg#right"/></svg></button><button data-detail="data"><svg><use href="../kya-command/icons.svg#doc"/></svg>Données & contrats<svg><use href="../kya-command/icons.svg#right"/></svg></button><button data-detail="audit"><svg><use href="../kya-command/icons.svg#clock"/></svg>Activité & audit<svg><use href="../kya-command/icons.svg#right"/></svg></button></div><div id="admin-extra" hidden><p>Administration du socle</p><button class="button" data-detail="secrets">Intégrations & secrets</button><button class="button" data-detail="versions">Versions & publications</button><button class="button" data-detail="deploy">Déploiements</button></div></section>
+      <footer class="page-footer"><span>KYA-Energy Group <i></i> Des données aux énergies d’un avenir durable.</span><span>Maquette interactive · données illustratives</span></footer>
+    </main>
+  </div>
+</div>
+<div class="mobile-scrim" id="mobile-scrim" hidden></div>
+<dialog id="context-dialog" class="context-dialog"><form method="dialog"><header><span><h2>Votre contexte de travail</h2><p>Choisissez l’entité et l’unité dans lesquelles agir.</p></span><button class="icon-button" aria-label="Fermer">×</button></header></form><div id="contexts"></div><p class="dialog-note">Simulation locale : aucune permission réelle n’est modifiée.</p></dialog>
+<dialog id="detail-dialog" class="detail-dialog"><form method="dialog"><button class="icon-button close-detail" aria-label="Fermer le détail">×</button></form><div id="detail-content"></div></dialog>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

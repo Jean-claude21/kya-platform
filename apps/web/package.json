@@ -7,6 +7,7 @@
   "scripts": {
     "build": "vite build",
     "dev": "vite --host 0.0.0.0 --port 3000",
+    "gen:design-system": "node scripts/generate-design-system-package.mjs",
     "start": "node .output/server/index.mjs",
     "test:e2e": "playwright test --config playwright.config.ts",
     "typecheck": "tsc --noEmit",

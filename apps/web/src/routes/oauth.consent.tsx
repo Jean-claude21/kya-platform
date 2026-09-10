@@ -99,6 +99,17 @@ function ConsentPage() {
 
   return (
     <main className="oauth-consent-page">
+      <section className="oauth-visual" aria-hidden="true">
+        <img src="/images/auth/ai-authorization.png" alt="" />
+        <div>
+          <KyaMark />
+          <p>
+            Une connexion explicite.
+            <br />
+            Des droits limités et révocables.
+          </p>
+        </div>
+      </section>
       <section className="oauth-consent-sheet" aria-labelledby="oauth-consent-title">
         <header>
           <KyaMark />

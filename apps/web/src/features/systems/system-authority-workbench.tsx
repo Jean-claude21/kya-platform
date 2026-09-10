@@ -4,7 +4,7 @@ const authorities = [
   {
     category: 'Métadonnées des artefacts',
     scope: 'Groupe KYA',
-    system: 'KYA Platform',
+    system: 'KYA-Platform',
     since: '5 sept. 2026',
     sensitivity: 'Interne',
   },
@@ -32,7 +32,7 @@ export function SystemAuthorityWorkbench() {
         <button aria-current="true" type="button">
           <Icon name="database" />
           <span>
-            <strong>KYA Platform</strong>
+            <strong>KYA-Platform</strong>
             <small>Interne · preview</small>
           </span>
           <StatusBadge tone="healthy">Actif</StatusBadge>
@@ -43,7 +43,7 @@ export function SystemAuthorityWorkbench() {
         <header>
           <div>
             <span>Système de gouvernance numérique</span>
-            <h2 id="system-detail-title">KYA Platform</h2>
+            <h2 id="system-detail-title">KYA-Platform</h2>
             <p>
               Premier système enregistré avec une responsabilité volontairement limitée à ses
               propres données.
@@ -116,7 +116,7 @@ export function SystemAuthorityWorkbench() {
           <div>
             <strong>Une autorité limitée aux données du Hub.</strong>
             <p>
-              KYA Platform fait foi pour le catalogue, ses versions et ses politiques de
+              KYA-Platform fait foi pour le catalogue, ses versions et ses politiques de
               distribution. Frappe et les données métiers seront référencés dans un pilote séparé.
             </p>
           </div>
