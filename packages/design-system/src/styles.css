@@ -64,7 +64,11 @@ a:focus-visible {
 .kya-mark strong {
   font-weight: 760;
 }
-.kya-mark__logo { width: 62px; height: 62px; object-fit: contain; }
+.kya-mark__logo {
+  width: 62px;
+  height: 62px;
+  object-fit: contain;
+}
 .kya-mark__symbol {
   position: relative;
   width: 28px;

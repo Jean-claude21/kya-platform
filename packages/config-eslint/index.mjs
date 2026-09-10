@@ -11,10 +11,22 @@ export default tseslint.config(
       '**/site/**',
       '**/tmp/**',
       '**/.venv/**',
+      'apps/web/prototypes/**',
       'catalog/templates/**',
     ],
   },
   eslint.configs.recommended,
+  {
+    files: ['**/*.mjs'],
+    languageOptions: {
+      globals: {
+        Buffer: 'readonly',
+        URL: 'readonly',
+        console: 'readonly',
+        process: 'readonly',
+      },
+    },
+  },
   ...tseslint.configs.strictTypeChecked.map((config) => ({
     ...config,
     files: ['**/*.ts', '**/*.tsx'],

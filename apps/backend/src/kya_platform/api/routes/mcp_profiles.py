@@ -21,16 +21,24 @@ from kya_platform.application.mcp_profiles.runtime import (
     ToolProfileRequest,
 )
 from kya_platform.application.reliability import JsonValue, canonical_request_hash
+from kya_platform.infrastructure.database.oauth_broker import ActiveConnectorGrant
 from kya_platform.observability import ApiError
 
 router = APIRouter(prefix="/mcp", tags=["mcp-profiles"])
 
 
 class ConnectorGrantQuery(Protocol):
+    async def list_active_connectors(
+        self,
+        *,
+        principal_id: UUID,
+        active_unit_id: str,
+    ) -> tuple[ActiveConnectorGrant, ...]: ...
+
     async def get_active_grant_scopes(
         self,
         *,
-        principal_id: object,
+        principal_id: UUID,
         active_unit_id: str,
         client_id: str,
     ) -> frozenset[str] | None: ...
@@ -42,6 +50,14 @@ class EffectiveProfileResponse(BaseModel):
     tool_keys: list[str]
     revision: str
     shadow_diverged: bool
+
+
+class ActiveConnectorResponse(BaseModel):
+    client_id: str
+    client_name: str
+    scopes: tuple[str, ...]
+    connected_at: datetime
+    expires_at: datetime
 
 
 class PreferenceRequest(BaseModel):
@@ -95,14 +111,7 @@ def _command(
     )
 
 
-@router.get("/me/effective-profile", response_model=EffectiveProfileResponse)
-async def effective_profile(
-    request: Request,
-    client_id: Annotated[str, Query(min_length=1, max_length=128)],
-    principal: Annotated[AuthorizedPrincipal, Depends(active_principal)],
-) -> EffectiveProfileResponse:
-    """Inspect the effective set for an existing live MCP connector grant."""
-
+def _broker(request: Request) -> ConnectorGrantQuery:
     broker: ConnectorGrantQuery | None = request.app.state.oauth_broker
     if broker is None:
         raise ApiError(
@@ -111,7 +120,35 @@ async def effective_profile(
             "Connecteurs indisponibles",
             "Le courtier OAuth MCP n'est pas configuré.",
         )
-    scopes = await broker.get_active_grant_scopes(
+    return broker
+
+
+@router.get("/me/connectors", response_model=list[ActiveConnectorResponse])
+async def active_connectors(
+    request: Request,
+    principal: Annotated[AuthorizedPrincipal, Depends(active_principal)],
+) -> list[ActiveConnectorResponse]:
+    """List the current user's live MCP connections in the active unit."""
+
+    connectors = await _broker(request).list_active_connectors(
+        principal_id=principal.principal_id,
+        active_unit_id=principal.active_unit_id,
+    )
+    return [
+        ActiveConnectorResponse.model_validate(connector, from_attributes=True)
+        for connector in connectors
+    ]
+
+
+@router.get("/me/effective-profile", response_model=EffectiveProfileResponse)
+async def effective_profile(
+    request: Request,
+    client_id: Annotated[str, Query(min_length=1, max_length=128)],
+    principal: Annotated[AuthorizedPrincipal, Depends(active_principal)],
+) -> EffectiveProfileResponse:
+    """Inspect the effective set for an existing live MCP connector grant."""
+
+    scopes = await _broker(request).get_active_grant_scopes(
         principal_id=principal.principal_id,
         active_unit_id=principal.active_unit_id,
         client_id=client_id,

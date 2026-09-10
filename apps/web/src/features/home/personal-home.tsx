@@ -94,7 +94,9 @@ export function PersonalHome({
             <button
               className="signature-text"
               type="button"
-              onClick={() => { onNavigate('Catalogue'); }}
+              onClick={() => {
+                onNavigate('Catalogue');
+              }}
             >
               Catalogue <Icon name="chevron" />
             </button>
@@ -105,7 +107,9 @@ export function PersonalHome({
                 type="button"
                 key={kind}
                 aria-pressed={kind === filter}
-                onClick={() => { setFilter(kind); }}
+                onClick={() => {
+                  setFilter(kind);
+                }}
               >
                 {kind === 'App' ? 'Apps' : kind === 'Skill' ? 'Skills' : kind}
               </button>
@@ -117,7 +121,9 @@ export function PersonalHome({
                 <button
                   className="signature-resource-main"
                   type="button"
-                  onClick={() => { onNavigate(item.target); }}
+                  onClick={() => {
+                    onNavigate(item.target);
+                  }}
                 >
                   <Icon name={item.icon} />
                   <span>
@@ -133,7 +139,9 @@ export function PersonalHome({
                 <button
                   className="signature-outline"
                   type="button"
-                  onClick={() => { onNavigate(item.target); }}
+                  onClick={() => {
+                    onNavigate(item.target);
+                  }}
                 >
                   {item.action}
                   <Icon name="chevron" />
@@ -149,15 +157,30 @@ export function PersonalHome({
           <section className="signature-shortcuts">
             <h3>Accès rapides</h3>
             <div>
-              <button type="button" onClick={() => { onNavigate('Espaces'); }}>
+              <button
+                type="button"
+                onClick={() => {
+                  onNavigate('Espaces');
+                }}
+              >
                 Mes espaces
                 <Icon name="chevron" />
               </button>
-              <button type="button" onClick={() => { onNavigate('Studio'); }}>
+              <button
+                type="button"
+                onClick={() => {
+                  onNavigate('Studio');
+                }}
+              >
                 Design System
                 <Icon name="chevron" />
               </button>
-              <button type="button" onClick={() => { onNavigate('MCP'); }}>
+              <button
+                type="button"
+                onClick={() => {
+                  onNavigate('MCP');
+                }}
+              >
                 KYA-Platform MCP
                 <Icon name="chevron" />
               </button>
@@ -172,7 +195,13 @@ export function PersonalHome({
                 <h3>KYA Design System</h3>
                 <p>Paquet local prêt pour revue</p>
               </div>
-              <button className="signature-text" type="button" onClick={() => { onNavigate('Studio'); }}>
+              <button
+                className="signature-text"
+                type="button"
+                onClick={() => {
+                  onNavigate('Studio');
+                }}
+              >
                 Examiner
                 <Icon name="chevron" />
               </button>
@@ -185,7 +214,9 @@ export function PersonalHome({
               <button
                 className="signature-text"
                 type="button"
-                onClick={() => { onNavigate('Publications'); }}
+                onClick={() => {
+                  onNavigate('Publications');
+                }}
               >
                 Ouvrir
                 <Icon name="chevron" />
@@ -204,7 +235,9 @@ export function PersonalHome({
                   type="button"
                   key={client}
                   className="signature-client"
-                  onClick={() => { onNavigate('MCP'); }}
+                  onClick={() => {
+                    onNavigate('MCP');
+                  }}
                 >
                   <Icon name={client === 'Codex' ? 'code' : 'network'} />
                   <strong>{client}</strong>
@@ -213,7 +246,13 @@ export function PersonalHome({
                 </button>
               ))}
             </div>
-            <button className="signature-primary" type="button" onClick={() => { onNavigate('MCP'); }}>
+            <button
+              className="signature-primary"
+              type="button"
+              onClick={() => {
+                onNavigate('MCP');
+              }}
+            >
               Gérer mes connexions
             </button>
           </section>

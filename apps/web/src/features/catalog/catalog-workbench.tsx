@@ -115,28 +115,36 @@ export function CatalogWorkbench({
           <button
             aria-pressed={activeType === 'Tous'}
             type="button"
-            onClick={() => { selectType('Tous'); }}
+            onClick={() => {
+              selectType('Tous');
+            }}
           >
             Tous <span>{artifacts.length}</span>
           </button>
           <button
             aria-pressed={activeType === 'Skill'}
             type="button"
-            onClick={() => { selectType('Skill'); }}
+            onClick={() => {
+              selectType('Skill');
+            }}
           >
             Skills <span>2</span>
           </button>
           <button
             aria-pressed={activeType === 'MCP'}
             type="button"
-            onClick={() => { selectType('MCP'); }}
+            onClick={() => {
+              selectType('MCP');
+            }}
           >
             MCP <span>1</span>
           </button>
           <button
             aria-pressed={activeType === 'App'}
             type="button"
-            onClick={() => { selectType('App'); }}
+            onClick={() => {
+              selectType('App');
+            }}
           >
             Apps <span>1</span>
           </button>
