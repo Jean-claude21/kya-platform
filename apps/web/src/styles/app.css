@@ -659,6 +659,12 @@
   border: 0;
   outline: 0;
 }
+.catalog-query-hint,
+.catalog-more {
+  margin: -8px 0 12px;
+  color: var(--kya-muted);
+  font-size: 12px;
+}
 .catalog-facets {
   display: grid;
   gap: 4px;
@@ -716,6 +722,49 @@
   display: grid;
   gap: 10px;
   margin-top: 16px;
+}
+.catalog-state {
+  display: grid;
+  min-height: 260px;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  padding: 28px;
+  color: var(--kya-muted);
+  text-align: center;
+}
+.catalog-state > svg {
+  width: 28px;
+  height: 28px;
+  color: var(--kya-green-700);
+}
+.catalog-state strong,
+.catalog-state h2 {
+  margin: 0;
+  color: var(--kya-green-950);
+}
+.catalog-state p {
+  max-width: 44ch;
+  margin: 0;
+}
+.catalog-state button {
+  min-height: 40px;
+  margin-top: 6px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: var(--kya-radius-sm);
+  color: white;
+  background: var(--kya-green-900);
+  font-weight: 700;
+  cursor: pointer;
+}
+.catalog-state--detail {
+  min-height: 220px;
+  padding: 8px;
+}
+.catalog-more {
+  margin: 14px 0 0;
+  text-align: center;
 }
 .artifact-grid > button {
   display: grid;
@@ -805,6 +854,7 @@
   color: var(--kya-green-950);
   font-weight: 700;
   text-align: right;
+  overflow-wrap: anywhere;
 }
 .install-state {
   margin-top: 20px;
