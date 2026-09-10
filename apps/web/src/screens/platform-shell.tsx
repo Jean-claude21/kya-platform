@@ -73,7 +73,9 @@ export function PlatformShell() {
       }
     };
     window.addEventListener('keydown', handle);
-    return () => { window.removeEventListener('keydown', handle); };
+    return () => {
+      window.removeEventListener('keydown', handle);
+    };
   }, []);
   useEffect(() => {
     if (panel) {
@@ -127,7 +129,9 @@ export function PlatformShell() {
       key={item.target}
       type="button"
       aria-current={activeModule === item.target ? 'page' : undefined}
-      onClick={() => { navigate(item.target); }}
+      onClick={() => {
+        navigate(item.target);
+      }}
     >
       <Icon name={item.icon} />
       <span>{item.label}</span>
@@ -143,7 +147,9 @@ export function PlatformShell() {
           className="signature-menu signature-icon"
           type="button"
           aria-label="Ouvrir la navigation"
-          onClick={() => { setPanel('menu'); }}
+          onClick={() => {
+            setPanel('menu');
+          }}
         >
           <Icon name="catalog" />
         </button>
@@ -164,7 +170,9 @@ export function PlatformShell() {
               aria-label="Unité active"
               value={unit}
               disabled={!isPreview}
-              onChange={(event) => { setUnit(event.target.value); }}
+              onChange={(event) => {
+                setUnit(event.target.value);
+              }}
             >
               {(isPreview
                 ? ['Direction des Systèmes', 'Communication', 'Espace stagiaires']
@@ -191,7 +199,9 @@ export function PlatformShell() {
             type="search"
             value={query}
             placeholder="Rechercher…"
-            onChange={(event) => { setQuery(event.target.value); }}
+            onChange={(event) => {
+              setQuery(event.target.value);
+            }}
           />
           <kbd>Ctrl K</kbd>
         </form>
@@ -199,7 +209,9 @@ export function PlatformShell() {
           className="signature-icon signature-bell"
           type="button"
           aria-label="Notifications"
-          onClick={() => { setPanel('notifications'); }}
+          onClick={() => {
+            setPanel('notifications');
+          }}
         >
           <Icon name="bell" />
         </button>
@@ -207,7 +219,9 @@ export function PlatformShell() {
           className="signature-avatar"
           type="button"
           aria-label="Ouvrir le compte"
-          onClick={() => { setPanel('account'); }}
+          onClick={() => {
+            setPanel('account');
+          }}
         >
           <Icon name="user" />
         </button>
@@ -219,13 +233,20 @@ export function PlatformShell() {
             <button
               type="button"
               aria-current={activeModule === 'Administration' ? 'page' : undefined}
-              onClick={() => { navigate('Administration'); }}
+              onClick={() => {
+                navigate('Administration');
+              }}
             >
               <Icon name="shield" />
               <span>Administration</span>
               <Icon name="chevron" />
             </button>
-            <button type="button" onClick={() => { setPanel('account'); }}>
+            <button
+              type="button"
+              onClick={() => {
+                setPanel('account');
+              }}
+            >
               <Icon name="user" />
               <span>
                 Mon compte<small>{isPreview ? 'Aperçu local' : 'Session authentifiée'}</small>
@@ -241,7 +262,13 @@ export function PlatformShell() {
           key={activeModule}
         >
           {activeModule !== 'Accueil' && (
-            <button type="button" className="signature-back" onClick={() => { navigate('Accueil'); }}>
+            <button
+              type="button"
+              className="signature-back"
+              onClick={() => {
+                navigate('Accueil');
+              }}
+            >
               Accueil /{' '}
               {navigation.find((item) => item.target === activeModule)?.label ?? activeModule}
             </button>
@@ -252,7 +279,9 @@ export function PlatformShell() {
       <dialog
         className="signature-dialog"
         ref={dialog}
-        onClose={() => { setPanel(null); }}
+        onClose={() => {
+          setPanel(null);
+        }}
         aria-labelledby="signature-dialog-title"
       >
         <button className="signature-close" type="button" onClick={() => dialog.current?.close()}>
@@ -264,7 +293,12 @@ export function PlatformShell() {
         {panel === 'menu' && (
           <nav aria-label="Navigation mobile">
             {navButtons}
-            <button type="button" onClick={() => { navigate('Administration'); }}>
+            <button
+              type="button"
+              onClick={() => {
+                navigate('Administration');
+              }}
+            >
               <Icon name="shield" />
               Administration
             </button>
@@ -294,7 +328,9 @@ export function PlatformShell() {
                     if (result.error) setAccountError('La déconnexion a échoué. Réessayez.');
                     else window.location.assign('/');
                   })
-                  .catch(() => { setAccountError('La déconnexion a échoué. Réessayez.'); });
+                  .catch(() => {
+                    setAccountError('La déconnexion a échoué. Réessayez.');
+                  });
               }}
             >
               Se déconnecter

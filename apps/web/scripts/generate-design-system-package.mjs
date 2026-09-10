@@ -3,7 +3,16 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const skillRoot = join(here, '..', '..', '..', 'catalog', 'templates', 'skill', 'kya-design-system');
+const skillRoot = join(
+  here,
+  '..',
+  '..',
+  '..',
+  'catalog',
+  'templates',
+  'skill',
+  'kya-design-system',
+);
 const textFiles = [
   'SKILL.md',
   'agents/openai.yaml',
@@ -24,8 +33,14 @@ for (const path of binaryFiles) {
   entries.push({ path, kind: 'binary', size, content: null });
 }
 
-const header = '// Generated from catalog/templates/skill/kya-design-system by generate-design-system-package.mjs.\n// Do not edit by hand; run `pnpm --filter @kya/web gen:design-system`.\n';
-const body = 'export type DesignSystemFile = { path: string; kind: \'text\' | \'binary\'; size: number; content: string | null };\n\nexport const designSystemPackage: DesignSystemFile[] = ' + JSON.stringify(entries, null, 2) + ';\n';
-writeFileSync(join(here, '..', 'src', 'features', 'studio', 'design-system-package.gen.ts'), header + body);
+const header =
+  '// Generated from catalog/templates/skill/kya-design-system by generate-design-system-package.mjs.\n// Do not edit by hand; run `pnpm --filter @kya/web gen:design-system`.\n';
+const body =
+  "export type DesignSystemFile = { path: string; kind: 'text' | 'binary'; size: number; content: string | null };\n\nexport const designSystemPackage: DesignSystemFile[] = " +
+  JSON.stringify(entries, null, 2) +
+  ';\n';
+writeFileSync(
+  join(here, '..', 'src', 'features', 'studio', 'design-system-package.gen.ts'),
+  header + body,
+);
 process.stdout.write('generated ' + entries.length + ' files\n');
-

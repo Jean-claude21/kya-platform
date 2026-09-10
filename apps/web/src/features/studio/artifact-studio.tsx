@@ -64,7 +64,9 @@ export function ArtifactStudio() {
                 key={file.path}
                 type="button"
                 aria-current={file.path === selected?.path ? 'page' : undefined}
-                onClick={() => { setSelectedPath(file.path); }}
+                onClick={() => {
+                  setSelectedPath(file.path);
+                }}
               >
                 <Icon name={iconFor(file.path)} />
                 <span>{file.path}</span>

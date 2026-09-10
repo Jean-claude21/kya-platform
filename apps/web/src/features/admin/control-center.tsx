@@ -76,7 +76,13 @@ export function ControlCenter({ onOpen }: { onOpen: (target: AdminTarget) => voi
       </header>
       <section className="control-index" aria-label="Fonctions d’administration">
         {controls.map((control) => (
-          <button key={control.target} type="button" onClick={() => { onOpen(control.target); }}>
+          <button
+            key={control.target}
+            type="button"
+            onClick={() => {
+              onOpen(control.target);
+            }}
+          >
             <span className="icon-tile">
               <Icon name={control.icon} />
             </span>

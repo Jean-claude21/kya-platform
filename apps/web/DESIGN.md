@@ -70,20 +70,20 @@ The voice is institutional and direct. Headings are compact and confident; body 
 
 ### Hierarchy
 
-| Token | Size | Weight | Line Height | Letter Spacing | Use |
-|---|---:|---:|---:|---:|---|
-| `{typography.display-lg}` | clamp(34px, 4vw, 52px) | 760 | 1.04 | -0.04em | Authentication and exceptional first-run statements |
-| `{typography.display-md}` | clamp(30px, 3vw, 44px) | 750 | 1.08 | -0.04em | Primary screen title |
-| `{typography.display-sm}` | 30px | 740 | 1.12 | -0.03em | Studio document or detailed entity title |
-| `{typography.heading-lg}` | 24px | 730 | 1.2 | -0.025em | Major section title |
-| `{typography.heading-md}` | 19px | 720 | 1.25 | -0.02em | Panel heading |
-| `{typography.heading-sm}` | 16px | 700 | 1.3 | 0 | Dense panel and rail heading |
-| `{typography.body-lg}` | 17px | 400 | 1.55 | 0 | Lead paragraph |
-| `{typography.body-md}` | 14px | 400 | 1.55 | 0 | Default body and controls |
-| `{typography.body-sm}` | 13px | 400 | 1.5 | 0 | Supporting explanations |
-| `{typography.meta}` | 12px | 600 | 1.4 | 0 | Metadata, table cells, and status text |
-| `{typography.caption}` | 11px | 600 | 1.35 | 0 | Secondary identifiers and compact context |
-| `{typography.eyebrow}` | 11px | 800 | 1.3 | 0.12em | Short uppercase section identifier |
+| Token                     |                   Size | Weight | Line Height | Letter Spacing | Use                                                 |
+| ------------------------- | ---------------------: | -----: | ----------: | -------------: | --------------------------------------------------- |
+| `{typography.display-lg}` | clamp(34px, 4vw, 52px) |    760 |        1.04 |        -0.04em | Authentication and exceptional first-run statements |
+| `{typography.display-md}` | clamp(30px, 3vw, 44px) |    750 |        1.08 |        -0.04em | Primary screen title                                |
+| `{typography.display-sm}` |                   30px |    740 |        1.12 |        -0.03em | Studio document or detailed entity title            |
+| `{typography.heading-lg}` |                   24px |    730 |         1.2 |       -0.025em | Major section title                                 |
+| `{typography.heading-md}` |                   19px |    720 |        1.25 |        -0.02em | Panel heading                                       |
+| `{typography.heading-sm}` |                   16px |    700 |         1.3 |              0 | Dense panel and rail heading                        |
+| `{typography.body-lg}`    |                   17px |    400 |        1.55 |              0 | Lead paragraph                                      |
+| `{typography.body-md}`    |                   14px |    400 |        1.55 |              0 | Default body and controls                           |
+| `{typography.body-sm}`    |                   13px |    400 |         1.5 |              0 | Supporting explanations                             |
+| `{typography.meta}`       |                   12px |    600 |         1.4 |              0 | Metadata, table cells, and status text              |
+| `{typography.caption}`    |                   11px |    600 |        1.35 |              0 | Secondary identifiers and compact context           |
+| `{typography.eyebrow}`    |                   11px |    800 |         1.3 |         0.12em | Short uppercase section identifier                  |
 
 ### Principles
 
@@ -123,13 +123,13 @@ Whitespace separates responsibilities rather than decorating the screen. Primary
 
 ## Elevation & Depth
 
-| Level | Treatment | Use |
-|---|---|---|
-| Flat | White or subtle surface with 1px border | Panels, tables, lists, forms |
-| Selected | Teal wash or inset 3px teal accent | Current navigation, selected row, active context |
-| Raised | `0 18px 44px rgba(6, 61, 58, 0.09)` | Menus and temporary overlays |
-| Floating | `0 18px 44px rgba(6, 61, 58, 0.25)` | Toasts and consequential transient feedback |
-| Photographic | Full-bleed image with deep-teal readability overlay | Authentication and onboarding only |
+| Level        | Treatment                                           | Use                                              |
+| ------------ | --------------------------------------------------- | ------------------------------------------------ |
+| Flat         | White or subtle surface with 1px border             | Panels, tables, lists, forms                     |
+| Selected     | Teal wash or inset 3px teal accent                  | Current navigation, selected row, active context |
+| Raised       | `0 18px 44px rgba(6, 61, 58, 0.09)`                 | Menus and temporary overlays                     |
+| Floating     | `0 18px 44px rgba(6, 61, 58, 0.25)`                 | Toasts and consequential transient feedback      |
+| Photographic | Full-bleed image with deep-teal readability overlay | Authentication and onboarding only               |
 
 The application does not use drop shadows on every card. Depth comes primarily from grouping, border contrast, and selected state. Image overlays must preserve the subject while guaranteeing readable white text.
 
@@ -141,13 +141,13 @@ There is no decorative circuit motif in authentication. A restrained inset brand
 
 ### Border Radius Scale
 
-| Token | Value | Use |
-|---|---:|---|
-| `{rounded.xs}` | 4px | Keyboard hints and tiny technical labels |
-| `{rounded.sm}` | 7px | Buttons, inputs, navigation rows, icon tiles |
-| `{rounded.md}` | 10px | Panels, menus, and work surfaces |
-| `{rounded.lg}` | 14px | Rare onboarding or authentication containers |
-| `{rounded.full}` | 9999px / 50% | Status dots, people, steps, and counts only |
+| Token            |        Value | Use                                          |
+| ---------------- | -----------: | -------------------------------------------- |
+| `{rounded.xs}`   |          4px | Keyboard hints and tiny technical labels     |
+| `{rounded.sm}`   |          7px | Buttons, inputs, navigation rows, icon tiles |
+| `{rounded.md}`   |         10px | Panels, menus, and work surfaces             |
+| `{rounded.lg}`   |         14px | Rare onboarding or authentication containers |
+| `{rounded.full}` | 9999px / 50% | Status dots, people, steps, and counts only  |
 
 Rounded rectangles are functional and restrained. Do not turn buttons, tabs, filters, or containers into pills by default. Circles are reserved for people, state, numeric counts, or sequential steps.
 
@@ -268,12 +268,12 @@ Disabled buttons retain readable labels and explain the missing dependency in vi
 
 ### Breakpoints
 
-| Token | Width | Behavior |
-|---|---:|---|
-| `{breakpoints.wide}` | ≥ 1440px | Full 224px sidebar and three-pane work surfaces |
-| `{breakpoints.desktop}` | 1101–1439px | Full sidebar; narrower detail and policy rails |
-| `{breakpoints.compact}` | 761–1100px | 82px icon sidebar; secondary rails stack below the main work surface |
-| `{breakpoints.mobile}` | ≤ 760px | Bottom navigation, stacked content, full-width primary actions |
+| Token                   |       Width | Behavior                                                             |
+| ----------------------- | ----------: | -------------------------------------------------------------------- |
+| `{breakpoints.wide}`    |    ≥ 1440px | Full 224px sidebar and three-pane work surfaces                      |
+| `{breakpoints.desktop}` | 1101–1439px | Full sidebar; narrower detail and policy rails                       |
+| `{breakpoints.compact}` |  761–1100px | 82px icon sidebar; secondary rails stack below the main work surface |
+| `{breakpoints.mobile}`  |     ≤ 760px | Bottom navigation, stacked content, full-width primary actions       |
 
 ### Touch Targets
 

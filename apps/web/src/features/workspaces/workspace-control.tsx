@@ -43,7 +43,9 @@ export function WorkspaceControl({
         <span>
           <small>Entité active</small>
           <strong>{active?.entity}</strong>
-          <em>{active?.unit} · {active?.role}</em>
+          <em>
+            {active?.unit} · {active?.role}
+          </em>
         </span>
         <Icon name="chevron" />
       </button>
