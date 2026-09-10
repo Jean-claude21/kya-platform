@@ -89,6 +89,9 @@ class WorkspaceQueryPort(Protocol):
     async def list_by_keys(self, workspace_keys: Sequence[str]) -> Sequence[Workspace]:
         """Load only keys already filtered by the authorization provider."""
 
+    async def list_memberships(self, workspace_id: UUID) -> Sequence[WorkspaceMembership]:
+        """List dated memberships for a workspace whose access was already checked."""
+
 
 class WorkspaceCommandPort(Protocol):
     async def add_membership(

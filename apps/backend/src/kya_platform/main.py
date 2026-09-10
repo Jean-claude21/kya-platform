@@ -65,6 +65,7 @@ from kya_platform.infrastructure.database.session import create_engine, create_s
 from kya_platform.infrastructure.database.source_lifecycle import (
     SqlAlchemySourceLifecycleRepository,
 )
+from kya_platform.infrastructure.database.workspaces import SqlAlchemyWorkspaceRepository
 from kya_platform.infrastructure.infisical import (
     HttpxInfisicalTransport,
     InfisicalMachineIdentityAdapter,
@@ -181,6 +182,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             app.state.identity_mapping = SqlAlchemyIdentityMapping(session_factory)
             app.state.bootstrap_claims = SqlAlchemyBootstrapClaimRepository(session_factory)
             app.state.core_service = CoreService(SqlAlchemyCoreRepository(session_factory))
+            workspace_repository = SqlAlchemyWorkspaceRepository(session_factory)
+            app.state.workspace_queries = workspace_repository
+            app.state.workspace_commands = workspace_repository
             app.state.content_service = ContentService(SqlAlchemyContentRepository(session_factory))
             app.state.intelligence_service = IntelligenceService(
                 SqlAlchemyIntelligenceRepository(session_factory), app.state.content_service
@@ -352,6 +356,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.state.publication_service = None
     application.state.attestation_repository = None
     application.state.registry_mcp_backend = None
+    application.state.workspace_queries = None
+    application.state.workspace_commands = None
     application.state.mcp_profile_service = None
     application.state.mcp_profile_repository = None
     application.state.mcp_preference_service = None

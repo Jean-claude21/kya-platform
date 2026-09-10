@@ -65,6 +65,11 @@ from kya_platform.infrastructure.database.models.reliability import (
     IdempotencyRecord,
     OutboxEvent,
 )
+from kya_platform.infrastructure.database.models.workspaces import (
+    WorkspaceLinkedUnitRow,
+    WorkspaceMembershipRow,
+    WorkspaceRow,
+)
 
 __all__ = [
     "AuditEvent",
@@ -118,4 +123,7 @@ __all__ = [
     "OAuthTokenRecord",
     "OutboxEvent",
     "PlatformBootstrapClaim",
+    "WorkspaceLinkedUnitRow",
+    "WorkspaceMembershipRow",
+    "WorkspaceRow",
 ]

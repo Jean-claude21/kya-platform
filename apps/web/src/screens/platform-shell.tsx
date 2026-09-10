@@ -26,15 +26,6 @@ const navigation: Array<{ target: Module; label: string; icon: IconName }> = [
   { target: 'Studio', label: 'Studio', icon: 'code' },
 ];
 const isPreview = import.meta.env.DEV && import.meta.env.VITE_KYA_PREVIEW_MODE === 'app';
-const workspace = {
-  entity: 'KYA-Energy Group',
-  key: 'platform',
-  name: 'KYA-Platform',
-  unit: 'Groupe',
-  scope: 'Groupe',
-  role: 'Droits évalués par le serveur',
-  classification: 'Interne' as const,
-};
 
 export function PlatformShell() {
   const [activeModule, setActiveModule] = useState<Module>('Accueil');
@@ -109,13 +100,7 @@ export function PlatformShell() {
   } else if (activeModule === 'MCP') screen = <AiEnvironment />;
   else if (activeModule === 'Studio') screen = <ArtifactStudio />;
   else if (activeModule === 'Espaces')
-    screen = (
-      <WorkspaceAccessPanel
-        activeKey="platform"
-        workspaces={[workspace]}
-        onSelect={() => undefined}
-      />
-    );
+    screen = <WorkspaceAccessPanel />;
   else if (activeModule === 'Administration') screen = <ControlCenter onOpen={navigate} />;
   else if (activeModule === 'Organisation') screen = <OrganizationAdmin />;
   else if (activeModule === 'Core') screen = <CoreAdministration />;
