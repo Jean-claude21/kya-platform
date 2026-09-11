@@ -53,9 +53,7 @@ def upgrade() -> None:
         sa.Column("workspace_id", sa.Uuid(), nullable=False),
         sa.Column("unit_id", sa.Uuid(), nullable=False),
         sa.ForeignKeyConstraint(["workspace_id"], ["core.workspace.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(
-            ["unit_id"], ["core.organizational_unit.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["unit_id"], ["core.organizational_unit.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("workspace_id", "unit_id"),
         schema="core",
     )
@@ -72,8 +70,7 @@ def upgrade() -> None:
             "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
         ),
         sa.CheckConstraint(
-            "level IN ('viewer', 'guest', 'member', 'contributor', 'editor', 'manager', "
-            "'owner')",
+            "level IN ('viewer', 'guest', 'member', 'contributor', 'editor', 'manager', 'owner')",
             name="ck_workspace_membership_valid_level",
         ),
         sa.CheckConstraint(
@@ -85,11 +82,15 @@ def upgrade() -> None:
         schema="core",
     )
     op.create_index(
-        "ix_workspace_membership_workspace", "workspace_membership", ["workspace_id"],
+        "ix_workspace_membership_workspace",
+        "workspace_membership",
+        ["workspace_id"],
         schema="core",
     )
     op.create_index(
-        "ix_workspace_membership_principal", "workspace_membership", ["principal_id"],
+        "ix_workspace_membership_principal",
+        "workspace_membership",
+        ["principal_id"],
         schema="core",
     )
 
@@ -104,4 +105,3 @@ def downgrade() -> None:
     op.drop_table("workspace_membership", schema="core")
     op.drop_table("workspace_linked_unit", schema="core")
     op.drop_table("workspace", schema="core")
-

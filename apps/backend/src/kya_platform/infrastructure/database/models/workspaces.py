@@ -69,8 +69,7 @@ class WorkspaceMembershipRow(Base):
     __tablename__ = "workspace_membership"
     __table_args__ = (
         CheckConstraint(
-            "level IN ('viewer', 'guest', 'member', 'contributor', 'editor', 'manager', "
-            "'owner')",
+            "level IN ('viewer', 'guest', 'member', 'contributor', 'editor', 'manager', 'owner')",
             name="ck_workspace_membership_valid_level",
         ),
         CheckConstraint(
@@ -97,4 +96,3 @@ class WorkspaceMembershipRow(Base):
 
 
 __all__ = ["WorkspaceLinkedUnitRow", "WorkspaceMembershipRow", "WorkspaceRow"]
-

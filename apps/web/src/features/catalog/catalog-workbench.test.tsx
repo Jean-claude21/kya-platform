@@ -109,7 +109,7 @@ describe('catalog workbench', () => {
       profile: 'portable-zip' as const,
       scope: 'personal' as const,
       target: 'workspace:workspace-cvsi',
-      destination: '\${USER_SELECTED_DIRECTORY}/kya-design-system-1.0.0.zip',
+      destination: '${USER_SELECTED_DIRECTORY}/kya-design-system-1.0.0.zip',
       package_locator: 'https://github.com/kya-energy/kya-platform/releases/download/x/x.zip',
       content_digest: 'a'.repeat(64),
       compatibility_requirement: '>=1.0.0',
