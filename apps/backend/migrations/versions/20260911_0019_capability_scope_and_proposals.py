@@ -24,9 +24,7 @@ def upgrade() -> None:
     )
     op.add_column(
         "artifact",
-        sa.Column(
-            "discoverable", sa.Boolean(), nullable=False, server_default=sa.false()
-        ),
+        sa.Column("discoverable", sa.Boolean(), nullable=False, server_default=sa.false()),
         schema="catalog",
     )
     op.create_index(
@@ -87,9 +85,7 @@ def upgrade() -> None:
         ["requested_by", "status"],
         schema="catalog",
     )
-    op.create_index(
-        "ix_catalog_proposal_artifact", "proposal", ["artifact_id"], schema="catalog"
-    )
+    op.create_index("ix_catalog_proposal_artifact", "proposal", ["artifact_id"], schema="catalog")
 
 
 def downgrade() -> None:
@@ -97,9 +93,7 @@ def downgrade() -> None:
     op.drop_index(
         "ix_catalog_proposal_requested_by_status", table_name="proposal", schema="catalog"
     )
-    op.drop_index(
-        "ix_catalog_proposal_target_workspace", table_name="proposal", schema="catalog"
-    )
+    op.drop_index("ix_catalog_proposal_target_workspace", table_name="proposal", schema="catalog")
     op.drop_table("proposal", schema="catalog")
     op.drop_index(
         "ix_catalog_artifact_visibility_scope_unit", table_name="artifact", schema="catalog"
