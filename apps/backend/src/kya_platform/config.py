@@ -54,6 +54,11 @@ class Settings(BaseSettings):
     bootstrap_owner_email: str | None = None
     bootstrap_claim_code_hash: SecretStr | None = None
     infisical_api_url: str | None = None
+    github_app_id: str | None = None
+    github_app_installation_id: str | None = None
+    github_app_private_key: SecretStr | None = None
+    github_proposal_repository: str | None = None
+    github_proposal_base_branch: str = "dev"
     infisical_client_id: str | None = None
     infisical_client_secret: SecretStr | None = None
     infisical_project_id: str | None = None
@@ -184,6 +189,14 @@ class Settings(BaseSettings):
             )
             if self.registry_mcp_authorization_server_url != self.oauth_issuer_url:
                 raise ValueError("Registry MCP authorization server must be the KYA OAuth issuer")
+        github_app = (
+            self.github_app_id,
+            self.github_app_installation_id,
+            self.github_app_private_key,
+            self.github_proposal_repository,
+        )
+        if any(item is not None for item in github_app) and not all(github_app):
+            raise ValueError("GitHub App proposal configuration must be complete")
         bootstrap = (self.bootstrap_owner_email, self.bootstrap_claim_code_hash)
         if any(item is not None for item in bootstrap) and not all(bootstrap):
             raise ValueError("Bootstrap owner configuration must be complete")
@@ -206,6 +219,10 @@ class Settings(BaseSettings):
     @property
     def has_infisical_configuration(self) -> bool:
         return self.infisical_api_url is not None
+
+    @property
+    def has_github_proposal_configuration(self) -> bool:
+        return self.github_app_id is not None
 
     @property
     def has_registry_mcp_configuration(self) -> bool:

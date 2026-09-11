@@ -13,6 +13,7 @@ from kya_platform.api.routes.health import router as health_router
 from kya_platform.api.routes.intelligence import router as intelligence_router
 from kya_platform.api.routes.mcp_profiles import router as mcp_profiles_router
 from kya_platform.api.routes.oauth import router as oauth_router
+from kya_platform.api.routes.proposals import router as proposals_router
 from kya_platform.api.routes.publications import attestation_router
 from kya_platform.api.routes.publications import router as publications_router
 from kya_platform.api.routes.secrets import router as secrets_router
@@ -33,6 +34,7 @@ api_router.include_router(mcp_profiles_router)
 api_router.include_router(oauth_router)
 api_router.include_router(audit_router)
 api_router.include_router(publications_router)
+api_router.include_router(proposals_router)
 api_router.include_router(attestation_router)
 api_router.include_router(secrets_router)
 api_router.include_router(source_lifecycle_router)
