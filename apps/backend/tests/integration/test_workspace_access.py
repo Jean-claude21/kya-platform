@@ -1,6 +1,7 @@
 """Negative workspace journeys prove filtering and direct-access denial."""
 
 from collections.abc import Sequence
+from datetime import UTC, datetime
 from uuid import UUID
 
 import pytest
@@ -10,7 +11,12 @@ from fastapi.testclient import TestClient
 from kya_platform.auth import AuthenticatedIdentity
 from kya_platform.authorization import AuthorizationDecision, CheckRequest, ListObjectsRequest
 from kya_platform.domain.organization import DateRange
-from kya_platform.domain.workspaces import Workspace, WorkspaceKind, WorkspaceMembership
+from kya_platform.domain.workspaces import (
+    AccessLevel,
+    Workspace,
+    WorkspaceKind,
+    WorkspaceMembership,
+)
 
 ALICE = UUID("019914b2-1a40-7000-8000-000000000031")
 CVSI = UUID("019914b2-1a40-7000-8000-000000000043")
@@ -50,8 +56,6 @@ class ContextPolicy:
 
 class WorkspaceQueries:
     def __init__(self) -> None:
-        from datetime import UTC, datetime
-
         self.records = {
             "platform": Workspace(
                 PLATFORM,
@@ -70,12 +74,16 @@ class WorkspaceQueries:
                 DateRange(datetime(2026, 9, 1, tzinfo=UTC)),
             ),
         }
+        self.memberships: dict[UUID, tuple[WorkspaceMembership, ...]] = {}
 
     async def get(self, workspace_key: str) -> Workspace | None:
         return self.records.get(workspace_key)
 
     async def list_by_keys(self, workspace_keys: Sequence[str]) -> Sequence[Workspace]:
         return tuple(self.records[key] for key in workspace_keys if key in self.records)
+
+    async def list_memberships(self, workspace_id: UUID) -> Sequence[WorkspaceMembership]:
+        return self.memberships.get(workspace_id, ())
 
 
 class WorkspaceCommands:
@@ -184,3 +192,45 @@ def test_authorized_unknown_workspace_has_a_stable_not_found_response(app: FastA
 
     assert response.status_code == 404
     assert response.json()["code"] == "workspace_not_found"
+
+
+@pytest.mark.integration
+def test_memberships_require_can_view_and_are_denied_without_disclosure(app: FastAPI) -> None:
+    with configure(app, ContextPolicy(direct_allowed=False)) as client:
+        response = client.get("/api/v1/workspaces/platform/memberships", headers=headers())
+
+    assert response.status_code == 403
+    assert response.json()["code"] == "permission_denied"
+
+
+@pytest.mark.integration
+def test_memberships_are_listed_for_an_authorized_viewer(app: FastAPI) -> None:
+    queries = WorkspaceQueries()
+    queries.memberships[PLATFORM] = (
+        WorkspaceMembership(
+            workspace_id=PLATFORM,
+            principal_id=ALICE,
+            level=AccessLevel.VIEWER,
+            validity=DateRange(datetime(2026, 9, 1, tzinfo=UTC)),
+        ),
+    )
+    app.state.token_verifier = AcceptingVerifier()
+    app.state.identity_mapping = AliceMapping()
+    app.state.authorization = ContextPolicy(direct_allowed=True)
+    app.state.workspace_queries = queries
+    app.state.workspace_commands = None
+    with TestClient(app) as client:
+        response = client.get("/api/v1/workspaces/platform/memberships", headers=headers())
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "items": [
+            {
+                "workspace_id": str(PLATFORM),
+                "principal_id": str(ALICE),
+                "level": "viewer",
+                "valid_from": "2026-09-01T00:00:00Z",
+                "valid_until": None,
+            }
+        ]
+    }

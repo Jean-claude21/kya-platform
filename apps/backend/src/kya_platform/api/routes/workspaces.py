@@ -53,6 +53,10 @@ class MembershipResponse(BaseModel):
     valid_until: datetime | None
 
 
+class MembershipListResponse(BaseModel):
+    items: list[MembershipResponse]
+
+
 def _workspace_queries(request: Request) -> WorkspaceQueryPort:
     queries: WorkspaceQueryPort | None = getattr(request.app.state, "workspace_queries", None)
     if queries is None:
@@ -128,6 +132,28 @@ async def get_workspace(
 ) -> WorkspaceResponse:
     workspace = await _load_workspace(_workspace_queries(request), workspace_key)
     return WorkspaceResponse.model_validate(workspace)
+
+
+@router.get("/{workspace_key}/memberships", response_model=MembershipListResponse)
+async def list_memberships(
+    workspace_key: str,
+    request: Request,
+    _principal: Annotated[AuthorizedPrincipal, Depends(view_workspace)],
+) -> MembershipListResponse:
+    workspace = await _load_workspace(_workspace_queries(request), workspace_key)
+    memberships = await _workspace_queries(request).list_memberships(workspace.id)
+    return MembershipListResponse(
+        items=[
+            MembershipResponse(
+                workspace_id=item.workspace_id,
+                principal_id=item.principal_id,
+                level=item.level,
+                valid_from=item.validity.valid_from,
+                valid_until=item.validity.valid_until,
+            )
+            for item in memberships
+        ]
+    )
 
 
 manage_workspace = require_permission(

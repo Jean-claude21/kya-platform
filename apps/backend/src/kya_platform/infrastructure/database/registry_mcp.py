@@ -12,7 +12,9 @@ from packaging.version import InvalidVersion, Version
 from pydantic import ValidationError
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.sql.elements import ColumnElement
 
+from kya_platform.application.catalog import CatalogBrowseQuery, CatalogDetail, CatalogSummary
 from kya_platform.application.publication.integrity import (
     ArtifactSignature,
     InMemoryTrustStore,
@@ -132,27 +134,74 @@ class SqlAlchemyRegistryMcpBackend:
     async def search_catalog(
         self, request: SearchCatalogInput, *, allowed_ids: tuple[str, ...]
     ) -> SearchCatalogOutput:
+        items = await self.browse(
+            query=CatalogBrowseQuery(
+                query=request.query,
+                artifact_types=tuple(item.value for item in request.types),
+                owner_workspace_id=request.workspace,
+            ),
+            allowed_ids=allowed_ids,
+        )
+        return SearchCatalogOutput(
+            items=tuple(
+                ArtifactSummary(
+                    artifact_id=item.public_id,
+                    artifact_type=item.artifact_type,
+                    name=item.name,
+                    summary=item.summary,
+                    latest_version=item.latest_version,
+                )
+                for item in items
+            )
+        )
+
+    async def resolve_release_id(self, public_id: str, version: str) -> UUID | None:
+        """Resolve a published release only after the caller authorized its artifact."""
+
+        artifact_id = await self.resolve_artifact_id(public_id)
+        if artifact_id is None:
+            return None
+        async with self._sessions() as session:
+            return cast(
+                UUID | None,
+                await session.scalar(
+                    select(CatalogRelease.id)
+                    .join(
+                        CatalogArtifactVersion,
+                        CatalogArtifactVersion.id == CatalogRelease.artifact_version_id,
+                    )
+                    .where(
+                        CatalogArtifactVersion.artifact_id == artifact_id,
+                        CatalogArtifactVersion.version == version,
+                        CatalogArtifactVersion.status == "published",
+                        CatalogRelease.status == "published",
+                    )
+                ),
+            )
+
+    async def browse(
+        self, *, query: CatalogBrowseQuery, allowed_ids: tuple[str, ...]
+    ) -> tuple[CatalogSummary, ...]:
         identifiers = _uuid_identifiers(allowed_ids)
         if not identifiers:
-            return SearchCatalogOutput(items=())
-        normalized = request.query.strip().casefold()
-        filters = [
-            CatalogArtifact.id.in_(identifiers),
-            or_(
-                func.lower(CatalogArtifact.name).contains(normalized),
-                func.lower(CatalogArtifact.slug).contains(normalized),
-                func.lower(func.coalesce(CatalogArtifact.summary, "")).contains(normalized),
-            ),
-        ]
-        if request.types:
+            return ()
+        normalized = query.query.strip().casefold()
+        filters: list[ColumnElement[bool]] = [CatalogArtifact.id.in_(identifiers)]
+        if normalized:
             filters.append(
-                CatalogArtifact.artifact_type.in_(tuple(item.value for item in request.types))
+                or_(
+                    func.lower(CatalogArtifact.name).contains(normalized),
+                    func.lower(CatalogArtifact.slug).contains(normalized),
+                    func.lower(func.coalesce(CatalogArtifact.summary, "")).contains(normalized),
+                )
             )
-        if request.workspace is not None:
+        if query.artifact_types:
+            filters.append(CatalogArtifact.artifact_type.in_(query.artifact_types))
+        if query.owner_workspace_id is not None:
             try:
-                filters.append(CatalogArtifact.owner_workspace_id == UUID(request.workspace))
+                filters.append(CatalogArtifact.owner_workspace_id == UUID(query.owner_workspace_id))
             except ValueError:
-                return SearchCatalogOutput(items=())
+                return ()
         async with self._sessions() as session:
             result = await session.execute(
                 select(CatalogArtifact, CatalogArtifactVersion)
@@ -166,29 +215,46 @@ class SqlAlchemyRegistryMcpBackend:
                 )
                 .limit(100)
             )
-        items: list[ArtifactSummary] = []
+        items: list[CatalogSummary] = []
         seen: set[UUID] = set()
         for artifact, version in result.all():
             if artifact.id in seen:
                 continue
             seen.add(artifact.id)
             items.append(
-                ArtifactSummary(
-                    artifact_id=_public_id(artifact),
+                CatalogSummary(
+                    id=str(artifact.id),
+                    public_id=_public_id(artifact),
                     artifact_type=artifact.artifact_type,
                     name=artifact.name,
                     summary=artifact.summary,
                     latest_version=version.version,
+                    lifecycle=artifact.lifecycle,
+                    owner_workspace_id=str(artifact.owner_workspace_id),
                 )
             )
-            if len(items) == 20:
+            if len(items) == query.limit:
                 break
-        return SearchCatalogOutput(items=tuple(items))
+        return tuple(items)
 
     async def get_artifact(self, request: GetArtifactInput) -> ArtifactDetail:
-        internal_id = await self.resolve_artifact_id(request.artifact_id)
-        if internal_id is None:
+        detail = await self.describe(public_id=request.artifact_id, version=request.version)
+        if detail is None:
             raise ToolError("artifact_not_found")
+        return ArtifactDetail(
+            artifact_id=detail.public_id,
+            artifact_type=detail.artifact_type,
+            name=detail.name,
+            summary=detail.summary,
+            latest_version=detail.latest_version,
+            versions=detail.versions,
+            installable=detail.installable,
+        )
+
+    async def describe(self, *, public_id: str, version: str | None = None) -> CatalogDetail | None:
+        internal_id = await self.resolve_artifact_id(public_id)
+        if internal_id is None:
+            return None
         async with self._sessions() as session:
             result = await session.execute(
                 select(CatalogArtifact, CatalogArtifactVersion)
@@ -200,20 +266,27 @@ class SqlAlchemyRegistryMcpBackend:
                 .order_by(CatalogArtifactVersion.created_at.desc())
             )
         rows = result.all()
-        if request.version is not None:
-            rows = [row for row in rows if row[1].version == request.version]
+        if version is not None:
+            rows = [row for row in rows if row[1].version == version]
         if not rows:
-            raise ToolError("artifact_not_found")
+            return None
         artifact = rows[0][0]
         versions = tuple(dict.fromkeys(row[1].version for row in rows))
-        return ArtifactDetail(
-            artifact_id=_public_id(artifact),
+        latest = rows[0][1]
+        return CatalogDetail(
+            id=str(artifact.id),
+            public_id=_public_id(artifact),
             artifact_type=artifact.artifact_type,
             name=artifact.name,
             summary=artifact.summary,
-            latest_version=rows[0][1].version,
+            latest_version=latest.version,
             versions=versions,
+            lifecycle=artifact.lifecycle,
+            owner_workspace_id=str(artifact.owner_workspace_id),
             installable=any(row[1].status == "published" for row in rows),
+            risk=latest.risk,
+            source_repository=latest.source_repository,
+            content_digest=latest.content_digest,
         )
 
     async def list_updates(self, request: ListUpdatesInput) -> ListUpdatesOutput:

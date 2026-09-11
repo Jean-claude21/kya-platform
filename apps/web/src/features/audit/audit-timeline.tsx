@@ -1,78 +1,72 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { Icon, StatusBadge } from '@kya/design-system';
 
-const events = [
-  {
-    id: '01A06F70-01',
-    at: '5 sept. · 10:18',
-    action: 'Artefact publié',
-    actor: 'Afi A. · CVSI',
-    actorContext: 'Direction CVSI',
-    environment: 'Test',
-    decision: 'Autorisée',
-    outcome: 'Réussie',
-    target: 'Skill Formats documentaires · v1.0.0',
-    correlation: '01A06F70…F23',
-    tone: 'healthy' as const,
-  },
-  {
-    id: '01A06F70-02',
-    at: '5 sept. · 10:12',
-    action: 'Approbation métier',
-    actor: 'Direction Communication',
-    actorContext: 'Direction Communication',
-    environment: 'Test',
-    decision: 'Approuvée',
-    outcome: 'Réussie',
-    target: 'Demande de publication PR-0042',
-    correlation: '01A06F70…F23',
-    tone: 'healthy' as const,
-  },
-  {
-    id: '01A06F70-03',
-    at: '5 sept. · 10:05',
-    action: 'Contrôles techniques',
-    actor: 'service:publication-worker',
-    actorContext: 'Service CVSI',
-    environment: 'Test',
-    decision: 'Conforme',
-    outcome: 'Réussie',
-    target: 'Digest sha256 · manifeste · propriétaires',
-    correlation: '01A06F70…F23',
-    tone: 'healthy' as const,
-  },
-  {
-    id: '01A06F70-04',
-    at: '5 sept. · 09:58',
-    action: 'Candidat soumis',
-    actor: 'Kossi D. · Communication',
-    actorContext: 'Direction Communication',
-    environment: 'Test',
-    decision: 'Reçue',
-    outcome: 'En validation',
-    target: 'Skill Formats documentaires · v1.0.0',
-    correlation: '01A06F70…F23',
-    tone: 'attention' as const,
-  },
-] as const;
+import { platformRequest } from '../../platform/api';
 
-const eventsByWorkspace: Readonly<Record<string, readonly (typeof events)[number][]>> = {
-  platform: events,
+export type AuditEvent = {
+  id: string;
+  occurred_at: string;
+  actor_id: string | null;
+  actor_context: Record<string, unknown>;
+  action: string;
+  target_type: string;
+  target_id: string;
+  scope: string;
+  environment: string | null;
+  decision: string | null;
+  outcome: string;
+  correlation_id: string;
+  causation_id: string | null;
+  metadata: Record<string, unknown>;
+  protected_content: Record<string, unknown> | null;
 };
 
-export function AuditTimeline({ workspaceKey }: { workspaceKey: string }) {
-  const [query, setQuery] = useState('');
+type RequestState = 'loading' | 'ready' | 'error';
+
+function outcomeTone(outcome: string): 'healthy' | 'attention' | 'restricted' {
+  const normalized = outcome.toLocaleLowerCase('fr');
+  if (normalized.includes('échec') || normalized.includes('refus')) return 'restricted';
+  if (normalized.includes('validation') || normalized.includes('attente')) return 'attention';
+  return 'healthy';
+}
+
+function formatDate(value: string): string {
+  return new Date(value).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+function actorLabel(event: AuditEvent): string {
+  if (event.actor_id) return event.actor_id.slice(0, 8) + '…';
+  const label = event.actor_context.label;
+  return typeof label === 'string' ? label : 'Acteur système';
+}
+
+export function AuditTimelineView({
+  contentMode,
+  error,
+  events,
+  query,
+  state,
+  workspaceKey,
+  onQueryChange,
+}: {
+  contentMode: string;
+  error: string;
+  events: AuditEvent[];
+  query: string;
+  state: RequestState;
+  workspaceKey: string;
+  onQueryChange: (value: string) => void;
+}) {
   const visibleEvents = useMemo(() => {
-    const scopedEvents = eventsByWorkspace[workspaceKey] ?? [];
     const normalized = query.trim().toLocaleLowerCase('fr');
-    if (!normalized) return scopedEvents;
-    return scopedEvents.filter((event) =>
-      `${event.action} ${event.actor} ${event.target} ${event.correlation}`
+    if (!normalized) return events;
+    return events.filter((event) =>
+      `${event.action} ${event.target_type} ${event.target_id} ${event.correlation_id}`
         .toLocaleLowerCase('fr')
         .includes(normalized),
     );
-  }, [query, workspaceKey]);
+  }, [events, query]);
 
   return (
     <main className="audit-page">
@@ -85,8 +79,9 @@ export function AuditTimeline({ workspaceKey }: { workspaceKey: string }) {
           </p>
         </div>
         <div className="audit-intro-badges">
-          <StatusBadge tone="neutral">Données de démonstration</StatusBadge>
-          <StatusBadge tone="restricted">Vue métadonnées uniquement</StatusBadge>
+          <StatusBadge tone="restricted">
+            {contentMode === 'protected' ? 'Contenu métier visible' : 'Vue métadonnées uniquement'}
+          </StatusBadge>
         </div>
       </section>
 
@@ -98,12 +93,8 @@ export function AuditTimeline({ workspaceKey }: { workspaceKey: string }) {
             <dd>{workspaceKey}</dd>
           </div>
           <div>
-            <dt>Unité active</dt>
-            <dd>Direction CVSI</dd>
-          </div>
-          <div>
             <dt>Mandat</dt>
-            <dd>audit.metadata</dd>
+            <dd>{contentMode === 'protected' ? 'audit.content' : 'audit.metadata'}</dd>
           </div>
         </dl>
         <label>
@@ -111,9 +102,9 @@ export function AuditTimeline({ workspaceKey }: { workspaceKey: string }) {
           <Icon name="search" />
           <input
             value={query}
-            placeholder="Action, acteur, cible…"
+            placeholder="Action, cible, corrélation…"
             onChange={(event) => {
-              setQuery(event.target.value);
+              onQueryChange(event.target.value);
             }}
           />
         </label>
@@ -126,63 +117,124 @@ export function AuditTimeline({ workspaceKey }: { workspaceKey: string }) {
       <section className="audit-events" aria-labelledby="audit-events-title">
         <header>
           <div>
-            <h2 id="audit-events-title">Historique de l’artefact</h2>
+            <h2 id="audit-events-title">Historique de l’espace</h2>
             <p>
-              {visibleEvents.length} preuve(s), ordonnées de la plus récente à la plus ancienne.
+              {state === 'ready'
+                ? `${String(visibleEvents.length)} preuve(s), ordonnées de la plus récente à la plus ancienne.`
+                : 'Lecture sécurisée en cours'}
             </p>
           </div>
-          {visibleEvents.length > 0 && (
-            <span className="audit-correlation">Corrélation 01A06F70…F23</span>
-          )}
         </header>
 
-        <ol className="audit-timeline">
-          {visibleEvents.map((event) => (
-            <li key={event.id}>
-              <span className={`audit-marker audit-marker--${event.tone}`} aria-hidden="true">
-                <Icon name={event.tone === 'healthy' ? 'check' : 'branch'} />
-              </span>
-              <article>
-                <header>
-                  <div>
-                    <time>{event.at}</time>
-                    <h3>{event.action}</h3>
-                  </div>
-                  <StatusBadge tone={event.tone}>{event.outcome}</StatusBadge>
-                </header>
-                <p>{event.target}</p>
-                <dl>
-                  <div>
-                    <dt>Acteur</dt>
-                    <dd>{event.actor}</dd>
-                  </div>
-                  <div>
-                    <dt>Décision</dt>
-                    <dd>{event.decision}</dd>
-                  </div>
-                  <div>
-                    <dt>Corrélation</dt>
-                    <dd>{event.correlation}</dd>
-                  </div>
-                  <div>
-                    <dt>Contexte</dt>
-                    <dd>{event.actorContext}</dd>
-                  </div>
-                  <div>
-                    <dt>Environnement</dt>
-                    <dd>{event.environment}</dd>
-                  </div>
-                </dl>
-              </article>
-            </li>
-          ))}
-        </ol>
-        {visibleEvents.length === 0 && (
-          <p className="audit-empty" role="status">
-            Aucun événement autorisé ne correspond à cet espace et à ce filtre.
-          </p>
+        {state === 'loading' ? (
+          <div className="catalog-state" role="status">
+            <Icon name="activity" />
+            <strong>Lecture de la piste d’audit…</strong>
+          </div>
+        ) : state === 'error' ? (
+          <div className="catalog-state" role="alert">
+            <Icon name="lock" />
+            <strong>Piste d’audit indisponible</strong>
+            <p>{error}</p>
+          </div>
+        ) : (
+          <>
+            <ol className="audit-timeline">
+              {visibleEvents.map((event) => (
+                <li key={event.id}>
+                  <span
+                    className={`audit-marker audit-marker--${outcomeTone(event.outcome)}`}
+                    aria-hidden="true"
+                  >
+                    <Icon name={outcomeTone(event.outcome) === 'healthy' ? 'check' : 'branch'} />
+                  </span>
+                  <article>
+                    <header>
+                      <div>
+                        <time>{formatDate(event.occurred_at)}</time>
+                        <h3>{event.action}</h3>
+                      </div>
+                      <StatusBadge tone={outcomeTone(event.outcome)}>{event.outcome}</StatusBadge>
+                    </header>
+                    <p>
+                      {event.target_type} · {event.target_id}
+                    </p>
+                    <dl>
+                      <div>
+                        <dt>Acteur</dt>
+                        <dd>{actorLabel(event)}</dd>
+                      </div>
+                      <div>
+                        <dt>Décision</dt>
+                        <dd>{event.decision ?? '—'}</dd>
+                      </div>
+                      <div>
+                        <dt>Corrélation</dt>
+                        <dd title={event.correlation_id}>{event.correlation_id.slice(0, 8)}…</dd>
+                      </div>
+                      <div>
+                        <dt>Environnement</dt>
+                        <dd>{event.environment ?? '—'}</dd>
+                      </div>
+                    </dl>
+                  </article>
+                </li>
+              ))}
+            </ol>
+            {visibleEvents.length === 0 && (
+              <p className="audit-empty" role="status">
+                Aucun événement autorisé ne correspond à cet espace et à ce filtre.
+              </p>
+            )}
+          </>
         )}
       </section>
     </main>
   );
 }
+
+export function AuditTimeline({ workspaceKey }: { workspaceKey: string }) {
+  const [events, setEvents] = useState<AuditEvent[]>([]);
+  const [contentMode, setContentMode] = useState('metadata_only');
+  const [state, setState] = useState<RequestState>('loading');
+  const [error, setError] = useState('');
+  const [query, setQuery] = useState('');
+
+  useEffect(() => {
+    let isActive = true;
+    setState('loading');
+    setError('');
+    void platformRequest<{ items: AuditEvent[]; content_mode: string }>(
+      `/audit/workspaces/${encodeURIComponent(workspaceKey)}/events`,
+    )
+      .then((value) => {
+        if (!isActive) return;
+        setEvents(value.items);
+        setContentMode(value.content_mode);
+        setState('ready');
+      })
+      .catch((failure: unknown) => {
+        if (!isActive) return;
+        setError(
+          failure instanceof Error ? failure.message : 'La piste d’audit est indisponible.',
+        );
+        setState('error');
+      });
+    return () => {
+      isActive = false;
+    };
+  }, [workspaceKey]);
+
+  return (
+    <AuditTimelineView
+      contentMode={contentMode}
+      error={error}
+      events={events}
+      query={query}
+      state={state}
+      workspaceKey={workspaceKey}
+      onQueryChange={setQuery}
+    />
+  );
+}
+
