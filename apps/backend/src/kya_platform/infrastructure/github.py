@@ -6,6 +6,7 @@ approver. Merging always remains a human action taken directly on GitHub.
 """
 
 import time
+from typing import cast
 from uuid import UUID
 
 import httpx
@@ -14,9 +15,25 @@ from pydantic import SecretStr
 
 from kya_platform.contracts.proposal_package import ProposalPackage
 
+JsonObject = dict[str, object]
+
 
 class GitHubUnavailableError(RuntimeError):
     """The GitHub adapter could not complete a trustworthy operation."""
+
+
+def _string_field(payload: JsonObject, key: str) -> str:
+    value = payload.get(key)
+    if not isinstance(value, str) or not value:
+        raise GitHubUnavailableError(f"GitHub response is missing a valid '{key}' field")
+    return value
+
+
+def _nested_object(payload: JsonObject, key: str) -> JsonObject:
+    value = payload.get(key)
+    if not isinstance(value, dict):
+        raise GitHubUnavailableError(f"GitHub response is missing a valid '{key}' object")
+    return cast(JsonObject, value)
 
 
 class GitHubAppPullRequestAdapter:
@@ -61,7 +78,7 @@ class GitHubAppPullRequestAdapter:
         base_ref = await self._get(
             f"/repos/{repository}/git/ref/heads/{self._base_branch}", headers
         )
-        base_sha = base_ref["object"]["sha"]
+        base_sha = _string_field(_nested_object(base_ref, "object"), "sha")
         branch_name = f"proposals/{slug}-{proposal_id.hex[:12]}"
         await self._post(
             f"/repos/{repository}/git/refs",
@@ -69,8 +86,9 @@ class GitHubAppPullRequestAdapter:
             {"ref": f"refs/heads/{branch_name}", "sha": base_sha},
         )
         base_commit = await self._get(f"/repos/{repository}/git/commits/{base_sha}", headers)
+        base_tree_sha = _string_field(_nested_object(base_commit, "tree"), "sha")
         prefix = f"catalog/templates/proposals/{slug}"
-        tree_entries = []
+        tree_entries: list[JsonObject] = []
         for file in package.files:
             blob = await self._post(
                 f"/repos/{repository}/git/blobs",
@@ -82,27 +100,28 @@ class GitHubAppPullRequestAdapter:
                     "path": f"{prefix}/{file.path}",
                     "mode": "100644",
                     "type": "blob",
-                    "sha": blob["sha"],
+                    "sha": _string_field(blob, "sha"),
                 }
             )
         tree = await self._post(
             f"/repos/{repository}/git/trees",
             headers,
-            {"base_tree": base_commit["tree"]["sha"], "tree": tree_entries},
+            {"base_tree": base_tree_sha, "tree": tree_entries},
         )
         commit = await self._post(
             f"/repos/{repository}/git/commits",
             headers,
             {
                 "message": f"proposal: {slug} ({proposal_id})",
-                "tree": tree["sha"],
+                "tree": _string_field(tree, "sha"),
                 "parents": [base_sha],
             },
         )
+        commit_sha = _string_field(commit, "sha")
         await self._patch(
             f"/repos/{repository}/git/refs/heads/{branch_name}",
             headers,
-            {"sha": commit["sha"]},
+            {"sha": commit_sha},
         )
         pull_request = await self._post(
             f"/repos/{repository}/pulls",
@@ -117,7 +136,7 @@ class GitHubAppPullRequestAdapter:
                 ),
             },
         )
-        return str(pull_request["html_url"])
+        return _string_field(pull_request, "html_url")
 
     async def get_merge_commit(self, pull_request_url: str) -> str | None:
         token = await self._installation_access_token()
@@ -163,32 +182,35 @@ class GitHubAppPullRequestAdapter:
         )
         if response.status_code >= 400:
             raise GitHubUnavailableError("could not obtain a GitHub App installation token")
-        payload = response.json()
-        self._installation_token = payload["token"]
+        payload = self._as_object(response)
+        self._installation_token = _string_field(payload, "token")
         self._installation_token_expires_at = time.time() + 55 * 60
         return self._installation_token
 
-    async def _get(self, path: str, headers: dict[str, str]) -> dict[str, object]:
+    async def _get(self, path: str, headers: dict[str, str]) -> JsonObject:
         response = await self._client.get(f"{self._api_url}{path}", headers=headers)
         if response.status_code >= 400:
             raise GitHubUnavailableError(f"GitHub GET {path} failed")
-        return response.json()
+        return self._as_object(response)
 
-    async def _post(
-        self, path: str, headers: dict[str, str], payload: dict[str, object]
-    ) -> dict[str, object]:
+    async def _post(self, path: str, headers: dict[str, str], payload: JsonObject) -> JsonObject:
         response = await self._client.post(f"{self._api_url}{path}", headers=headers, json=payload)
         if response.status_code >= 400:
             raise GitHubUnavailableError(f"GitHub POST {path} failed")
-        return response.json()
+        return self._as_object(response)
 
-    async def _patch(
-        self, path: str, headers: dict[str, str], payload: dict[str, object]
-    ) -> dict[str, object]:
+    async def _patch(self, path: str, headers: dict[str, str], payload: JsonObject) -> JsonObject:
         response = await self._client.patch(f"{self._api_url}{path}", headers=headers, json=payload)
         if response.status_code >= 400:
             raise GitHubUnavailableError(f"GitHub PATCH {path} failed")
-        return response.json()
+        return self._as_object(response)
+
+    @staticmethod
+    def _as_object(response: httpx.Response) -> JsonObject:
+        decoded = response.json()
+        if not isinstance(decoded, dict):
+            raise GitHubUnavailableError("GitHub response was not a JSON object")
+        return cast(JsonObject, decoded)
 
 
 __all__ = ["GitHubAppPullRequestAdapter", "GitHubUnavailableError"]

@@ -1,5 +1,6 @@
 """Transactional Neon adapter for non-developer capability proposals."""
 
+from types import TracebackType
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -127,7 +128,12 @@ class SqlAlchemyProposalUnitOfWork:
         self.outbox = SqlAlchemyProposalOutbox(self._session)
         return self
 
-    async def __aexit__(self, exc_type, exc_value, traceback) -> None:
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
         del exc_type, exc_value, traceback
         if self._session is not None:
             if self._session.in_transaction():
