@@ -95,6 +95,11 @@ class ProposalService:
         self._unit_of_work_factory = unit_of_work_factory
         self._pull_requests = pull_requests
 
+    async def get(self, proposal_id: UUID) -> Proposal:
+        async with self._unit_of_work_factory() as unit_of_work:
+            record = await self._required(unit_of_work.proposals, proposal_id)
+        return record.proposal
+
     async def submit(
         self,
         *,

@@ -32,6 +32,7 @@ from kya_platform.application.mcp_profiles.runtime import (
     ToolProfileMode,
     ToolProfileRequest,
 )
+from kya_platform.application.proposal import ProposalService, ProposalUnitOfWorkFactory
 from kya_platform.application.publication import (
     PublicationService,
     PublicationUnitOfWorkFactory,
@@ -56,6 +57,7 @@ from kya_platform.infrastructure.database.identity import SqlAlchemyIdentityMapp
 from kya_platform.infrastructure.database.intelligence import SqlAlchemyIntelligenceRepository
 from kya_platform.infrastructure.database.mcp_profiles import SqlAlchemyMcpProfileRegistry
 from kya_platform.infrastructure.database.oauth_broker import VALID_SCOPES, OAuthBroker
+from kya_platform.infrastructure.database.proposal import SqlAlchemyProposalUnitOfWork
 from kya_platform.infrastructure.database.publication import (
     SqlAlchemyAttestationRepository,
     SqlAlchemyPublicationUnitOfWork,
@@ -67,6 +69,7 @@ from kya_platform.infrastructure.database.source_lifecycle import (
     SqlAlchemySourceLifecycleRepository,
 )
 from kya_platform.infrastructure.database.workspaces import SqlAlchemyWorkspaceRepository
+from kya_platform.infrastructure.github import GitHubAppPullRequestAdapter
 from kya_platform.infrastructure.infisical import (
     HttpxInfisicalTransport,
     InfisicalMachineIdentityAdapter,
@@ -250,6 +253,27 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     )
                 )
                 app.state.attestation_repository = SqlAlchemyAttestationRepository(session_factory)
+            if resolved_settings.has_github_proposal_configuration:
+                assert resolved_settings.github_app_id is not None
+                assert resolved_settings.github_app_installation_id is not None
+                assert resolved_settings.github_app_private_key is not None
+                assert resolved_settings.github_proposal_repository is not None
+                github_http_client = httpx.AsyncClient(timeout=30.0)
+                pull_requests = GitHubAppPullRequestAdapter(
+                    github_http_client,
+                    app_id=resolved_settings.github_app_id,
+                    installation_id=resolved_settings.github_app_installation_id,
+                    private_key=resolved_settings.github_app_private_key,
+                    base_branch=resolved_settings.github_proposal_base_branch,
+                )
+                app.state.proposal_service = ProposalService(
+                    cast(
+                        ProposalUnitOfWorkFactory,
+                        lambda: SqlAlchemyProposalUnitOfWork(session_factory),
+                    ),
+                    pull_requests,
+                )
+                app.state.proposal_repository = resolved_settings.github_proposal_repository
         app.state.infisical_secret_resolver = None
         if resolved_settings.has_infisical_configuration:
             api_url = resolved_settings.infisical_api_url
@@ -356,6 +380,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.state.source_lifecycle_service = None
     application.state.artifact_registry = None
     application.state.publication_service = None
+    application.state.proposal_service = None
+    application.state.proposal_repository = None
     application.state.attestation_repository = None
     application.state.registry_mcp_backend = None
     application.state.workspace_queries = None
