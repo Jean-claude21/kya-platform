@@ -26,6 +26,7 @@ class CatalogArtifact(Base):
     __table_args__ = (
         UniqueConstraint("registry_id", "slug", name="uq_catalog_artifact_registry_slug"),
         Index("ix_catalog_artifact_owner_workspace", "owner_workspace_id"),
+        Index("ix_catalog_artifact_visibility_scope_unit", "visibility_scope_unit_id"),
         CheckConstraint(
             "lifecycle IN ('draft', 'prototype', 'candidate', 'validating', 'approved', "
             "'published', 'suspended', 'deprecated', 'retired')",
@@ -45,6 +46,8 @@ class CatalogArtifact(Base):
     technical_owner_id: Mapped[UUID] = mapped_column(nullable=False)
     visibility: Mapped[str] = mapped_column(String(32), nullable=False, default="private")
     lifecycle: Mapped[str] = mapped_column(String(32), nullable=False, default="draft")
+    visibility_scope_unit_id: Mapped[UUID | None] = mapped_column(nullable=True)
+    discoverable: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -297,6 +300,48 @@ class CatalogInstallationHistory(Base):
     )
 
 
+class CatalogProposal(Base):
+    """A non-developer contribution awaiting review before any Git commit exists."""
+
+    __tablename__ = "proposal"
+    __table_args__ = (
+        ForeignKeyConstraint(["artifact_id"], ["catalog.artifact.id"], ondelete="RESTRICT"),
+        ForeignKeyConstraint(
+            ["resulting_artifact_version_id"],
+            ["catalog.artifact_version.id"],
+            ondelete="RESTRICT",
+        ),
+        Index("ix_catalog_proposal_target_workspace", "target_workspace_id"),
+        Index("ix_catalog_proposal_requested_by_status", "requested_by", "status"),
+        Index("ix_catalog_proposal_artifact", "artifact_id"),
+        CheckConstraint(
+            "status IN ('submitted', 'in_review', 'approved', 'rejected', 'pull_request_open', "
+            "'merged', 'closed_without_merge')",
+            name="valid_status",
+        ),
+        {"schema": "catalog"},
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=new_id)
+    artifact_id: Mapped[UUID | None] = mapped_column(nullable=True)
+    target_workspace_id: Mapped[UUID] = mapped_column(nullable=False)
+    slug: Mapped[str] = mapped_column(String(120), nullable=False)
+    artifact_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    package: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    requested_by: Mapped[UUID] = mapped_column(nullable=False)
+    requested_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="submitted")
+    reviewer_id: Mapped[UUID | None] = mapped_column(nullable=True)
+    review_decision: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    review_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    pull_request_url: Mapped[str | None] = mapped_column(String(700), nullable=True)
+    merged_commit_sha: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    resulting_artifact_version_id: Mapped[UUID | None] = mapped_column(nullable=True)
+
+
 class CatalogDistributionOperation(Base):
     __tablename__ = "distribution_operation"
     __table_args__ = (
@@ -340,6 +385,7 @@ __all__ = [
     "CatalogInstallation",
     "CatalogInstallationHistory",
     "CatalogPackageFile",
+    "CatalogProposal",
     "CatalogPublicationRequest",
     "CatalogRelease",
 ]
