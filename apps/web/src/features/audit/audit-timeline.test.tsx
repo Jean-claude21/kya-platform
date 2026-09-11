@@ -86,4 +86,3 @@ describe('audit timeline', () => {
     expect(failed).toContain('Service inaccessible');
   });
 });
-

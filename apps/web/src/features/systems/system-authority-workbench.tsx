@@ -165,9 +165,15 @@ export function SystemAuthorityWorkbenchView({
             <div className="authority-heading">
               <div>
                 <h3>Autorité de cette source</h3>
-                <p>Une deuxième source exclusive sur le même périmètre bloquerait la publication.</p>
+                <p>
+                  Une deuxième source exclusive sur le même périmètre bloquerait la publication.
+                </p>
               </div>
-              <button disabled title="Disponible après connexion du formulaire à l’API" type="button">
+              <button
+                disabled
+                title="Disponible après connexion du formulaire à l’API"
+                type="button"
+              >
                 Ajouter une source · bientôt
               </button>
             </div>
@@ -234,4 +240,3 @@ export function SystemAuthorityWorkbench() {
     />
   );
 }
-

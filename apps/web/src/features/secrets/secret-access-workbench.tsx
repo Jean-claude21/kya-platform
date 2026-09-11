@@ -217,9 +217,7 @@ export function SecretAccessWorkbench() {
       })
       .catch((failure: unknown) => {
         if (!isActive) return;
-        setError(
-          failure instanceof Error ? failure.message : 'Les références sont indisponibles.',
-        );
+        setError(failure instanceof Error ? failure.message : 'Les références sont indisponibles.');
         setState('error');
       });
     return () => {
@@ -237,4 +235,3 @@ export function SecretAccessWorkbench() {
     />
   );
 }
-

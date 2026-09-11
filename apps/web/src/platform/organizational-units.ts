@@ -19,4 +19,3 @@ export const organizationalUnitTypeLabels: Record<string, string> = {
 export function organizationalUnitTypeLabel(typeKey: string): string {
   return organizationalUnitTypeLabels[typeKey] ?? typeKey;
 }
-

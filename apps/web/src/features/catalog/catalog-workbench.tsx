@@ -207,7 +207,7 @@ export function CatalogWorkbenchView({
         <div className="catalog-proof">
           <Icon name="shield" />
           <span>
-          <strong>Unité active</strong>
+            <strong>Unité active</strong>
             {activeUnit ? organizationalUnitTypeLabel(activeUnit) : 'Calcul en cours'}
           </span>
         </div>

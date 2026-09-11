@@ -5,14 +5,7 @@ import { Icon, StatusBadge } from '@kya/design-system';
 import { platformRequest } from '../../platform/api';
 
 export type WorkspaceKind =
-  | 'personal'
-  | 'team'
-  | 'direction'
-  | 'project'
-  | 'country'
-  | 'group'
-  | 'temporary'
-  | 'restricted';
+  'personal' | 'team' | 'direction' | 'project' | 'country' | 'group' | 'temporary' | 'restricted';
 
 export type WorkspaceSummary = {
   id: string;
@@ -156,7 +149,9 @@ export function WorkspaceAccessPanel() {
       })
       .catch((failure: unknown) => {
         if (!isActive) return;
-        setListError(failure instanceof Error ? failure.message : 'Les espaces sont indisponibles.');
+        setListError(
+          failure instanceof Error ? failure.message : 'Les espaces sont indisponibles.',
+        );
         setListState('error');
       });
     return () => {
@@ -246,7 +241,9 @@ export function WorkspaceAccessPanel() {
                 <strong>{workspace.name}</strong>
                 <small>{kindLabels[workspace.kind]}</small>
               </span>
-              <StatusBadge tone={workspace.classification === 'restricted' ? 'restricted' : 'neutral'}>
+              <StatusBadge
+                tone={workspace.classification === 'restricted' ? 'restricted' : 'neutral'}
+              >
                 {workspace.classification}
               </StatusBadge>
             </button>
@@ -282,7 +279,11 @@ export function WorkspaceAccessPanel() {
                 <h3>Membres et responsabilités</h3>
                 <p>Les affectations temporaires expirent automatiquement.</p>
               </div>
-              <button disabled title="Disponible après connexion de l’écriture à Neon" type="button">
+              <button
+                disabled
+                title="Disponible après connexion de l’écriture à Neon"
+                type="button"
+              >
                 Ajouter un membre · bientôt
               </button>
             </div>
@@ -333,4 +334,3 @@ export function WorkspaceAccessPanel() {
     </main>
   );
 }
-

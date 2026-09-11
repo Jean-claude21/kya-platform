@@ -84,4 +84,3 @@ describe('system authority workbench', () => {
     expect(empty).toContain('Aucune source visible');
   });
 });
-

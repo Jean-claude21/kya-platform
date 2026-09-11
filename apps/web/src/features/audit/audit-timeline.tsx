@@ -215,9 +215,7 @@ export function AuditTimeline({ workspaceKey }: { workspaceKey: string }) {
       })
       .catch((failure: unknown) => {
         if (!isActive) return;
-        setError(
-          failure instanceof Error ? failure.message : 'La piste d’audit est indisponible.',
-        );
+        setError(failure instanceof Error ? failure.message : 'La piste d’audit est indisponible.');
         setState('error');
       });
     return () => {
@@ -237,4 +235,3 @@ export function AuditTimeline({ workspaceKey }: { workspaceKey: string }) {
     />
   );
 }
-
