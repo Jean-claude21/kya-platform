@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Icon, StatusBadge } from '@kya/design-system';
 import { platformRequest } from '../../platform/api';
+import { organizationalUnitTypeLabel } from '../../platform/organizational-units';
 
 type Client = {
   id: string;
@@ -100,7 +101,7 @@ export function CoreAdministration() {
         <section className="core-records">
           <header>
             <div>
-              <span>Lecture directe · unité group</span>
+              <span>Lecture directe · unité {organizationalUnitTypeLabel('group')}</span>
               <h2>Référentiels actuels</h2>
             </div>
             {error && <StatusBadge tone="warning">{error}</StatusBadge>}
