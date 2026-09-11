@@ -4,6 +4,7 @@ import { Icon, StatusBadge } from '@kya/design-system';
 import type { IconName } from '@kya/design-system';
 
 import { idempotencyKey, platformRequest } from '../../platform/api';
+import { organizationalUnitTypeLabel } from '../../platform/organizational-units';
 
 export type ArtifactType = 'skill' | 'mcp' | 'app' | 'api' | 'dataset' | 'template';
 
@@ -207,7 +208,7 @@ export function CatalogWorkbenchView({
           <Icon name="shield" />
           <span>
             <strong>Unité active</strong>
-            {activeUnit || 'Calcul en cours'}
+            {activeUnit ? organizationalUnitTypeLabel(activeUnit) : 'Calcul en cours'}
           </span>
         </div>
       </section>

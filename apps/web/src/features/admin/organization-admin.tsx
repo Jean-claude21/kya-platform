@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Icon, StatusBadge } from '@kya/design-system';
 import { platformRequest } from '../../platform/api';
+import { organizationalUnitTypeLabel } from '../../platform/organizational-units';
 
 type Unit = {
   id: string;
@@ -58,7 +59,7 @@ export function OrganizationAdmin() {
                 <span>
                   <strong>{root.name}</strong>
                   <small>
-                    {root.type_key} · {root.key}
+                    {organizationalUnitTypeLabel(root.type_key)} · {root.key}
                   </small>
                 </span>
               </button>
@@ -70,7 +71,7 @@ export function OrganizationAdmin() {
                       <span>
                         <strong>{unit.name}</strong>
                         <small>
-                          {unit.type_key} · {unit.key}
+                          {organizationalUnitTypeLabel(unit.type_key)} · {unit.key}
                         </small>
                       </span>
                     </button>

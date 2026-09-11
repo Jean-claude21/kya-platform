@@ -13,6 +13,7 @@ from kya_platform.infrastructure.database.models import (
     CatalogAttestation,
     CatalogCapabilityManifest,
     CatalogPackageFile,
+    CatalogProposal,
     CatalogPublicationRequest,
     CatalogRelease,
     CoreClientAccount,
@@ -58,6 +59,7 @@ def test_reliability_models_have_explicit_schema_ownership() -> None:
         "catalog.installation",
         "catalog.installation_history",
         "catalog.package_file",
+        "catalog.proposal",
         "catalog.publication_request",
         "catalog.release",
         "core.client_account",
@@ -141,6 +143,7 @@ def test_catalog_models_have_constraints_and_explicit_schema_ownership() -> None
     assert CatalogAttestation.__table__.schema == "catalog"
     assert CatalogPackageFile.__table__.schema == "catalog"
     assert CatalogCapabilityManifest.__table__.schema == "catalog"
+    assert CatalogProposal.__table__.schema == "catalog"
     assert CatalogPublicationRequest.__table__.schema == "catalog"
     assert CatalogRelease.__table__.schema == "catalog"
 

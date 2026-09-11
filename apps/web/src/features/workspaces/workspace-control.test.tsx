@@ -46,4 +46,3 @@ describe('workspace control', () => {
     expect(html).toContain('Aucun espace accessible dans ce contexte.');
   });
 });
-

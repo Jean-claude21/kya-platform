@@ -10,6 +10,7 @@ from kya_platform.infrastructure.database.models.catalog import (
     CatalogInstallation,
     CatalogInstallationHistory,
     CatalogPackageFile,
+    CatalogProposal,
     CatalogPublicationRequest,
     CatalogRelease,
 )
@@ -82,6 +83,7 @@ __all__ = [
     "CatalogInstallation",
     "CatalogInstallationHistory",
     "CatalogPackageFile",
+    "CatalogProposal",
     "CatalogPublicationRequest",
     "CatalogRelease",
     "CoreClientAccount",

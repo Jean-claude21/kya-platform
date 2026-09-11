@@ -99,4 +99,3 @@ class SqlAlchemySecretReferenceRepository:
 
 
 __all__ = ["SqlAlchemySecretReferenceRepository"]
-

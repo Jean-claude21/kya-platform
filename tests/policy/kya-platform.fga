@@ -35,16 +35,19 @@ type workspace
     define can_view: (viewer or editor or manager or manager from unit or administrator from unit) but not blocked
     define can_edit: (editor or manager or manager from unit or administrator from unit) but not blocked
     define can_manage: (manager or administrator from unit) but not blocked
+    define can_propose: can_view
 
 type artifact
   relations
     define workspace: [workspace]
+    define scope_unit: [org_unit]
     define publisher: [user, team#member, role#assignee, user with active_grant]
     define reviewer: [user, team#member, role#assignee, user with active_grant]
     define approver: [user, team#member, role#assignee, user with active_grant]
     define blocked: [user, team#member]
-    define can_view: (publisher or reviewer or approver or can_view from workspace) but not blocked
+    define can_view: (publisher or reviewer or approver or can_view from workspace or member from scope_unit or manager from scope_unit or administrator from scope_unit) but not blocked
     define can_submit: (publisher or can_edit from workspace) but not blocked
+    define can_propose: (publisher or reviewer or approver or can_propose from workspace) but not blocked
     define can_review: reviewer but not blocked
     define can_approve: approver but not blocked
 

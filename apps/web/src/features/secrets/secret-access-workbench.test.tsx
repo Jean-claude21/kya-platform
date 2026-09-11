@@ -87,4 +87,3 @@ describe('secret access workbench', () => {
     expect(html).not.toMatch(/value/i);
   });
 });
-

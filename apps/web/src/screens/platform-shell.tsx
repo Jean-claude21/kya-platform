@@ -99,8 +99,7 @@ export function PlatformShell() {
     );
   } else if (activeModule === 'MCP') screen = <AiEnvironment />;
   else if (activeModule === 'Studio') screen = <ArtifactStudio />;
-  else if (activeModule === 'Espaces')
-    screen = <WorkspaceAccessPanel />;
+  else if (activeModule === 'Espaces') screen = <WorkspaceAccessPanel />;
   else if (activeModule === 'Administration') screen = <ControlCenter onOpen={navigate} />;
   else if (activeModule === 'Organisation') screen = <OrganizationAdmin />;
   else if (activeModule === 'Core') screen = <CoreAdministration />;

@@ -55,4 +55,3 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_index("ix_secret_reference_owner_scope", table_name="secret_reference", schema="core")
     op.drop_table("secret_reference", schema="core")
-
