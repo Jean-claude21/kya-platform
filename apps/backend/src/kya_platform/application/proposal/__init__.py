@@ -12,8 +12,12 @@ from typing import Protocol, Self
 from uuid import UUID
 
 from kya_platform.application import OutboxMessage
+from kya_platform.application.artifact_registry.proposal_validation import (
+    ProposalValidationError,
+    validate_proposal_package,
+)
 from kya_platform.application.ports.reliability import OutboxPort
-from kya_platform.contracts.artifact_package import ArtifactPackage
+from kya_platform.contracts.proposal_package import ProposalPackage
 from kya_platform.domain.catalog import ArtifactType, Proposal, ProposalStatus
 
 MAX_OPEN_PROPOSALS_PER_AUTHOR = 5
@@ -30,7 +34,7 @@ class ProposalQuotaExceededError(ValueError):
 @dataclass(frozen=True, slots=True)
 class ProposalRecord:
     proposal: Proposal
-    package: ArtifactPackage
+    package: ProposalPackage
 
 
 class ProposalRepository(Protocol):
@@ -40,7 +44,7 @@ class ProposalRepository(Protocol):
     async def count_open_for_author(self, author_id: UUID) -> int:
         """Count proposals not yet in a terminal status for one author."""
 
-    async def save(self, proposal: Proposal, *, package: ArtifactPackage) -> None:
+    async def save(self, proposal: Proposal, *, package: ProposalPackage) -> None:
         """Insert or update one proposal with its submitted package payload."""
 
 
@@ -72,7 +76,7 @@ class PullRequestPort(Protocol):
         *,
         repository: str,
         slug: str,
-        package: ArtifactPackage,
+        package: ProposalPackage,
         required_approver_id: UUID,
         proposal_id: UUID,
     ) -> str:
@@ -99,11 +103,15 @@ class ProposalService:
         slug: str,
         artifact_type: ArtifactType,
         artifact_id: UUID | None,
-        package: ArtifactPackage,
+        package: ProposalPackage,
         requested_by: UUID,
         at: datetime,
         correlation_id: UUID,
     ) -> Proposal:
+        try:
+            validate_proposal_package(package)
+        except ProposalValidationError:
+            raise
         proposal = Proposal.open(
             id=proposal_id,
             target_workspace_id=target_workspace_id,
