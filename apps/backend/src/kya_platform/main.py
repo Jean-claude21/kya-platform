@@ -61,6 +61,7 @@ from kya_platform.infrastructure.database.publication import (
     SqlAlchemyPublicationUnitOfWork,
 )
 from kya_platform.infrastructure.database.registry_mcp import SqlAlchemyRegistryMcpBackend
+from kya_platform.infrastructure.database.secrets import SqlAlchemySecretReferenceRepository
 from kya_platform.infrastructure.database.session import create_engine, create_session_factory
 from kya_platform.infrastructure.database.source_lifecycle import (
     SqlAlchemySourceLifecycleRepository,
@@ -185,6 +186,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             workspace_repository = SqlAlchemyWorkspaceRepository(session_factory)
             app.state.workspace_queries = workspace_repository
             app.state.workspace_commands = workspace_repository
+            app.state.secret_references = SqlAlchemySecretReferenceRepository(session_factory)
             app.state.content_service = ContentService(SqlAlchemyContentRepository(session_factory))
             app.state.intelligence_service = IntelligenceService(
                 SqlAlchemyIntelligenceRepository(session_factory), app.state.content_service
@@ -358,6 +360,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.state.registry_mcp_backend = None
     application.state.workspace_queries = None
     application.state.workspace_commands = None
+    application.state.secret_references = None
     application.state.mcp_profile_service = None
     application.state.mcp_profile_repository = None
     application.state.mcp_preference_service = None

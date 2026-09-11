@@ -72,6 +72,7 @@ def test_reliability_models_have_explicit_schema_ownership() -> None:
         "core.position_assignment",
         "core.project",
         "core.project_site",
+        "core.secret_reference",
         "core.site",
         "core.work_relationship",
         "core.workspace",
