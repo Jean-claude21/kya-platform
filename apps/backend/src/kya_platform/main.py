@@ -242,15 +242,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                         ),
                     )
                 )
-                app.state.registry_mcp_backend = SqlAlchemyRegistryMcpBackend(
-                    session_factory,
-                    trust_store,
-                )
-                app.state.publication_service = PublicationService(
+                publication_service = PublicationService(
                     cast(
                         PublicationUnitOfWorkFactory,
                         lambda: SqlAlchemyPublicationUnitOfWork(session_factory, signer),
                     )
+                )
+                app.state.publication_service = publication_service
+                app.state.registry_mcp_backend = SqlAlchemyRegistryMcpBackend(
+                    session_factory,
+                    trust_store,
+                    publication_service,
                 )
                 app.state.attestation_repository = SqlAlchemyAttestationRepository(session_factory)
             if resolved_settings.has_github_proposal_configuration:
