@@ -11,8 +11,8 @@
     "workspace": "kya-platform"
   },
   "source": {
-    "repository": "https://github.com/kya-energy/kya-platform",
-    "commit": "0000000000000000000000000000000000000000",
+    "repository": "https://github.com/Jean-claude21/kya-platform",
+    "commit": "3031d8687c28bf12873c5f648cb629dfeceb78df",
     "path": "catalog/templates/skill/kya-design-system"
   },
   "integrity": {
