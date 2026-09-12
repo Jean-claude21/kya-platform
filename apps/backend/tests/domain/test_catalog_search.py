@@ -7,6 +7,7 @@ import pytest
 from kya_platform.application.catalog import (
     CatalogBrowseQuery,
     CatalogBrowseService,
+    CatalogDiscoverableSummary,
     CatalogItem,
     CatalogSearchService,
     CatalogSummary,
@@ -137,6 +138,102 @@ async def test_browse_rejects_an_item_outside_the_authorized_set() -> None:
 
     with pytest.raises(RuntimeError, match="unauthorized"):
         await service.browse(
+            user="user:alice",
+            query=CatalogBrowseQuery(),
+            context={},
+            contextual_tuples=(),
+        )
+
+
+class _AccessibleCatalog:
+    async def browse(
+        self, *, query: CatalogBrowseQuery, allowed_ids: tuple[str, ...]
+    ) -> Sequence[CatalogSummary]:
+        return (
+            CatalogSummary(
+                id="skill-visible",
+                public_id="kya:skill:document-standard",
+                name="Standard documentaire KYA",
+                artifact_type="skill",
+                summary=None,
+                latest_version="1.0.0",
+                lifecycle="published",
+                owner_workspace_id="workspace-id",
+            ),
+        )
+
+
+class _Discovery:
+    def __init__(self, items: Sequence[CatalogDiscoverableSummary]) -> None:
+        self._items = items
+        self.excluded_ids: tuple[str, ...] | None = None
+
+    async def browse_discoverable(
+        self, *, query: CatalogBrowseQuery, excluded_ids: tuple[str, ...]
+    ) -> Sequence[CatalogDiscoverableSummary]:
+        self.excluded_ids = excluded_ids
+        return self._items
+
+
+@pytest.mark.asyncio
+@pytest.mark.unit
+async def test_browse_with_discoverable_appends_a_reduced_non_repeated_tail() -> None:
+    discoverable = CatalogDiscoverableSummary(
+        public_id="kya:skill:other-team-skill",
+        name="Skill d'une autre équipe",
+        artifact_type="skill",
+        summary=None,
+        owner_workspace_name="Équipe Data",
+    )
+    discovery = _Discovery((discoverable,))
+    service = CatalogBrowseService(
+        authorization=Policy(), catalog=_AccessibleCatalog(), discovery=discovery
+    )
+
+    accessible, discoverable_items = await service.browse_with_discoverable(
+        user="user:alice",
+        query=CatalogBrowseQuery(),
+        context={},
+        contextual_tuples=(),
+    )
+
+    assert [item.public_id for item in accessible] == ["kya:skill:document-standard"]
+    assert discoverable_items == (discoverable,)
+    assert discovery.excluded_ids == ("skill-visible",)
+
+
+@pytest.mark.asyncio
+@pytest.mark.unit
+async def test_browse_with_discoverable_without_discovery_port_returns_empty_tail() -> None:
+    service = CatalogBrowseService(authorization=Policy(), catalog=_AccessibleCatalog())
+
+    accessible, discoverable_items = await service.browse_with_discoverable(
+        user="user:alice",
+        query=CatalogBrowseQuery(),
+        context={},
+        contextual_tuples=(),
+    )
+
+    assert [item.public_id for item in accessible] == ["kya:skill:document-standard"]
+    assert discoverable_items == ()
+
+
+@pytest.mark.asyncio
+@pytest.mark.unit
+async def test_browse_with_discoverable_rejects_a_repeated_identifier() -> None:
+    conflicting = CatalogDiscoverableSummary(
+        public_id="skill-visible",
+        name="Doublon",
+        artifact_type="skill",
+        summary=None,
+        owner_workspace_name="Équipe Data",
+    )
+    service = CatalogBrowseService(
+        authorization=Policy(), catalog=_AccessibleCatalog(), discovery=_Discovery((conflicting,))
+    )
+
+    with pytest.raises(RuntimeError, match="already fully accessible"):
+        await service.browse_with_discoverable(
             user="user:alice",
             query=CatalogBrowseQuery(),
             context={},

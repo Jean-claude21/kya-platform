@@ -14,7 +14,12 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.sql.elements import ColumnElement
 
-from kya_platform.application.catalog import CatalogBrowseQuery, CatalogDetail, CatalogSummary
+from kya_platform.application.catalog import (
+    CatalogBrowseQuery,
+    CatalogDetail,
+    CatalogDiscoverableSummary,
+    CatalogSummary,
+)
 from kya_platform.application.publication import PublicationService
 from kya_platform.application.publication.integrity import (
     ArtifactSignature,
@@ -43,6 +48,7 @@ from kya_platform.infrastructure.database.models import (
     CatalogInstallationHistory,
     CatalogRelease,
     OutboxEvent,
+    WorkspaceRow,
 )
 from kya_platform.mcp.registry.contracts import (
     ArtifactDetail,
@@ -240,6 +246,44 @@ class SqlAlchemyRegistryMcpBackend:
             if len(items) == query.limit:
                 break
         return tuple(items)
+
+    async def browse_discoverable(
+        self, *, query: CatalogBrowseQuery, excluded_ids: tuple[str, ...]
+    ) -> tuple[CatalogDiscoverableSummary, ...]:
+        excluded = _uuid_identifiers(excluded_ids)
+        normalized = query.query.strip().casefold()
+        filters: list[ColumnElement[bool]] = [CatalogArtifact.discoverable.is_(True)]
+        if excluded:
+            filters.append(CatalogArtifact.id.not_in(excluded))
+        if normalized:
+            filters.append(
+                or_(
+                    func.lower(CatalogArtifact.name).contains(normalized),
+                    func.lower(CatalogArtifact.slug).contains(normalized),
+                    func.lower(func.coalesce(CatalogArtifact.summary, "")).contains(normalized),
+                )
+            )
+        if query.artifact_types:
+            filters.append(CatalogArtifact.artifact_type.in_(query.artifact_types))
+        async with self._sessions() as session:
+            result = await session.execute(
+                select(CatalogArtifact, WorkspaceRow.name)
+                .join(WorkspaceRow, WorkspaceRow.id == CatalogArtifact.owner_workspace_id)
+                .where(*filters)
+                .order_by(CatalogArtifact.updated_at.desc())
+                .limit(query.limit)
+            )
+        return tuple(
+            CatalogDiscoverableSummary(
+                public_id=_public_id(artifact),
+                name=artifact.name,
+                artifact_type=artifact.artifact_type,
+                summary=artifact.summary,
+                owner_workspace_name=workspace_name,
+                installable=False,
+            )
+            for artifact, workspace_name in result.all()
+        )
 
     async def get_artifact(self, request: GetArtifactInput) -> ArtifactDetail:
         detail = await self.describe(public_id=request.artifact_id, version=request.version)
