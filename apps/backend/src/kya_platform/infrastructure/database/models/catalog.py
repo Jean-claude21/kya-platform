@@ -342,6 +342,38 @@ class CatalogProposal(Base):
     resulting_artifact_version_id: Mapped[UUID | None] = mapped_column(nullable=True)
 
 
+class CatalogScopePromotion(Base):
+    """Widens an artifact's visibility scope; never duplicates the artifact."""
+
+    __tablename__ = "scope_promotion"
+    __table_args__ = (
+        ForeignKeyConstraint(["artifact_id"], ["catalog.artifact.id"], ondelete="RESTRICT"),
+        Index("ix_catalog_scope_promotion_artifact", "artifact_id", "requested_at"),
+        CheckConstraint(
+            "status IN ('awaiting-review', 'awaiting-approval', 'approved', 'rejected', 'applied')",
+            name="valid_status",
+        ),
+        {"schema": "catalog"},
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=new_id)
+    artifact_id: Mapped[UUID] = mapped_column(nullable=False)
+    current_scope_unit_id: Mapped[UUID] = mapped_column(nullable=False)
+    target_scope_unit_id: Mapped[UUID] = mapped_column(nullable=False)
+    requested_by: Mapped[UUID] = mapped_column(nullable=False)
+    requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    separation_of_duties: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    reviewer_id: Mapped[UUID | None] = mapped_column(nullable=True)
+    review_decision: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    approver_id: Mapped[UUID | None] = mapped_column(nullable=True)
+    approval_decision: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    applied_by: Mapped[UUID | None] = mapped_column(nullable=True)
+    applied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class CatalogDistributionOperation(Base):
     __tablename__ = "distribution_operation"
     __table_args__ = (
@@ -388,4 +420,5 @@ __all__ = [
     "CatalogProposal",
     "CatalogPublicationRequest",
     "CatalogRelease",
+    "CatalogScopePromotion",
 ]

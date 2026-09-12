@@ -343,6 +343,96 @@ class Proposal:
         return replace(self, status=ProposalStatus.CLOSED_WITHOUT_MERGE)
 
 
+class ScopePromotionStatus(StrEnum):
+    AWAITING_REVIEW = "awaiting-review"
+    AWAITING_APPROVAL = "awaiting-approval"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    APPLIED = "applied"
+
+
+@dataclass(frozen=True, slots=True)
+class ScopePromotionRequest:
+    """Widens an artifact's visibility scope; never duplicates it, never narrows it here."""
+
+    id: UUID
+    artifact_id: UUID
+    current_scope_unit_id: UUID
+    target_scope_unit_id: UUID
+    requested_by: UUID
+    requested_at: datetime
+    separation_of_duties: bool
+    status: ScopePromotionStatus = ScopePromotionStatus.AWAITING_REVIEW
+    review_record: Review | None = None
+    approval: Approval | None = None
+    applied_by: UUID | None = None
+    applied_at: datetime | None = None
+
+    @classmethod
+    def open(
+        cls,
+        *,
+        id: UUID,
+        artifact_id: UUID,
+        current_scope_unit_id: UUID,
+        target_scope_unit_id: UUID,
+        requested_by: UUID,
+        requested_at: datetime,
+        separation_of_duties: bool = True,
+    ) -> ScopePromotionRequest:
+        return cls(
+            id=id,
+            artifact_id=artifact_id,
+            current_scope_unit_id=current_scope_unit_id,
+            target_scope_unit_id=target_scope_unit_id,
+            requested_by=requested_by,
+            requested_at=requested_at,
+            separation_of_duties=separation_of_duties,
+            status=ScopePromotionStatus.AWAITING_REVIEW,
+        )
+
+    def review(
+        self, reviewer_id: UUID, decision: ReviewDecision, *, at: datetime
+    ) -> ScopePromotionRequest:
+        if self.status is not ScopePromotionStatus.AWAITING_REVIEW:
+            raise ValueError("scope promotion is not awaiting review")
+        if self.separation_of_duties and reviewer_id == self.requested_by:
+            raise PermissionError("an author cannot review own scope promotion")
+        next_status = (
+            ScopePromotionStatus.AWAITING_APPROVAL
+            if decision is ReviewDecision.ACCEPTED
+            else ScopePromotionStatus.REJECTED
+        )
+        return replace(self, status=next_status, review_record=Review(reviewer_id, decision, at))
+
+    def approve(
+        self, approver_id: UUID, decision: ApprovalDecision, *, at: datetime
+    ) -> ScopePromotionRequest:
+        if (
+            self.status is not ScopePromotionStatus.AWAITING_APPROVAL
+            or self.review_record is None
+            or self.review_record.decision is not ReviewDecision.ACCEPTED
+        ):
+            raise ValueError("scope promotion approval requires an accepted review")
+        if self.separation_of_duties and approver_id == self.requested_by:
+            raise PermissionError("an author cannot approve own scope promotion")
+        if self.separation_of_duties and approver_id == self.review_record.reviewer_id:
+            raise PermissionError("a reviewer cannot approve the same scope promotion")
+        next_status = (
+            ScopePromotionStatus.APPROVED
+            if decision is ApprovalDecision.APPROVED
+            else ScopePromotionStatus.REJECTED
+        )
+        return replace(self, status=next_status, approval=Approval(approver_id, decision, at))
+
+    def apply(self, applier_id: UUID, *, at: datetime) -> ScopePromotionRequest:
+        if self.status is not ScopePromotionStatus.APPROVED:
+            raise ValueError("only an approved scope promotion can be applied")
+        return replace(
+            self, status=ScopePromotionStatus.APPLIED, applied_by=applier_id, applied_at=at
+        )
+
+
 __all__ = [
     "Approval",
     "ApprovalDecision",
@@ -356,4 +446,6 @@ __all__ = [
     "PublicationStatus",
     "Review",
     "ReviewDecision",
+    "ScopePromotionRequest",
+    "ScopePromotionStatus",
 ]

@@ -13,6 +13,7 @@ from kya_platform.infrastructure.database.models.catalog import (
     CatalogProposal,
     CatalogPublicationRequest,
     CatalogRelease,
+    CatalogScopePromotion,
 )
 from kya_platform.infrastructure.database.models.core import (
     CoreClientAccount,
@@ -86,6 +87,7 @@ __all__ = [
     "CatalogProposal",
     "CatalogPublicationRequest",
     "CatalogRelease",
+    "CatalogScopePromotion",
     "CoreClientAccount",
     "CoreContactPoint",
     "CoreExternalReference",
