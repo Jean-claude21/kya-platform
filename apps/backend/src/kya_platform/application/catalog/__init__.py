@@ -43,6 +43,21 @@ class CatalogSummary:
 
 
 @dataclass(frozen=True, slots=True)
+class CatalogDiscoverableSummary:
+    """A reduced, non-actionable shape for artifacts marked discoverable by their owner.
+
+    Never includes file contents, manifests, versions, digests, or an installation path.
+    """
+
+    public_id: str
+    name: str
+    artifact_type: str
+    summary: str | None
+    owner_workspace_name: str
+    installable: bool = False
+
+
+@dataclass(frozen=True, slots=True)
 class CatalogDetail:
     id: str
     public_id: str
@@ -66,6 +81,17 @@ class CatalogBrowsePort(Protocol):
         """Browse only inside an authorization-filtered identifier set."""
 
 
+class CatalogDiscoveryPort(Protocol):
+    async def browse_discoverable(
+        self, *, query: CatalogBrowseQuery, excluded_ids: tuple[str, ...]
+    ) -> Sequence[CatalogDiscoverableSummary]:
+        """Browse artifacts marked discoverable by their owner, outside the excluded set.
+
+        excluded_ids are identifiers the caller already has full can_view access to; they are
+        never repeated in this reduced, non-actionable list.
+        """
+
+
 class CatalogDetailPort(Protocol):
     async def resolve_artifact_id(self, public_id: str) -> object | None:
         """Resolve a public identifier without disclosing metadata."""
@@ -75,9 +101,16 @@ class CatalogDetailPort(Protocol):
 
 
 class CatalogBrowseService:
-    def __init__(self, *, authorization: AuthorizationPort, catalog: CatalogBrowsePort) -> None:
+    def __init__(
+        self,
+        *,
+        authorization: AuthorizationPort,
+        catalog: CatalogBrowsePort,
+        discovery: CatalogDiscoveryPort | None = None,
+    ) -> None:
         self._authorization = authorization
         self._catalog = catalog
+        self._discovery = discovery
 
     async def browse(
         self,
@@ -115,6 +148,33 @@ class CatalogBrowseService:
         if any(item.id not in allowed_ids for item in results):
             raise RuntimeError("catalog returned an unauthorized artifact")
         return tuple(results)
+
+    async def browse_with_discoverable(
+        self,
+        *,
+        user: str,
+        query: CatalogBrowseQuery,
+        context: Mapping[str, JsonValue],
+        contextual_tuples: Sequence[ContextualTuple],
+    ) -> tuple[tuple[CatalogSummary, ...], tuple[CatalogDiscoverableSummary, ...]]:
+        """Return fully accessible results, plus a reduced discoverable-only tail.
+
+        The discoverable tail never repeats an identifier already in the accessible set, and
+        never discloses file contents, versions, digests, or an installation path.
+        """
+
+        accessible = await self.browse(
+            user=user, query=query, context=context, contextual_tuples=contextual_tuples
+        )
+        if self._discovery is None:
+            return accessible, ()
+        excluded_ids = tuple(item.id for item in accessible)
+        discoverable = await self._discovery.browse_discoverable(
+            query=query, excluded_ids=excluded_ids
+        )
+        if any(item.public_id in excluded_ids for item in discoverable):
+            raise RuntimeError("discovery returned an identifier already fully accessible")
+        return accessible, tuple(discoverable)
 
 
 class CatalogDetailService:
@@ -205,6 +265,8 @@ __all__ = [
     "CatalogDetail",
     "CatalogDetailPort",
     "CatalogDetailService",
+    "CatalogDiscoverableSummary",
+    "CatalogDiscoveryPort",
     "CatalogItem",
     "CatalogSearchPort",
     "CatalogSearchService",

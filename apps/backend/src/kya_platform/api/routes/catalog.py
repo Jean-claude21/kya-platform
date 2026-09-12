@@ -15,6 +15,7 @@ from kya_platform.application.catalog import (
     CatalogBrowseService,
     CatalogDetailPort,
     CatalogDetailService,
+    CatalogDiscoveryPort,
 )
 from kya_platform.authorization import AuthorizationPort, CheckRequest, active_unit_context
 from kya_platform.contracts.installation_plan import (
@@ -54,10 +55,20 @@ class CatalogSummaryResponse(BaseModel):
     owner_workspace_id: str
 
 
+class CatalogDiscoverableSummaryResponse(BaseModel):
+    artifact_id: str
+    artifact_type: str
+    name: str
+    summary: str | None
+    owner_workspace_name: str
+    installable: bool
+
+
 class CatalogBrowseResponse(BaseModel):
     items: tuple[CatalogSummaryResponse, ...]
     active_unit: str
     has_more: bool
+    discoverable_items: tuple[CatalogDiscoverableSummaryResponse, ...] = ()
 
 
 class CatalogDetailResponse(CatalogSummaryResponse):
@@ -68,7 +79,7 @@ class CatalogDetailResponse(CatalogSummaryResponse):
     content_digest: str
 
 
-class CatalogBackend(CatalogBrowsePort, CatalogDetailPort, Protocol):
+class CatalogBackend(CatalogBrowsePort, CatalogDetailPort, CatalogDiscoveryPort, Protocol):
     async def resolve_release_id(self, public_id: str, version: str) -> UUID | None: ...
 
     async def resolve_installation_workspace(self, installation_id: UUID) -> str | None: ...
@@ -143,7 +154,7 @@ def _service(request: Request) -> CatalogBrowseService:
             "Catalogue indisponible",
             "Le catalogue gouverné n'est pas configuré.",
         )
-    return CatalogBrowseService(authorization=authorization, catalog=catalog)
+    return CatalogBrowseService(authorization=authorization, catalog=catalog, discovery=catalog)
 
 
 def _detail_service(request: Request) -> CatalogDetailService:
@@ -243,7 +254,7 @@ async def browse_catalog(
         current_time=datetime.now(UTC),
     )
     try:
-        items = await _service(request).browse(
+        items, discoverable_items = await _service(request).browse_with_discoverable(
             user=f"user:{principal.principal_id}",
             query=CatalogBrowseQuery(
                 query=query,
@@ -276,6 +287,17 @@ async def browse_catalog(
         ),
         active_unit=principal.active_unit_id,
         has_more=len(items) == limit,
+        discoverable_items=tuple(
+            CatalogDiscoverableSummaryResponse(
+                artifact_id=item.public_id,
+                artifact_type=item.artifact_type,
+                name=item.name,
+                summary=item.summary,
+                owner_workspace_name=item.owner_workspace_name,
+                installable=item.installable,
+            )
+            for item in discoverable_items
+        ),
     )
 
 

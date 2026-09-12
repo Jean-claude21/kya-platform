@@ -10,8 +10,8 @@
       remove the `tool_not_implemented` stub. A separate non-Git-backed proposal MCP tool remains a
       future increment if MCP-originated proposals (as opposed to HTTP) are needed.
 - [ ] Add web Studio route(s) to list, review, approve or reject proposals.
-- [ ] Extend catalog browse/detail to return the reduced discoverable-only shape.
-- [ ] Add authorization-parity tests for discoverability without access.
+- [x] Extend catalog browse/detail to return the reduced discoverable-only shape.
+  - [x] Add authorization-parity tests for discoverability without access.
 - [x] Add proposal-to-version integration test with a mocked GitHub adapter.
 - [x] Add promotion history-preservation test (version and installation history untouched; the
       artifact row's identity, versions and installations are never duplicated by a promotion).

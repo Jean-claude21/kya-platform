@@ -7,6 +7,7 @@ from uuid import UUID
 import pytest
 from mcp.server.mcpserver.exceptions import ToolError
 
+from kya_platform.application.catalog import CatalogBrowseQuery
 from kya_platform.application.publication.integrity import (
     Ed25519ArtifactSigner,
     InMemoryTrustStore,
@@ -307,3 +308,33 @@ def test_update_resolution_ignores_incompatible_or_invalid_versions() -> None:
     )
 
     assert selected is None
+
+
+@pytest.mark.asyncio
+async def test_browse_discoverable_excludes_already_accessible_ids_and_joins_owner_name() -> None:
+    artifact, _ = rows(status="published")
+    result = Result([(artifact, "Équipe Data")])
+    session = Session(scalar_values=[], results=[result])
+    backend = SqlAlchemyRegistryMcpBackend(Sessions(session))  # type: ignore[arg-type]
+
+    items = await backend.browse_discoverable(
+        query=CatalogBrowseQuery(limit=10), excluded_ids=(str(WORKSPACE),)
+    )
+
+    assert len(items) == 1
+    assert items[0].public_id == "kya:skill:document-standard"
+    assert items[0].owner_workspace_name == "Équipe Data"
+    assert items[0].installable is False
+
+
+@pytest.mark.asyncio
+async def test_browse_discoverable_returns_nothing_without_matches() -> None:
+    result = Result([])
+    session = Session(scalar_values=[], results=[result])
+    backend = SqlAlchemyRegistryMcpBackend(Sessions(session))  # type: ignore[arg-type]
+
+    items = await backend.browse_discoverable(
+        query=CatalogBrowseQuery(query="solaire", limit=10), excluded_ids=()
+    )
+
+    assert items == ()

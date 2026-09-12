@@ -7,7 +7,12 @@ from fastapi.testclient import TestClient
 from mcp.server.mcpserver.exceptions import ToolError
 
 from kya_platform.api.security import AuthorizedPrincipal, active_principal
-from kya_platform.application.catalog import CatalogBrowseQuery, CatalogDetail, CatalogSummary
+from kya_platform.application.catalog import (
+    CatalogBrowseQuery,
+    CatalogDetail,
+    CatalogDiscoverableSummary,
+    CatalogSummary,
+)
 from kya_platform.auth import AuthenticatedIdentity
 from kya_platform.authorization import AuthorizationDecision, CheckRequest, ListObjectsRequest
 from kya_platform.config import Settings
@@ -78,6 +83,9 @@ class Catalog:
     def __init__(self) -> None:
         self.received: CatalogBrowseQuery | None = None
         self.allowed_ids: tuple[str, ...] | None = None
+        self.discoverable_query: CatalogBrowseQuery | None = None
+        self.discoverable_excluded_ids: tuple[str, ...] | None = None
+        self.discoverable_items: tuple[CatalogDiscoverableSummary, ...] = ()
         self.confirm_installation_calls: list[ConfirmInstallationInput] = []
         self.request_update_calls: list[RequestUpdateInput] = []
         self.confirm_update_calls: list[ConfirmUpdateInput] = []
@@ -110,6 +118,13 @@ class Catalog:
         if public_id != "kya:skill:kya-design-system":
             return None
         return ARTIFACT_ID
+
+    async def browse_discoverable(
+        self, *, query: CatalogBrowseQuery, excluded_ids: tuple[str, ...]
+    ) -> tuple[CatalogDiscoverableSummary, ...]:
+        self.discoverable_query = query
+        self.discoverable_excluded_ids = excluded_ids
+        return self.discoverable_items
 
     async def describe(self, *, public_id: str, version: str | None = None) -> CatalogDetail | None:
         if await self.resolve_artifact_id(public_id) is None:
@@ -231,6 +246,7 @@ def test_browse_returns_only_sanitized_authorized_capabilities() -> None:
         ],
         "active_unit": "direction-cvsi",
         "has_more": False,
+        "discoverable_items": [],
     }
     assert catalog.allowed_ids == (str(ARTIFACT_ID),)
     assert catalog.received == CatalogBrowseQuery(
@@ -239,6 +255,7 @@ def test_browse_returns_only_sanitized_authorized_capabilities() -> None:
         owner_workspace_id=None,
         limit=10,
     )
+    assert catalog.discoverable_excluded_ids == (str(ARTIFACT_ID),)
 
 
 def test_browse_fails_closed_when_authorization_is_unavailable() -> None:
@@ -252,6 +269,39 @@ def test_browse_fails_closed_when_authorization_is_unavailable() -> None:
 
     assert response.status_code == 503
     assert response.json()["code"] == "catalog_unavailable"
+
+
+def test_browse_appends_a_reduced_discoverable_tail_beyond_accessible_items() -> None:
+    app = create_app(Settings(_env_file=None, environment="test"))
+    app.dependency_overrides[active_principal] = principal
+    catalog = Catalog()
+    catalog.discoverable_items = (
+        CatalogDiscoverableSummary(
+            public_id="kya:skill:other-team-skill",
+            name="Skill d'une autre équipe",
+            artifact_type="skill",
+            summary="Non installable sans demande d'accès.",
+            owner_workspace_name="Équipe Data",
+        ),
+    )
+    app.state.authorization = Policy()
+    app.state.registry_mcp_backend = catalog
+
+    with TestClient(app) as client:
+        response = client.get("/api/v1/catalog/artifacts")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["discoverable_items"] == [
+        {
+            "artifact_id": "kya:skill:other-team-skill",
+            "artifact_type": "skill",
+            "name": "Skill d'une autre équipe",
+            "summary": "Non installable sans demande d'accès.",
+            "owner_workspace_name": "Équipe Data",
+            "installable": False,
+        }
+    ]
 
 
 def test_detail_returns_version_provenance_and_installability() -> None:
