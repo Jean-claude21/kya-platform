@@ -512,4 +512,3 @@ def run() -> None:
 
 
 __all__ = ["app", "create_app", "run"]
-
