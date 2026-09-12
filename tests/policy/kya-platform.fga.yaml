@@ -172,6 +172,21 @@ tests:
           can_discover: false
           can_invoke: false
 
+  - name: L'ascendance organisationnelle traverse toute la hiérarchie
+    check:
+      - user: org_unit:group
+        object: org_unit:direction-cvsi
+        assertions:
+          ancestor: true
+      - user: org_unit:togo
+        object: org_unit:direction-cvsi
+        assertions:
+          ancestor: true
+      - user: org_unit:direction-cvsi
+        object: org_unit:group
+        assertions:
+          ancestor: false
+
   - name: Les profils MCP sont administrés comme des ressources gouvernées
     tuples:
       - user: user:alice

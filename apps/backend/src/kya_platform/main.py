@@ -42,6 +42,10 @@ from kya_platform.application.publication.integrity import (
     InMemoryTrustStore,
     TrustedSigningKey,
 )
+from kya_platform.application.scope_promotion import (
+    ScopePromotionService,
+    ScopePromotionUnitOfWorkFactory,
+)
 from kya_platform.application.source_lifecycle import SourceLifecycleService
 from kya_platform.authorization import AuthorizationService
 from kya_platform.bootstrap import BootstrapService
@@ -63,6 +67,7 @@ from kya_platform.infrastructure.database.publication import (
     SqlAlchemyPublicationUnitOfWork,
 )
 from kya_platform.infrastructure.database.registry_mcp import SqlAlchemyRegistryMcpBackend
+from kya_platform.infrastructure.database.scope_promotion import SqlAlchemyScopePromotionUnitOfWork
 from kya_platform.infrastructure.database.secrets import SqlAlchemySecretReferenceRepository
 from kya_platform.infrastructure.database.session import create_engine, create_session_factory
 from kya_platform.infrastructure.database.source_lifecycle import (
@@ -315,6 +320,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 store_id=store_id,
                 model_id=model_id,
             )
+        authorization_port = app.state.authorization
+        if authorization_port is not None and session_factory is not None:
+            app.state.scope_promotion_service = ScopePromotionService(
+                cast(
+                    ScopePromotionUnitOfWorkFactory,
+                    lambda: SqlAlchemyScopePromotionUnitOfWork(session_factory),
+                ),
+                authorization_port,
+            )
         claims = app.state.bootstrap_claims
         authorization = app.state.authorization
         if resolved_settings.has_bootstrap_configuration and (
@@ -384,6 +398,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.state.publication_service = None
     application.state.proposal_service = None
     application.state.proposal_repository = None
+    application.state.scope_promotion_service = None
     application.state.attestation_repository = None
     application.state.registry_mcp_backend = None
     application.state.workspace_queries = None

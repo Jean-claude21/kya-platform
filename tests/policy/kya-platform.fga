@@ -14,6 +14,7 @@ type role
 type org_unit
   relations
     define parent: [org_unit]
+    define ancestor: parent or ancestor from parent
     define user_in_context: [user]
     define base_member: [user, team#member, role#assignee, user with active_grant]
     define member: base_member and user_in_context

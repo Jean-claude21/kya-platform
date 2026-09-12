@@ -16,6 +16,7 @@ from kya_platform.infrastructure.database.models import (
     CatalogProposal,
     CatalogPublicationRequest,
     CatalogRelease,
+    CatalogScopePromotion,
     CoreClientAccount,
     CoreExternalReference,
     CoreOrganizationalUnit,
@@ -62,6 +63,7 @@ def test_reliability_models_have_explicit_schema_ownership() -> None:
         "catalog.proposal",
         "catalog.publication_request",
         "catalog.release",
+        "catalog.scope_promotion",
         "core.client_account",
         "core.contact_point",
         "core.external_reference",
@@ -146,6 +148,7 @@ def test_catalog_models_have_constraints_and_explicit_schema_ownership() -> None
     assert CatalogProposal.__table__.schema == "catalog"
     assert CatalogPublicationRequest.__table__.schema == "catalog"
     assert CatalogRelease.__table__.schema == "catalog"
+    assert CatalogScopePromotion.__table__.schema == "catalog"
 
     artifact_unique = {
         tuple(column.name for column in constraint.columns)
