@@ -114,6 +114,7 @@ class PublishCandidateInput(StrictMcpContract):
     artifact_id: NonEmpty
     version: NonEmpty
     evidence: tuple[NonEmpty, ...] = Field(min_length=1)
+    actor_id: UUID
     idempotency_key: IdempotencyKey
     confirmation: Confirmation
 

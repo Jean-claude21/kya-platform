@@ -473,6 +473,7 @@ def create_registry_server(
                 artifact_id=artifact_id,
                 version=version,
                 evidence=tuple(evidence),
+                actor_id=guard.principal_id("publish_candidate"),
                 idempotency_key=idempotency_key,
                 confirmation=confirmation,
             )

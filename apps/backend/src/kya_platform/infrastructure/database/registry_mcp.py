@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.sql.elements import ColumnElement
 
 from kya_platform.application.catalog import CatalogBrowseQuery, CatalogDetail, CatalogSummary
+from kya_platform.application.publication import PublicationService
 from kya_platform.application.publication.integrity import (
     ArtifactSignature,
     InMemoryTrustStore,
@@ -27,6 +28,7 @@ from kya_platform.contracts.installation_plan import (
     InstallationPlan,
     build_installation_plan,
 )
+from kya_platform.domain.catalog import ArtifactVersion
 from kya_platform.domain.distribution import (
     ChangeKind,
     UpdateDecision,
@@ -86,9 +88,11 @@ class SqlAlchemyRegistryMcpBackend:
         self,
         sessions: async_sessionmaker[AsyncSession],
         trust_store: InMemoryTrustStore | None = None,
+        publication_service: PublicationService | None = None,
     ) -> None:
         self._sessions = sessions
         self._trust_store = trust_store
+        self._publication_service = publication_service
 
     async def resolve_artifact_id(self, public_id: str) -> UUID | None:
         parts = public_id.split(":", 2)
@@ -814,7 +818,41 @@ class SqlAlchemyRegistryMcpBackend:
         return OperationStatus(operation_id=operation_id, status=operation_status)
 
     async def publish_candidate(self, request: PublishCandidateInput) -> PublicationAccepted:
-        raise ToolError("tool_not_implemented")
+        if self._publication_service is None:
+            raise ToolError("publication_service_unavailable")
+        internal_artifact_id = await self.resolve_artifact_id(request.artifact_id)
+        if internal_artifact_id is None:
+            raise ToolError("artifact_not_found")
+        async with self._sessions() as session:
+            version_row = await session.scalar(
+                select(CatalogArtifactVersion).where(
+                    CatalogArtifactVersion.artifact_id == internal_artifact_id,
+                    CatalogArtifactVersion.version == request.version,
+                )
+            )
+        if version_row is None:
+            raise ToolError("artifact_version_not_found")
+        evidence_ids = _uuid_identifiers(request.evidence)
+        if len(evidence_ids) != len(request.evidence):
+            raise ToolError("evidence_identifier_invalid")
+        try:
+            published = await self._publication_service.submit(
+                request_id=uuid7(),
+                candidate=ArtifactVersion(
+                    internal_artifact_id,
+                    version_row.version,
+                    version_row.source_commit,
+                    version_row.content_digest,
+                    version_row.manifest_digest,
+                ),
+                actor_id=request.actor_id,
+                at=datetime.now(UTC),
+                correlation_id=uuid7(),
+                evidence_ids=evidence_ids,
+            )
+        except ValueError as error:
+            raise ToolError("publication_candidate_invalid") from error
+        return PublicationAccepted(request_id=published.id)
 
     def _verify_release_integrity(
         self,
