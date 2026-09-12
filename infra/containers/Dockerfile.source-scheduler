@@ -26,6 +26,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 WORKDIR /app
 
+RUN apt-get update \
+    && apt-get upgrade --yes \
+    && rm -rf /var/lib/apt/lists/*
 RUN python -m pip uninstall --yes pip
 COPY --from=build /app/.venv /app/.venv
 COPY --from=build /app/apps/backend /app/apps/backend
