@@ -106,6 +106,46 @@ def test_artifact_signing_key_requires_32_base64url_bytes() -> None:
 
 
 @pytest.mark.unit
+def test_github_app_private_key_must_be_base64_encoded_pem() -> None:
+    pem = "-----BEGIN RSA PRIVATE KEY-----\r\nfake\r\n-----END RSA PRIVATE KEY-----\r\n"
+    encoded = base64.b64encode(pem.encode()).decode()
+
+    settings = Settings(
+        _env_file=None,
+        github_app_id="123",
+        github_app_installation_id="456",
+        github_app_private_key=SecretStr(encoded),
+        github_proposal_repository="kya-energy/kya-platform",
+    )
+
+    assert settings.has_github_proposal_configuration
+    assert settings.github_app_private_key is not None
+    assert settings.github_app_private_key.get_secret_value() == pem
+    with pytest.raises(ValidationError, match="base64-encoded PEM"):
+        Settings(
+            _env_file=None,
+            github_app_id="123",
+            github_app_installation_id="456",
+            github_app_private_key=SecretStr("not-base64!!"),
+            github_proposal_repository="kya-energy/kya-platform",
+        )
+    with pytest.raises(ValidationError, match="decode to PEM"):
+        Settings(
+            _env_file=None,
+            github_app_id="123",
+            github_app_installation_id="456",
+            github_app_private_key=SecretStr(base64.b64encode(b"not a key").decode()),
+            github_proposal_repository="kya-energy/kya-platform",
+        )
+
+
+@pytest.mark.unit
+def test_partial_github_app_configuration_is_rejected() -> None:
+    with pytest.raises(ValidationError, match="must be complete"):
+        Settings(_env_file=None, github_app_id="123")
+
+
+@pytest.mark.unit
 def test_database_and_signing_key_enable_governed_publication_runtime() -> None:
     encoded = base64.urlsafe_b64encode(b"s" * 32).rstrip(b"=").decode()
     settings = Settings(

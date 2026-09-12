@@ -197,6 +197,19 @@ class Settings(BaseSettings):
         )
         if any(item is not None for item in github_app) and not all(github_app):
             raise ValueError("GitHub App proposal configuration must be complete")
+        if self.github_app_private_key is not None:
+            import base64
+
+            encoded_key = self.github_app_private_key.get_secret_value()
+            try:
+                decoded_key = base64.b64decode(encoded_key, validate=True).decode("ascii")
+            except (ValueError, UnicodeDecodeError) as error:
+                raise ValueError(
+                    "GitHub App private key must be base64-encoded PEM content"
+                ) from error
+            if "BEGIN" not in decoded_key or "PRIVATE KEY" not in decoded_key:
+                raise ValueError("GitHub App private key must decode to PEM content")
+            self.github_app_private_key = SecretStr(decoded_key)
         bootstrap = (self.bootstrap_owner_email, self.bootstrap_claim_code_hash)
         if any(item is not None for item in bootstrap) and not all(bootstrap):
             raise ValueError("Bootstrap owner configuration must be complete")
