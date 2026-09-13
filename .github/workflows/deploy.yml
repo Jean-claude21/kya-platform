@@ -105,6 +105,7 @@ jobs:
           COOLIFY_API_URL: ${{ secrets.COOLIFY_API_URL }}
           COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
           APPLICATION_NAME: kya-platform-backend
+          APPLICATION_HOST: api.kya-platform.vttlife.com
         run: |
           set -euo pipefail
           api_root="${COOLIFY_API_URL%/}"
@@ -119,9 +120,14 @@ jobs:
           application_uuid="$(jq -er \
             --arg name "$APPLICATION_NAME" \
             --arg branch "$GITHUB_REF_NAME" \
-            '[.[] | select(.name == $name and .git_branch == $branch)] |
+            --arg host "$APPLICATION_HOST" \
+            '[.[] | select(
+               .name == $name and
+               .git_branch == $branch and
+               ((.fqdn // "") | contains($host))
+             )] |
              if length == 1 then .[0].uuid
-             elif length == 0 then error("Coolify application not found for name and branch")
+             elif length == 0 then error("Coolify application not found for name, branch, and host")
              else error("Coolify application selection is ambiguous") end' \
             <<<"$applications")"
 
