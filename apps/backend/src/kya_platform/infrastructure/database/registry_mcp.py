@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import cast
 from uuid import UUID, uuid7
@@ -351,9 +352,12 @@ class SqlAlchemyRegistryMcpBackend:
         for release, artifact_version in result.all():
             if profile is None:
                 return cast(UUID, release.id)
-            compatibility = artifact_version.manifest.get("compatibility", {})
-            requirement = compatibility.get(profile.value)
-            if isinstance(requirement, str) and requirement:
+            requirement = self._installation_compatibility_requirement(
+                manifest=artifact_version.manifest,
+                profile=profile,
+                artifact_type=str(artifact_version.manifest.get("type", "")),
+            )
+            if requirement is not None:
                 return cast(UUID, release.id)
         return None
 
@@ -477,9 +481,12 @@ class SqlAlchemyRegistryMcpBackend:
         if release.status != "published" or version.status != "published":
             raise ToolError("release_not_installable")
         self._verify_release_integrity(release, version.content_digest)
-        compatibility = version.manifest.get("compatibility", {})
-        requirement = compatibility.get(request.profile.value)
-        if not isinstance(requirement, str) or not requirement:
+        requirement = self._installation_compatibility_requirement(
+            manifest=version.manifest,
+            profile=request.profile,
+            artifact_type=artifact.artifact_type,
+        )
+        if requirement is None:
             raise ToolError("target_profile_incompatible")
         try:
             return build_installation_plan(
@@ -502,6 +509,33 @@ class SqlAlchemyRegistryMcpBackend:
             raise ToolError("target_profile_incompatible") from error
         except ValueError as error:
             raise ToolError("installation_plan_invalid") from error
+
+    @staticmethod
+    def _installation_compatibility_requirement(
+        *,
+        manifest: Mapping[str, object],
+        profile: InstallationProfile,
+        artifact_type: str,
+    ) -> str | None:
+        """Resolve explicit compatibility, with one bounded legacy Skill bridge.
+
+        Early KYA Skill releases declared only the Codex filesystem profile even though their
+        validated package uses the portable Agent Skills layout consumed by Claude Code as well.
+        Keep those immutable releases installable while requiring future releases to declare all
+        supported profiles explicitly.
+        """
+
+        compatibility = manifest.get("compatibility", {})
+        if not isinstance(compatibility, Mapping):
+            return None
+        requirement = compatibility.get(profile.value)
+        if isinstance(requirement, str) and requirement:
+            return requirement
+        if artifact_type == ArtifactType.SKILL.value and profile is InstallationProfile.CLAUDE_CODE:
+            legacy_requirement = compatibility.get(InstallationProfile.CODEX.value)
+            if isinstance(legacy_requirement, str) and legacy_requirement:
+                return legacy_requirement
+        return None
 
     async def request_update(self, request: RequestUpdateInput) -> OperationAccepted:
         request_hash = hashlib.sha256(
