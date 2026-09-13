@@ -320,9 +320,7 @@ async def test_install_plan_bridges_legacy_codex_skill_to_claude_code() -> None:
     release, trust = signed_release()
     session = Session(scalar_values=[], results=[Result([(release, version, artifact)])])
     backend = SqlAlchemyRegistryMcpBackend(Sessions(session), trust)  # type: ignore[arg-type]
-    request = install_request().model_copy(
-        update={"profile": InstallationProfile.CLAUDE_CODE}
-    )
+    request = install_request().model_copy(update={"profile": InstallationProfile.CLAUDE_CODE})
 
     plan = await backend.request_install(request)
 
