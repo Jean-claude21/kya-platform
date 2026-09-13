@@ -31,6 +31,7 @@ from kya_platform.contracts.artifact_manifest import ArtifactType
 from kya_platform.contracts.installation_plan import (
     ClientCompatibilityError,
     InstallationPlan,
+    InstallationProfile,
     build_installation_plan,
 )
 from kya_platform.domain.catalog import ArtifactVersion
@@ -57,6 +58,7 @@ from kya_platform.mcp.registry.contracts import (
     ConfirmUpdateInput,
     GetArtifactInput,
     GetOperationInput,
+    InstallableRelease,
     InstallationRecorded,
     ListUpdatesInput,
     ListUpdatesOutput,
@@ -289,6 +291,9 @@ class SqlAlchemyRegistryMcpBackend:
         detail = await self.describe(public_id=request.artifact_id, version=request.version)
         if detail is None:
             raise ToolError("artifact_not_found")
+        installable_releases = await self._installable_releases(
+            artifact_id=UUID(detail.id), version=request.version
+        )
         return ArtifactDetail(
             artifact_id=detail.public_id,
             artifact_type=detail.artifact_type,
@@ -296,8 +301,48 @@ class SqlAlchemyRegistryMcpBackend:
             summary=detail.summary,
             latest_version=detail.latest_version,
             versions=detail.versions,
-            installable=detail.installable,
+            installable=bool(installable_releases),
+            installable_releases=installable_releases,
         )
+
+    async def _installable_releases(
+        self, *, artifact_id: UUID, version: str | None
+    ) -> tuple[InstallableRelease, ...]:
+        filters: list[ColumnElement[bool]] = [
+            CatalogArtifactVersion.artifact_id == artifact_id,
+            CatalogArtifactVersion.status == "published",
+            CatalogRelease.status == "published",
+        ]
+        if version is not None:
+            filters.append(CatalogArtifactVersion.version == version)
+        async with self._sessions() as session:
+            result = await session.execute(
+                select(CatalogRelease, CatalogArtifactVersion)
+                .join(
+                    CatalogArtifactVersion,
+                    CatalogArtifactVersion.id == CatalogRelease.artifact_version_id,
+                )
+                .where(*filters)
+                .order_by(CatalogRelease.published_at.desc())
+            )
+        releases: list[InstallableRelease] = []
+        for release, artifact_version in result.all():
+            compatibility = artifact_version.manifest.get("compatibility", {})
+            profiles = tuple(
+                profile
+                for profile in InstallationProfile
+                if isinstance(compatibility.get(profile.value), str)
+                and compatibility[profile.value]
+            )
+            releases.append(
+                InstallableRelease(
+                    release_id=release.id,
+                    version=artifact_version.version,
+                    compatible_profiles=profiles,
+                    published_at=release.published_at,
+                )
+            )
+        return tuple(releases)
 
     async def describe(self, *, public_id: str, version: str | None = None) -> CatalogDetail | None:
         internal_id = await self.resolve_artifact_id(public_id)
