@@ -2,9 +2,9 @@
 
 ## Frontière de confiance
 
-`get_artifact` expose, pour chaque release publiée installable, son `release_id`, sa version, ses
-profils compatibles et sa date de publication. Le client transmet ensuite ce `release_id` inchangé :
-aucun identifiant technique ne doit être inventé ou demandé à l'utilisateur.
+`get_artifact` exposes each installable published release with its `release_id`, version, compatible
+profiles and publication date. The client passes that `release_id` unchanged: no technical
+identifier should be invented or requested from the user.
 
 `request_install` n'installe rien. Après contrôle OAuth et OpenFGA, le Registry charge une release
 publiée depuis Neon, vérifie son digest et sa signature Ed25519, puis contrôle la compatibilité du

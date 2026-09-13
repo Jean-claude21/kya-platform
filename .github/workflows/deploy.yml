@@ -99,11 +99,59 @@ jobs:
     environment: ${{ inputs.environment }}
     steps:
       - uses: actions/checkout@v4
-      - name: Submit provider-neutral promotion
+      - name: Deploy KYA-Platform backend through Coolify
+        if: inputs.provider == 'coolify'
         env:
-          PROVIDER: ${{ inputs.provider }}
-          TARGET_ENV: ${{ inputs.environment }}
-          IMAGE_DIGEST: ${{ inputs.image_digest }}
+          COOLIFY_API_URL: ${{ secrets.COOLIFY_API_URL }}
+          COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+          APPLICATION_NAME: kya-platform-backend
         run: |
-          echo "Promotion request: provider=$PROVIDER environment=$TARGET_ENV image=$IMAGE_DIGEST"
-          echo "The provider adapter resolves the target resource and records the deployment reference."
+          set -euo pipefail
+          api_root="${COOLIFY_API_URL%/}"
+          if [[ "$api_root" != */api/v1 ]]; then
+            api_root="$api_root/api/v1"
+          fi
+
+          applications="$(curl --fail --silent --show-error \
+            --retry 3 \
+            --header "Authorization: Bearer $COOLIFY_API_TOKEN" \
+            "$api_root/applications")"
+          application_uuid="$(jq -er \
+            --arg name "$APPLICATION_NAME" \
+            --arg branch "$GITHUB_REF_NAME" \
+            '[.[] | select(.name == $name and .git_branch == $branch)] |
+             if length == 1 then .[0].uuid
+             elif length == 0 then error("Coolify application not found for name and branch")
+             else error("Coolify application selection is ambiguous") end' \
+            <<<"$applications")"
+
+          deployment="$(curl --fail --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $COOLIFY_API_TOKEN" \
+            "$api_root/deploy?uuid=$application_uuid&force=true")"
+          deployment_uuid="$(jq -er '.deployments[0].deployment_uuid' <<<"$deployment")"
+
+          for attempt in $(seq 1 60); do
+            status="$(curl --fail --silent --show-error \
+              --header "Authorization: Bearer $COOLIFY_API_TOKEN" \
+              "$api_root/deployments/$deployment_uuid" | jq -er '.status')"
+            case "$status" in
+              finished)
+                echo "Coolify deployment $deployment_uuid finished."
+                exit 0
+                ;;
+              failed|cancelled)
+                echo "Coolify deployment $deployment_uuid ended with status $status." >&2
+                exit 1
+                ;;
+            esac
+            sleep 10
+          done
+          echo "Coolify deployment $deployment_uuid did not finish within 10 minutes." >&2
+          exit 1
+
+      - name: Reject unimplemented deployment providers
+        if: inputs.provider != 'coolify'
+        run: |
+          echo "Deployment provider '${{ inputs.provider }}' is not implemented." >&2
+          exit 1
