@@ -168,9 +168,14 @@ async def test_get_returns_versions_and_installability_without_package_content()
     artifact, draft = rows()
     _artifact, published = rows(status="published")
     published.version = "0.9.0"
+    release, _trust = signed_release()
+    release.artifact_version_id = published.id
     session = Session(
         scalar_values=[ALLOWED],
-        results=[Result([(artifact, draft), (artifact, published)])],
+        results=[
+            Result([(artifact, draft), (artifact, published)]),
+            Result([(release, published)]),
+        ],
     )
     backend = SqlAlchemyRegistryMcpBackend(Sessions(session))  # type: ignore[arg-type]
 
@@ -178,6 +183,25 @@ async def test_get_returns_versions_and_installability_without_package_content()
 
     assert detail.versions == ("1.0.0", "0.9.0")
     assert detail.installable is True
+    assert len(detail.installable_releases) == 1
+    assert detail.installable_releases[0].release_id == RELEASE
+    assert detail.installable_releases[0].version == "0.9.0"
+    assert detail.installable_releases[0].compatible_profiles == ("codex", "portable-zip")
+
+
+@pytest.mark.asyncio
+async def test_get_does_not_claim_installability_without_a_published_release() -> None:
+    artifact, published = rows(status="published")
+    session = Session(
+        scalar_values=[ALLOWED],
+        results=[Result([(artifact, published)]), Result([])],
+    )
+    backend = SqlAlchemyRegistryMcpBackend(Sessions(session))  # type: ignore[arg-type]
+
+    detail = await backend.get_artifact(GetArtifactInput(artifact_id="kya:skill:document-standard"))
+
+    assert detail.installable is False
+    assert detail.installable_releases == ()
 
 
 def signed_release() -> tuple[CatalogRelease, InMemoryTrustStore]:

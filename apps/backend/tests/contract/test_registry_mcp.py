@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -18,6 +19,7 @@ from kya_platform.mcp.registry import (
     ArtifactDetail,
     ArtifactSummary,
     Confirmation,
+    InstallableRelease,
     InstallationRecorded,
     ListUpdatesOutput,
     RequestInstallInput,
@@ -233,6 +235,26 @@ class SearchBackend:
         raise AssertionError("not called")
 
 
+class DetailBackend(SearchBackend):
+    async def get_artifact(self, request: Any) -> ArtifactDetail:
+        return ArtifactDetail(
+            artifact_id="kya:skill:business-method",
+            artifact_type="skill",
+            name="Méthode métier KYA",
+            latest_version="0.1.0",
+            versions=("0.1.0",),
+            installable=True,
+            installable_releases=(
+                InstallableRelease(
+                    release_id=UUID("01991b00-0000-7000-8000-000000000302"),
+                    version="0.1.0",
+                    compatible_profiles=("codex", "claude-code"),
+                    published_at=datetime(2026, 9, 13, 12, 0, tzinfo=UTC),
+                ),
+            ),
+        )
+
+
 def access_token() -> AccessToken:
     return AccessToken(
         token="opaque-test-token",
@@ -241,6 +263,34 @@ def access_token() -> AccessToken:
         scopes=["catalog:read"],
         claims={"active_unit": "dss", "iss": "https://auth.example.test"},
     )
+
+
+@pytest.mark.asyncio
+async def test_get_artifact_exposes_the_release_reference_needed_for_installation() -> None:
+    server = create_registry_server(
+        backend=DetailBackend(),
+        authorization=AuthorizationService(RecordingPolicy(allowed=True, checks=[])),
+        token_verifier=NoopTokenVerifier(),
+        issuer_url="https://auth.example.test",
+        resource_url="https://registry.example.test/mcp",
+        access_token_provider=access_token,
+    )
+
+    async with Client(server) as client:
+        result = await client.call_tool(
+            "get_artifact", {"artifact_id": "kya:skill:business-method", "version": "0.1.0"}
+        )
+
+    assert result.is_error is False
+    releases = result.structured_content["installable_releases"]
+    assert releases == [
+        {
+            "release_id": "01991b00-0000-7000-8000-000000000302",
+            "version": "0.1.0",
+            "compatible_profiles": ["codex", "claude-code"],
+            "published_at": "2026-09-13T12:00:00Z",
+        }
+    ]
 
 
 @pytest.mark.asyncio
