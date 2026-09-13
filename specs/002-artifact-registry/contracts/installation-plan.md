@@ -12,6 +12,11 @@ defaults the target to the caller's active unit, the scope to `personal`, the pr
 request such as “install KYA Design System” after catalog discovery without exposing technical
 installation parameters to the user.
 
+For the first immutable KYA Skill releases, a bounded compatibility bridge treats an explicit
+`codex` requirement as valid for the `claude-code` filesystem profile. Those packages already use
+the shared Agent Skills directory structure. The bridge applies only to Skills; new releases must
+declare every supported profile explicitly in their manifest.
+
 `request_install` does not write files. After OAuth and OpenFGA authorization, the Registry loads a
 published release from Neon, verifies its digest and Ed25519 signature, then checks the target
 profile and client compatibility. It returns an immutable plan. The client remains responsible for

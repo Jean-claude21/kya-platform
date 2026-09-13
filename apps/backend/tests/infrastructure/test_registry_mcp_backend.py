@@ -221,8 +221,9 @@ async def test_release_resolution_selects_latest_published_compatible_release() 
 
 
 @pytest.mark.asyncio
-async def test_release_resolution_rejects_an_incompatible_profile() -> None:
+async def test_release_resolution_bridges_legacy_skill_to_claude_code() -> None:
     _artifact, published = rows(status="published")
+    published.manifest["type"] = "skill"
     release, _trust = signed_release()
     session = Session(
         scalar_values=[ALLOWED],
@@ -232,6 +233,26 @@ async def test_release_resolution_rejects_an_incompatible_profile() -> None:
 
     resolved = await backend.resolve_installable_release_id(
         artifact_id="kya:skill:document-standard",
+        version=None,
+        profile=InstallationProfile.CLAUDE_CODE,
+    )
+
+    assert resolved == RELEASE
+
+
+@pytest.mark.asyncio
+async def test_release_resolution_does_not_bridge_non_skill_profiles() -> None:
+    _artifact, published = rows(status="published")
+    published.manifest["type"] = "application"
+    release, _trust = signed_release()
+    session = Session(
+        scalar_values=[ALLOWED],
+        results=[Result([(release, published)])],
+    )
+    backend = SqlAlchemyRegistryMcpBackend(Sessions(session))  # type: ignore[arg-type]
+
+    resolved = await backend.resolve_installable_release_id(
+        artifact_id="kya:application:document-standard",
         version=None,
         profile=InstallationProfile.CLAUDE_CODE,
     )
@@ -291,6 +312,21 @@ async def test_install_plan_is_built_only_from_a_verified_published_release() ->
     assert plan.content_digest == "b" * 64
     assert plan.destination == "${CODEX_PERSONAL_SKILLS_DIR}/document-standard"
     assert plan.server_writes_local_files is False
+
+
+@pytest.mark.asyncio
+async def test_install_plan_bridges_legacy_codex_skill_to_claude_code() -> None:
+    artifact, version = rows(status="published")
+    release, trust = signed_release()
+    session = Session(scalar_values=[], results=[Result([(release, version, artifact)])])
+    backend = SqlAlchemyRegistryMcpBackend(Sessions(session), trust)  # type: ignore[arg-type]
+    request = install_request().model_copy(update={"profile": InstallationProfile.CLAUDE_CODE})
+
+    plan = await backend.request_install(request)
+
+    assert plan.profile is InstallationProfile.CLAUDE_CODE
+    assert plan.compatibility_requirement == ">=2026-09"
+    assert plan.destination == "~/.claude/skills/document-standard"
 
 
 @pytest.mark.asyncio
