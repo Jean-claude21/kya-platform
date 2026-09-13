@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -19,7 +18,6 @@ from kya_platform.mcp.registry import (
     ArtifactDetail,
     ArtifactSummary,
     Confirmation,
-    InstallableRelease,
     InstallationRecorded,
     ListUpdatesOutput,
     RequestInstallInput,
@@ -204,6 +202,11 @@ class SearchBackend:
     async def resolve_operation_workspace(self, operation_id: UUID) -> str | None:
         return "dss"
 
+    async def resolve_installable_release_id(
+        self, *, artifact_id: str, version: str | None, profile: Any
+    ) -> UUID | None:
+        return UUID("01991b00-0000-7000-8000-000000000302")
+
     async def get_artifact(self, request: Any) -> ArtifactDetail:
         raise AssertionError("not called")
 
@@ -244,14 +247,6 @@ class DetailBackend(SearchBackend):
             latest_version="0.1.0",
             versions=("0.1.0",),
             installable=True,
-            installable_releases=(
-                InstallableRelease(
-                    release_id=UUID("01991b00-0000-7000-8000-000000000302"),
-                    version="0.1.0",
-                    compatible_profiles=("codex", "claude-code"),
-                    published_at=datetime(2026, 9, 13, 12, 0, tzinfo=UTC),
-                ),
-            ),
         )
 
 
@@ -266,7 +261,7 @@ def access_token() -> AccessToken:
 
 
 @pytest.mark.asyncio
-async def test_get_artifact_exposes_the_release_reference_needed_for_installation() -> None:
+async def test_get_artifact_keeps_its_backward_compatible_output_schema() -> None:
     server = create_registry_server(
         backend=DetailBackend(),
         authorization=AuthorizationService(RecordingPolicy(allowed=True, checks=[])),
@@ -282,15 +277,8 @@ async def test_get_artifact_exposes_the_release_reference_needed_for_installatio
         )
 
     assert result.is_error is False
-    releases = result.structured_content["installable_releases"]
-    assert releases == [
-        {
-            "release_id": "01991b00-0000-7000-8000-000000000302",
-            "version": "0.1.0",
-            "compatible_profiles": ["codex", "claude-code"],
-            "published_at": "2026-09-13T12:00:00Z",
-        }
-    ]
+    assert result.structured_content["installable"] is True
+    assert "installable_releases" not in result.structured_content
 
 
 @pytest.mark.asyncio
@@ -410,7 +398,10 @@ class AcceptingMcpTokenVerifier:
 
 
 class InstallBackend(SearchBackend):
+    last_request: RequestInstallInput | None = None
+
     async def request_install(self, request: RequestInstallInput) -> InstallationPlan:
+        self.last_request = request
         return build_installation_plan(
             release_id=request.release_id,
             artifact_id=UUID("11111111-1111-4111-8111-111111111111"),
@@ -438,8 +429,9 @@ async def test_registry_server_returns_a_consent_bound_installation_plan() -> No
         scopes=["catalog:install"],
         claims={"active_unit": "dss", "iss": "https://auth.example.test"},
     )
+    backend = InstallBackend()
     server = create_registry_server(
-        backend=InstallBackend(),
+        backend=backend,
         authorization=AuthorizationService(RecordingPolicy(allowed=True, checks=[])),
         token_verifier=NoopTokenVerifier(),
         issuer_url="https://auth.example.test",
@@ -447,26 +439,24 @@ async def test_registry_server_returns_a_consent_bound_installation_plan() -> No
         access_token_provider=lambda: token,
     )
 
-    release_id = UUID("01991b00-0000-7000-8000-000000000301")
     async with Client(server) as client:
+        listed = await client.list_tools()
         result = await client.call_tool(
             "request_install",
-            {
-                "release_id": str(release_id),
-                "target": "workspace:dss",
-                "profile": "codex",
-                "scope": "personal",
-                "client_version": "2026-09",
-                "idempotency_key": "install-business-method-0001",
-                "confirmation": {"confirmed": True},
-            },
+            {"artifact_id": "kya:skill:business-method"},
         )
 
+    install_tool = next(item for item in listed.tools if item.name == "request_install")
+    assert install_tool.input_schema["required"] == ["artifact_id"]
     assert result.is_error is False
-    assert result.structured_content["release_id"] == str(release_id)
+    assert result.structured_content["release_id"] == "01991b00-0000-7000-8000-000000000302"
     assert result.structured_content["requires_client_confirmation"] is True
     assert result.structured_content["server_writes_local_files"] is False
     assert len(result.structured_content["steps"]) == 7
+    assert backend.last_request is not None
+    assert backend.last_request.profile.value == "claude-code"
+    assert backend.last_request.scope.value == "personal"
+    assert backend.last_request.target == "workspace:dss"
 
 
 @pytest.mark.asyncio

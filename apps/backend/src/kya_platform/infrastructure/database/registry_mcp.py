@@ -58,7 +58,6 @@ from kya_platform.mcp.registry.contracts import (
     ConfirmUpdateInput,
     GetArtifactInput,
     GetOperationInput,
-    InstallableRelease,
     InstallationRecorded,
     ListUpdatesInput,
     ListUpdatesOutput,
@@ -291,8 +290,13 @@ class SqlAlchemyRegistryMcpBackend:
         detail = await self.describe(public_id=request.artifact_id, version=request.version)
         if detail is None:
             raise ToolError("artifact_not_found")
-        installable_releases = await self._installable_releases(
-            artifact_id=UUID(detail.id), version=request.version
+        has_installable_release = (
+            await self._resolve_installable_release_id(
+                internal_id=UUID(detail.id),
+                version=request.version,
+                profile=None,
+            )
+            is not None
         )
         return ArtifactDetail(
             artifact_id=detail.public_id,
@@ -301,15 +305,34 @@ class SqlAlchemyRegistryMcpBackend:
             summary=detail.summary,
             latest_version=detail.latest_version,
             versions=detail.versions,
-            installable=bool(installable_releases),
-            installable_releases=installable_releases,
+            installable=has_installable_release,
         )
 
-    async def _installable_releases(
-        self, *, artifact_id: UUID, version: str | None
-    ) -> tuple[InstallableRelease, ...]:
+    async def resolve_installable_release_id(
+        self,
+        *,
+        artifact_id: str,
+        version: str | None,
+        profile: InstallationProfile | None,
+    ) -> UUID | None:
+        internal_id = await self.resolve_artifact_id(artifact_id)
+        if internal_id is None:
+            return None
+        return await self._resolve_installable_release_id(
+            internal_id=internal_id,
+            version=version,
+            profile=profile,
+        )
+
+    async def _resolve_installable_release_id(
+        self,
+        *,
+        internal_id: UUID,
+        version: str | None,
+        profile: InstallationProfile | None,
+    ) -> UUID | None:
         filters: list[ColumnElement[bool]] = [
-            CatalogArtifactVersion.artifact_id == artifact_id,
+            CatalogArtifactVersion.artifact_id == internal_id,
             CatalogArtifactVersion.status == "published",
             CatalogRelease.status == "published",
         ]
@@ -325,24 +348,14 @@ class SqlAlchemyRegistryMcpBackend:
                 .where(*filters)
                 .order_by(CatalogRelease.published_at.desc())
             )
-        releases: list[InstallableRelease] = []
         for release, artifact_version in result.all():
+            if profile is None:
+                return cast(UUID, release.id)
             compatibility = artifact_version.manifest.get("compatibility", {})
-            profiles = tuple(
-                profile
-                for profile in InstallationProfile
-                if isinstance(compatibility.get(profile.value), str)
-                and compatibility[profile.value]
-            )
-            releases.append(
-                InstallableRelease(
-                    release_id=release.id,
-                    version=artifact_version.version,
-                    compatible_profiles=profiles,
-                    published_at=release.published_at,
-                )
-            )
-        return tuple(releases)
+            requirement = compatibility.get(profile.value)
+            if isinstance(requirement, str) and requirement:
+                return cast(UUID, release.id)
+        return None
 
     async def describe(self, *, public_id: str, version: str | None = None) -> CatalogDetail | None:
         internal_id = await self.resolve_artifact_id(public_id)

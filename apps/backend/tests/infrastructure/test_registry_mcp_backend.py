@@ -23,6 +23,7 @@ from kya_platform.infrastructure.database.registry_mcp import SqlAlchemyRegistry
 from kya_platform.mcp.registry.contracts import (
     Confirmation,
     GetArtifactInput,
+    InstallationProfile,
     RequestInstallInput,
     SearchCatalogInput,
 )
@@ -183,10 +184,7 @@ async def test_get_returns_versions_and_installability_without_package_content()
 
     assert detail.versions == ("1.0.0", "0.9.0")
     assert detail.installable is True
-    assert len(detail.installable_releases) == 1
-    assert detail.installable_releases[0].release_id == RELEASE
-    assert detail.installable_releases[0].version == "0.9.0"
-    assert detail.installable_releases[0].compatible_profiles == ("codex", "portable-zip")
+    assert "installable_releases" not in detail.model_dump()
 
 
 @pytest.mark.asyncio
@@ -201,7 +199,44 @@ async def test_get_does_not_claim_installability_without_a_published_release() -
     detail = await backend.get_artifact(GetArtifactInput(artifact_id="kya:skill:document-standard"))
 
     assert detail.installable is False
-    assert detail.installable_releases == ()
+
+
+@pytest.mark.asyncio
+async def test_release_resolution_selects_latest_published_compatible_release() -> None:
+    _artifact, published = rows(status="published")
+    release, _trust = signed_release()
+    session = Session(
+        scalar_values=[ALLOWED],
+        results=[Result([(release, published)])],
+    )
+    backend = SqlAlchemyRegistryMcpBackend(Sessions(session))  # type: ignore[arg-type]
+
+    resolved = await backend.resolve_installable_release_id(
+        artifact_id="kya:skill:document-standard",
+        version="1.0.0",
+        profile=InstallationProfile.CODEX,
+    )
+
+    assert resolved == RELEASE
+
+
+@pytest.mark.asyncio
+async def test_release_resolution_rejects_an_incompatible_profile() -> None:
+    _artifact, published = rows(status="published")
+    release, _trust = signed_release()
+    session = Session(
+        scalar_values=[ALLOWED],
+        results=[Result([(release, published)])],
+    )
+    backend = SqlAlchemyRegistryMcpBackend(Sessions(session))  # type: ignore[arg-type]
+
+    resolved = await backend.resolve_installable_release_id(
+        artifact_id="kya:skill:document-standard",
+        version=None,
+        profile=InstallationProfile.CLAUDE_CODE,
+    )
+
+    assert resolved is None
 
 
 def signed_release() -> tuple[CatalogRelease, InMemoryTrustStore]:

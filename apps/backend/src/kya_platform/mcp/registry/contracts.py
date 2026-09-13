@@ -2,7 +2,6 @@
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import datetime
 from enum import StrEnum
 from typing import Annotated, Literal
 from uuid import UUID
@@ -133,17 +132,9 @@ class SearchCatalogOutput(StrictMcpContract):
     next_cursor: str | None = None
 
 
-class InstallableRelease(StrictMcpContract):
-    release_id: UUID = Field(description="Opaque identifier to pass unchanged to request_install.")
-    version: str
-    compatible_profiles: tuple[InstallationProfile, ...]
-    published_at: datetime
-
-
 class ArtifactDetail(ArtifactSummary):
     versions: tuple[str, ...]
     installable: bool
-    installable_releases: tuple[InstallableRelease, ...] = ()
 
 
 class UpdateSummary(StrictMcpContract):

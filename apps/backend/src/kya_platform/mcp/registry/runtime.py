@@ -119,6 +119,9 @@ class StateRegistryBackend:
     async def resolve_operation_workspace(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
         return await self._backend().resolve_operation_workspace(*args, **kwargs)
 
+    async def resolve_installable_release_id(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+        return await self._backend().resolve_installable_release_id(*args, **kwargs)
+
     async def get_artifact(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
         return await self._backend().get_artifact(*args, **kwargs)
 
