@@ -68,6 +68,14 @@ class RegistryBackend(Protocol):
 
     async def resolve_operation_workspace(self, operation_id: UUID) -> str | None: ...
 
+    async def resolve_installable_release_id(
+        self,
+        *,
+        artifact_id: str,
+        version: str | None,
+        profile: InstallationProfile,
+    ) -> UUID | None: ...
+
     async def get_artifact(self, request: GetArtifactInput) -> ArtifactDetail: ...
 
     async def list_updates(self, request: ListUpdatesInput) -> ListUpdatesOutput: ...
@@ -326,26 +334,33 @@ def create_registry_server(
 
     @server.tool(name="request_install", structured_output=True)
     async def request_install(
-        release_id: UUID,
-        target: str,
-        profile: InstallationProfile,
-        scope: InstallationScope,
-        client_version: str,
-        idempotency_key: str,
-        confirmation: Confirmation,
+        artifact_id: str,
+        version: str | None = None,
+        profile: InstallationProfile = InstallationProfile.CLAUDE_CODE,
+        scope: InstallationScope = InstallationScope.PERSONAL,
+        target: str | None = None,
+        client_version: str = "2026-09",
     ) -> InstallationPlan:
-        """Résoudre un plan déterministe ; le client garde la décision d'écriture."""
-        target_id = target.removeprefix("workspace:")
+        """Install a Skill: resolve its published release and prepare the client-safe plan."""
+        resolved_target = target or f"workspace:{guard.active_unit('request_install')}"
+        target_id = resolved_target.removeprefix("workspace:")
         await guard.require("request_install", target_id)
+        release_id = await backend.resolve_installable_release_id(
+            artifact_id=artifact_id,
+            version=version,
+            profile=profile,
+        )
+        if release_id is None:
+            raise ToolError("compatible_release_not_found")
         return await backend.request_install(
             RequestInstallInput(
                 release_id=release_id,
-                target=target,
+                target=resolved_target,
                 profile=profile,
                 scope=scope,
                 client_version=client_version,
-                idempotency_key=idempotency_key,
-                confirmation=confirmation,
+                idempotency_key=f"install-plan:{release_id}",
+                confirmation=Confirmation(confirmed=True),
             )
         )
 
