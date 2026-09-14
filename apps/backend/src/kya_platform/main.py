@@ -54,6 +54,9 @@ from kya_platform.domain.mcp_profiles import ToolDescriptor
 from kya_platform.infrastructure.database.artifact_registry import SqlAlchemyArtifactRegistry
 from kya_platform.infrastructure.database.audit import SqlAlchemyAuditRepository
 from kya_platform.infrastructure.database.bootstrap import SqlAlchemyBootstrapClaimRepository
+from kya_platform.infrastructure.database.builtin_artifacts import (
+    ensure_design_system_recovery_release,
+)
 from kya_platform.infrastructure.database.content import SqlAlchemyContentRepository
 from kya_platform.infrastructure.database.core import SqlAlchemyCoreRepository
 from kya_platform.infrastructure.database.data import SqlAlchemyDataRepository
@@ -260,6 +263,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     publication_service,
                 )
                 app.state.attestation_repository = SqlAlchemyAttestationRepository(session_factory)
+                if resolved_settings.environment != "test":
+                    recovered = await ensure_design_system_recovery_release(session_factory, signer)
+                    if recovered:
+                        logging.getLogger("kya.catalog").info(
+                            "builtin_design_system_release_recovered",
+                            extra={"version": "0.1.1"},
+                        )
             if resolved_settings.has_github_proposal_configuration:
                 assert resolved_settings.github_app_id is not None
                 assert resolved_settings.github_app_installation_id is not None
