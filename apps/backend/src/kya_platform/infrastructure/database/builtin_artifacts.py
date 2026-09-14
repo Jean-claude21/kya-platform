@@ -27,8 +27,7 @@ from kya_platform.infrastructure.database.models import (
 
 _VERSION = "0.1.1"
 _ARCHIVE_URL = (
-    "https://api.kya-platform.vttlife.com/api/v1/releases/"
-    "kya-design-system/0.1.1/package"
+    "https://api.kya-platform.vttlife.com/api/v1/releases/kya-design-system/0.1.1/package"
 )
 _ARCHIVE_DIGEST = "0d85fbe28422c84b33daa5ef397b4b8e3a5c3469c265ad10c5ab5d01dba471a6"
 

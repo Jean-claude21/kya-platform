@@ -264,9 +264,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 )
                 app.state.attestation_repository = SqlAlchemyAttestationRepository(session_factory)
                 if resolved_settings.environment != "test":
-                    recovered = await ensure_design_system_recovery_release(
-                        session_factory, signer
-                    )
+                    recovered = await ensure_design_system_recovery_release(session_factory, signer)
                     if recovered:
                         logging.getLogger("kya.catalog").info(
                             "builtin_design_system_release_recovered",
