@@ -156,6 +156,22 @@ async def test_resolve_rejects_non_kya_id_before_database_access() -> None:
 
 
 @pytest.mark.asyncio
+async def test_release_workspace_resolution_returns_published_owner() -> None:
+    session = Session(scalar_values=[WORKSPACE], results=[])
+    backend = SqlAlchemyRegistryMcpBackend(Sessions(session))  # type: ignore[arg-type]
+
+    assert await backend.resolve_release_workspace(RELEASE) == str(WORKSPACE)
+
+
+@pytest.mark.asyncio
+async def test_release_workspace_resolution_fails_closed_when_absent() -> None:
+    session = Session(scalar_values=[None], results=[])
+    backend = SqlAlchemyRegistryMcpBackend(Sessions(session))  # type: ignore[arg-type]
+
+    assert await backend.resolve_release_workspace(RELEASE) is None
+
+
+@pytest.mark.asyncio
 async def test_get_unknown_public_id_returns_stable_not_found() -> None:
     session = Session(scalar_values=[None], results=[])
     backend = SqlAlchemyRegistryMcpBackend(Sessions(session))  # type: ignore[arg-type]
@@ -185,8 +201,6 @@ async def test_get_returns_versions_and_installability_without_package_content()
     assert detail.versions == ("1.0.0", "0.9.0")
     assert detail.installable is True
     assert "installable_releases" not in detail.model_dump()
-    assert f"release_id={RELEASE}" in (detail.summary or "")
-    assert "profile=claude-code" in (detail.summary or "")
 
 
 @pytest.mark.asyncio

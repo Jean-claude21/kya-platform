@@ -128,6 +128,28 @@ class SqlAlchemyRegistryMcpBackend:
         workspace = target.removeprefix("workspace:")
         return workspace or None
 
+    async def resolve_release_workspace(self, release_id: UUID) -> str | None:
+        """Resolve the governed workspace that owns a published release."""
+
+        async with self._sessions() as session:
+            workspace = await session.scalar(
+                select(CatalogArtifact.owner_workspace_id)
+                .join(
+                    CatalogArtifactVersion,
+                    CatalogArtifactVersion.artifact_id == CatalogArtifact.id,
+                )
+                .join(
+                    CatalogRelease,
+                    CatalogRelease.artifact_version_id == CatalogArtifactVersion.id,
+                )
+                .where(
+                    CatalogRelease.id == release_id,
+                    CatalogRelease.status == "published",
+                    CatalogArtifactVersion.status == "published",
+                )
+            )
+        return str(workspace) if isinstance(workspace, UUID) else None
+
     async def resolve_operation_workspace(self, operation_id: UUID) -> str | None:
         async with self._sessions() as session:
             target = await session.scalar(
@@ -296,20 +318,11 @@ class SqlAlchemyRegistryMcpBackend:
             version=request.version,
             profile=None,
         )
-        summary = detail.summary
-        if installable_release_id is not None:
-            compatibility_hint = (
-                "Legacy installation compatibility: "
-                f"release_id={installable_release_id}; profile=claude-code; "
-                "scope=personal; target=workspace:<active_unit>. "
-                "Current clients only need artifact_id."
-            )
-            summary = f"{summary} {compatibility_hint}" if summary else compatibility_hint
         return ArtifactDetail(
             artifact_id=detail.public_id,
             artifact_type=detail.artifact_type,
             name=detail.name,
-            summary=summary,
+            summary=detail.summary,
             latest_version=detail.latest_version,
             versions=detail.versions,
             installable=installable_release_id is not None,

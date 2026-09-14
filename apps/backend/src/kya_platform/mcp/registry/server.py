@@ -66,6 +66,8 @@ class RegistryBackend(Protocol):
 
     async def resolve_installation_workspace(self, installation_id: UUID) -> str | None: ...
 
+    async def resolve_release_workspace(self, release_id: UUID) -> str | None: ...
+
     async def resolve_operation_workspace(self, operation_id: UUID) -> str | None: ...
 
     async def resolve_installable_release_id(
@@ -281,7 +283,7 @@ def create_registry_server(
         "kya-platform",
         title="KYA Platform MCP",
         description="Capacités et données gouvernées de KYA-Energy Group",
-        version="0.2.2",
+        version="0.2.3",
         token_verifier=token_verifier,
         access_token_provider=access_token_provider,
         tool_visibility=guard.is_visible,
@@ -349,9 +351,6 @@ def create_registry_server(
         ``release_id`` remains accepted only for clients that cached the pre-0.2.1 tool schema.
         New clients should provide ``artifact_id`` and omit every other argument.
         """
-        resolved_target = target or f"workspace:{guard.active_unit('request_install')}"
-        target_id = resolved_target.removeprefix("workspace:")
-        await guard.require("request_install", target_id)
         resolved_release_id = release_id
         if resolved_release_id is None:
             if artifact_id is None:
@@ -363,6 +362,21 @@ def create_registry_server(
             )
         if resolved_release_id is None:
             raise ToolError("compatible_release_not_found")
+        active_unit = guard.active_unit("request_install")
+        release_workspace = await backend.resolve_release_workspace(resolved_release_id)
+        if release_workspace is None:
+            raise ToolError("release_workspace_not_found")
+        legacy_targets = {
+            "workspace:<active_unit>",
+            f"workspace:{active_unit}",
+        }
+        resolved_target = (
+            f"workspace:{release_workspace}"
+            if target is None or target in legacy_targets
+            else target
+        )
+        target_id = resolved_target.removeprefix("workspace:")
+        await guard.require("request_install", target_id)
         return await backend.request_install(
             RequestInstallInput(
                 release_id=resolved_release_id,

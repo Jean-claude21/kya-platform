@@ -34,11 +34,14 @@ clients may explicitly select `codex`, `claude-code`, or `portable-zip`, and `pe
 
 Some remote AI clients keep a tool schema for the lifetime of an existing conversation. During the
 0.2 transition, `request_install` therefore also accepts the former resolved `release_id`,
-idempotency, and confirmation fields. For those already-open sessions, the metadata-only artifact
-summary carries a temporary installation hint containing the authorized release UUID and safe
-defaults. The structured `get_artifact` schema remains unchanged, avoiding the strict-output
-validation failure that prompted the compatibility bridge. Fresh clients should send only
+idempotency, and confirmation fields. Artifact metadata remains strictly descriptive and never
+contains executable instructions or transport parameters. Fresh clients should send only
 `artifact_id`; server-side release resolution remains the canonical path.
+
+The OAuth `active_unit` claim identifies an organizational context, not a workspace. When the
+caller omits the installation target—or a cached client substitutes the active unit—the Registry
+resolves the immutable release's owning workspace and checks `can_edit` on that real workspace.
+An explicit workspace UUID remains supported for an intentional project-scoped installation.
 
 ## Internal resolved input
 
