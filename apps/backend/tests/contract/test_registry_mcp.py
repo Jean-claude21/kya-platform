@@ -199,6 +199,9 @@ class SearchBackend:
     async def resolve_installation_workspace(self, installation_id: UUID) -> str | None:
         return "dss"
 
+    async def resolve_release_workspace(self, release_id: UUID) -> str | None:
+        return "dss"
+
     async def resolve_operation_workspace(self, operation_id: UUID) -> str | None:
         return "dss"
 
@@ -496,6 +499,47 @@ async def test_registry_server_accepts_a_cached_legacy_release_id_schema() -> No
     assert result.is_error is False
     assert backend.last_request is not None
     assert str(backend.last_request.release_id) == release_id
+
+
+@pytest.mark.asyncio
+async def test_registry_server_maps_active_org_unit_to_release_workspace() -> None:
+    token = AccessToken(
+        token="opaque-install-token",
+        client_id="claude-current",
+        subject="alice",
+        scopes=["catalog:install"],
+        claims={"active_unit": "group", "iss": "https://auth.example.test"},
+    )
+    backend = InstallBackend()
+    workspace_id = "22222222-2222-4222-8222-222222222222"
+
+    async def release_workspace(_release_id: UUID) -> str:
+        return workspace_id
+
+    backend.resolve_release_workspace = release_workspace  # type: ignore[method-assign]
+    policy = RecordingPolicy(allowed=True, checks=[])
+    server = create_registry_server(
+        backend=backend,
+        authorization=AuthorizationService(policy),
+        token_verifier=NoopTokenVerifier(),
+        issuer_url="https://auth.example.test",
+        resource_url="https://registry.example.test/mcp",
+        access_token_provider=lambda: token,
+    )
+
+    async with Client(server) as client:
+        result = await client.call_tool(
+            "request_install",
+            {
+                "artifact_id": "kya:skill:business-method",
+                "target": "workspace:group",
+            },
+        )
+
+    assert result.is_error is False
+    assert backend.last_request is not None
+    assert backend.last_request.target == f"workspace:{workspace_id}"
+    assert policy.checks[0].object == f"workspace:{workspace_id}"
 
 
 @pytest.mark.asyncio
