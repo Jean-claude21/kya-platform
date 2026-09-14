@@ -523,6 +523,7 @@ class SqlAlchemyRegistryMcpBackend:
                 client_version=request.client_version,
                 file_count=version.file_count,
                 package_size=version.package_size,
+                integrity_locator=self._integrity_locator(release.storage_locator),
             )
         except ClientCompatibilityError as error:
             raise ToolError("target_profile_incompatible") from error
@@ -678,8 +679,12 @@ class SqlAlchemyRegistryMcpBackend:
             self._verify_release_integrity(release, version.content_digest)
             if request.installed_digest != release.content_digest:
                 raise ToolError("installed_digest_mismatch")
-            requirement = version.manifest.get("compatibility", {}).get(request.profile.value)
-            if not isinstance(requirement, str):
+            requirement = self._installation_compatibility_requirement(
+                manifest=version.manifest,
+                profile=request.profile,
+                artifact_type=artifact.artifact_type,
+            )
+            if requirement is None:
                 raise ToolError("target_profile_incompatible")
             try:
                 expected_plan = build_installation_plan(
@@ -697,6 +702,7 @@ class SqlAlchemyRegistryMcpBackend:
                     client_version=request.client_version,
                     file_count=version.file_count,
                     package_size=version.package_size,
+                    integrity_locator=self._integrity_locator(release.storage_locator),
                 )
             except (ClientCompatibilityError, ValueError) as error:
                 raise ToolError("installation_receipt_invalid") from error
@@ -1029,6 +1035,12 @@ class SqlAlchemyRegistryMcpBackend:
         )
         if verification is not SignatureVerification.VALID:
             raise ToolError(f"release_signature_{verification.value}")
+
+    @staticmethod
+    def _integrity_locator(package_locator: str) -> str:
+        if package_locator.endswith("/package"):
+            return f"{package_locator[: -len('/package')]}/integrity"
+        return f"{package_locator}.integrity.json"
 
     @staticmethod
     def _latest_compatible_candidate(

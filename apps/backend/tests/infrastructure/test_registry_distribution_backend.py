@@ -187,7 +187,13 @@ async def test_distribution_resources_resolve_to_their_workspace() -> None:
 
 
 @pytest.mark.asyncio
-async def test_confirm_installation_records_receipt_history_operation_and_outbox() -> None:
+@pytest.mark.parametrize(
+    "profile",
+    (InstallationProfile.CODEX, InstallationProfile.CLAUDE_CODE),
+)
+async def test_confirm_installation_records_receipt_history_operation_and_outbox(
+    profile: InstallationProfile,
+) -> None:
     release, version, artifact = release_rows()
     plan = build_installation_plan(
         release_id=RELEASE_ID,
@@ -195,7 +201,7 @@ async def test_confirm_installation_records_receipt_history_operation_and_outbox
         artifact_type=ArtifactType.SKILL,
         artifact_slug=artifact.slug,
         version=version.version,
-        profile=InstallationProfile.CODEX,
+        profile=profile,
         scope=InstallationScope.PERSONAL,
         target="workspace:dss",
         package_locator=release.storage_locator,
@@ -215,7 +221,7 @@ async def test_confirm_installation_records_receipt_history_operation_and_outbox
             plan_id=plan.plan_id,
             release_id=RELEASE_ID,
             target="workspace:dss",
-            profile="codex",
+            profile=profile,
             scope="personal",
             client_version="2026-09",
             installed_digest="b" * 64,

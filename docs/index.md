@@ -18,4 +18,5 @@ applications and standards.
   integrity evidence and controlled release lifecycles.
 
 Start with the [architecture overview](architecture/overview.md) or inspect the
-[master artifact templates](artifacts/master-templates.md).
+[master artifact templates](artifacts/master-templates.md). Artifact clients should follow the
+[installation integrity contract](artifacts/installation-integrity.md).

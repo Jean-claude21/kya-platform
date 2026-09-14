@@ -188,6 +188,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # validate configuration wiring. Catalogue synchronization is an
         # operational startup concern and is covered by repository tests.
         if session_factory is not None:
+            app.state.catalog_sessions = session_factory
             audit_repository = SqlAlchemyAuditRepository(session_factory)
             app.state.audit_queries = AuditQueryService(audit_repository)
             app.state.audit_writer = AuditWriter(audit_repository)
@@ -250,6 +251,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                         ),
                     )
                 )
+                app.state.artifact_trust_store = trust_store
                 publication_service = PublicationService(
                     cast(
                         PublicationUnitOfWorkFactory,

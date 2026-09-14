@@ -51,7 +51,7 @@ class InstallationPlan(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    schema_version: Literal["1"] = "1"
+    schema_version: Literal["2"] = "2"
     plan_id: UUID
     release_id: UUID
     artifact_id: UUID
@@ -63,6 +63,7 @@ class InstallationPlan(BaseModel):
     target: str = Field(min_length=1, max_length=200)
     destination: str
     package_locator: str
+    integrity_locator: str
     content_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
     compatibility_requirement: str
     client_version: str
@@ -110,6 +111,7 @@ def build_installation_plan(
     client_version: str,
     file_count: int,
     package_size: int,
+    integrity_locator: str | None = None,
 ) -> InstallationPlan:
     """Build the same plan for the same immutable release and target."""
 
@@ -126,6 +128,9 @@ def build_installation_plan(
             "client version does not satisfy the release compatibility policy"
         )
     destination = destination_for(profile, scope, artifact_slug, version)
+    resolved_integrity_locator = integrity_locator or f"{package_locator}.integrity.json"
+    if not resolved_integrity_locator.startswith(("git+https://", "https://", "oci://")):
+        raise ValueError("release integrity locator is not supported")
     identity = "|".join(
         (
             str(release_id),
@@ -134,6 +139,7 @@ def build_installation_plan(
             target,
             destination,
             content_digest,
+            resolved_integrity_locator,
             client_version,
         )
     )
@@ -152,6 +158,7 @@ def build_installation_plan(
         target=target,
         destination=destination,
         package_locator=package_locator,
+        integrity_locator=resolved_integrity_locator,
         content_digest=content_digest,
         compatibility_requirement=compatibility_requirement,
         client_version=client_version,
@@ -162,11 +169,13 @@ def build_installation_plan(
             InstallationStep(
                 order=2,
                 action=InstallationAction.VERIFY_SIGNATURE,
+                source=resolved_integrity_locator,
                 expected_digest=content_digest,
             ),
             InstallationStep(
                 order=3,
                 action=InstallationAction.VERIFY_DIGEST,
+                source=resolved_integrity_locator,
                 expected_digest=content_digest,
             ),
             InstallationStep(order=4, action=InstallationAction.VERIFY_COMPATIBILITY),

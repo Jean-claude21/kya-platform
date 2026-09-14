@@ -69,6 +69,9 @@ def test_same_immutable_release_and_target_produce_the_same_plan() -> None:
     assert [step.action for step in first.steps] == list(InstallationAction)
     assert first.requires_client_confirmation is True
     assert first.server_writes_local_files is False
+    assert first.integrity_locator.endswith(".integrity.json")
+    assert first.steps[1].source == first.integrity_locator
+    assert first.steps[2].source == first.integrity_locator
     assert all("secret" not in step.model_dump_json().lower() for step in first.steps)
 
 

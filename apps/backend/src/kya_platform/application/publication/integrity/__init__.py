@@ -67,7 +67,9 @@ class InMemoryTrustStore:
         self._keys[key_id] = key.model_copy(update={"compromised_at": compromised_at})
 
 
-def _message(artifact_version_id: UUID, content_digest: str) -> bytes:
+def signature_message(artifact_version_id: UUID, content_digest: str) -> bytes:
+    """Return the exact domain-separated bytes covered by an artifact signature."""
+
     return _SIGNATURE_DOMAIN + artifact_version_id.bytes + bytes.fromhex(content_digest)
 
 
@@ -119,7 +121,9 @@ class Ed25519ArtifactSigner:
             signature="pending",
             signed_at=signed_at,
         )
-        raw_signature = self._private_key.sign(_message(artifact_version_id, content_digest))
+        raw_signature = self._private_key.sign(
+            signature_message(artifact_version_id, content_digest)
+        )
         encoded = base64.urlsafe_b64encode(raw_signature).rstrip(b"=").decode("ascii")
         return unsigned.model_copy(update={"signature": encoded})
 
@@ -146,7 +150,7 @@ def verify_artifact_signature(
         )
         Ed25519PublicKey.from_public_bytes(trusted_key.public_key).verify(
             raw_signature,
-            _message(signature.artifact_version_id, signature.content_digest),
+            signature_message(signature.artifact_version_id, signature.content_digest),
         )
     except InvalidSignature, ValueError:
         return SignatureVerification.INVALID_SIGNATURE
@@ -159,5 +163,6 @@ __all__ = [
     "InMemoryTrustStore",
     "SignatureVerification",
     "TrustedSigningKey",
+    "signature_message",
     "verify_artifact_signature",
 ]
