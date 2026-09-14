@@ -24,6 +24,7 @@ from kya_platform.contracts.artifact_package import (
     CapabilityManifest,
     PackageFile,
     PackageFileKind,
+    canonical_content_payload,
 )
 
 MAX_ARCHIVE_BYTES = 100 * 1024 * 1024
@@ -57,13 +58,7 @@ class ValidatedArchive:
 def calculate_payload_digest(files: list[PackageFile]) -> str:
     """Digest content without the self-referential artifact manifest."""
 
-    inventory = [
-        {"path": item.path, "sha256": item.sha256.lower(), "size": item.size}
-        for item in sorted(files, key=lambda candidate: candidate.path)
-        if item.path != "artifact.manifest.json"
-    ]
-    canonical = json.dumps(inventory, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
-    return hashlib.sha256(canonical.encode()).hexdigest()
+    return hashlib.sha256(canonical_content_payload(files)).hexdigest()
 
 
 def _kind(path: str) -> PackageFileKind:

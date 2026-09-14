@@ -173,6 +173,19 @@ class ArtifactPackage(StrictPackageContract):
         return hashlib.sha256(payload.encode()).hexdigest()
 
 
+def canonical_content_payload(files: list[PackageFile]) -> bytes:
+    """Serialize the v1 content inventory, excluding its self-referential manifest."""
+
+    inventory = [
+        {"path": item.path, "sha256": item.sha256.lower(), "size": item.size}
+        for item in sorted(files, key=lambda candidate: candidate.path)
+        if item.path != "artifact.manifest.json"
+    ]
+    return json.dumps(inventory, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode(
+        "utf-8"
+    )
+
+
 __all__ = [
     "MAX_PACKAGE_BYTES",
     "MAX_PACKAGE_FILES",
@@ -183,4 +196,5 @@ __all__ = [
     "PackageFile",
     "PackageFileKind",
     "ResourceLimits",
+    "canonical_content_payload",
 ]
