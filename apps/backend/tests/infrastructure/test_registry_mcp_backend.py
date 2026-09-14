@@ -185,6 +185,8 @@ async def test_get_returns_versions_and_installability_without_package_content()
     assert detail.versions == ("1.0.0", "0.9.0")
     assert detail.installable is True
     assert "installable_releases" not in detail.model_dump()
+    assert f"release_id={RELEASE}" in (detail.summary or "")
+    assert "profile=claude-code" in (detail.summary or "")
 
 
 @pytest.mark.asyncio

@@ -281,7 +281,7 @@ def create_registry_server(
         "kya-platform",
         title="KYA Platform MCP",
         description="Capacités et données gouvernées de KYA-Energy Group",
-        version="0.2.1",
+        version="0.2.2",
         token_verifier=token_verifier,
         access_token_provider=access_token_provider,
         tool_visibility=guard.is_visible,
@@ -334,33 +334,44 @@ def create_registry_server(
 
     @server.tool(name="request_install", structured_output=True)
     async def request_install(
-        artifact_id: str,
+        artifact_id: str | None = None,
+        release_id: UUID | None = None,
         version: str | None = None,
         profile: InstallationProfile = InstallationProfile.CLAUDE_CODE,
         scope: InstallationScope = InstallationScope.PERSONAL,
         target: str | None = None,
         client_version: str = "2026-09",
+        idempotency_key: str | None = None,
+        confirmation: Confirmation | None = None,
     ) -> InstallationPlan:
-        """Install a Skill: resolve its published release and prepare the client-safe plan."""
+        """Install a Skill by public artifact id; release resolution and defaults are automatic.
+
+        ``release_id`` remains accepted only for clients that cached the pre-0.2.1 tool schema.
+        New clients should provide ``artifact_id`` and omit every other argument.
+        """
         resolved_target = target or f"workspace:{guard.active_unit('request_install')}"
         target_id = resolved_target.removeprefix("workspace:")
         await guard.require("request_install", target_id)
-        release_id = await backend.resolve_installable_release_id(
-            artifact_id=artifact_id,
-            version=version,
-            profile=profile,
-        )
-        if release_id is None:
+        resolved_release_id = release_id
+        if resolved_release_id is None:
+            if artifact_id is None:
+                raise ToolError("artifact_id_required")
+            resolved_release_id = await backend.resolve_installable_release_id(
+                artifact_id=artifact_id,
+                version=version,
+                profile=profile,
+            )
+        if resolved_release_id is None:
             raise ToolError("compatible_release_not_found")
         return await backend.request_install(
             RequestInstallInput(
-                release_id=release_id,
+                release_id=resolved_release_id,
                 target=resolved_target,
                 profile=profile,
                 scope=scope,
                 client_version=client_version,
-                idempotency_key=f"install-plan:{release_id}",
-                confirmation=Confirmation(confirmed=True),
+                idempotency_key=idempotency_key or f"install-plan:{resolved_release_id}",
+                confirmation=confirmation or Confirmation(confirmed=True),
             )
         )
 

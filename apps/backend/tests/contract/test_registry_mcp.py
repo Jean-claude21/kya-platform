@@ -447,7 +447,7 @@ async def test_registry_server_returns_a_consent_bound_installation_plan() -> No
         )
 
     install_tool = next(item for item in listed.tools if item.name == "request_install")
-    assert install_tool.input_schema["required"] == ["artifact_id"]
+    assert install_tool.input_schema.get("required", []) == []
     assert result.is_error is False
     assert result.structured_content["release_id"] == "01991b00-0000-7000-8000-000000000302"
     assert result.structured_content["requires_client_confirmation"] is True
@@ -457,6 +457,45 @@ async def test_registry_server_returns_a_consent_bound_installation_plan() -> No
     assert backend.last_request.profile.value == "claude-code"
     assert backend.last_request.scope.value == "personal"
     assert backend.last_request.target == "workspace:dss"
+
+
+@pytest.mark.asyncio
+async def test_registry_server_accepts_a_cached_legacy_release_id_schema() -> None:
+    token = AccessToken(
+        token="opaque-install-token",
+        client_id="claude-cached",
+        subject="alice",
+        scopes=["catalog:install"],
+        claims={"active_unit": "dss", "iss": "https://auth.example.test"},
+    )
+    backend = InstallBackend()
+    server = create_registry_server(
+        backend=backend,
+        authorization=AuthorizationService(RecordingPolicy(allowed=True, checks=[])),
+        token_verifier=NoopTokenVerifier(),
+        issuer_url="https://auth.example.test",
+        resource_url="https://registry.example.test/mcp",
+        access_token_provider=lambda: token,
+    )
+
+    release_id = "01991b00-0000-7000-8000-000000000302"
+    async with Client(server) as client:
+        result = await client.call_tool(
+            "request_install",
+            {
+                "release_id": release_id,
+                "profile": "claude-code",
+                "scope": "personal",
+                "target": "workspace:dss",
+                "client_version": "2026-09",
+                "idempotency_key": "claude-cached-install-0001",
+                "confirmation": {"confirmed": True},
+            },
+        )
+
+    assert result.is_error is False
+    assert backend.last_request is not None
+    assert str(backend.last_request.release_id) == release_id
 
 
 @pytest.mark.asyncio
