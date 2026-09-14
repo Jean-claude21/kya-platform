@@ -30,6 +30,16 @@ showing the target, obtaining consent, and performing local writes.
 Defaults are safe for a personal Claude installation in the caller's active KYA unit. Advanced
 clients may explicitly select `codex`, `claude-code`, or `portable-zip`, and `personal` or `project`.
 
+### Cached-schema compatibility
+
+Some remote AI clients keep a tool schema for the lifetime of an existing conversation. During the
+0.2 transition, `request_install` therefore also accepts the former resolved `release_id`,
+idempotency, and confirmation fields. For those already-open sessions, the metadata-only artifact
+summary carries a temporary installation hint containing the authorized release UUID and safe
+defaults. The structured `get_artifact` schema remains unchanged, avoiding the strict-output
+validation failure that prompted the compatibility bridge. Fresh clients should send only
+`artifact_id`; server-side release resolution remains the canonical path.
+
 ## Internal resolved input
 
 After release resolution, the backend receives the exact `release_id`, target, profile, scope,

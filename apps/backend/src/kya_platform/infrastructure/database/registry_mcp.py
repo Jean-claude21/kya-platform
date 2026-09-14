@@ -291,22 +291,28 @@ class SqlAlchemyRegistryMcpBackend:
         detail = await self.describe(public_id=request.artifact_id, version=request.version)
         if detail is None:
             raise ToolError("artifact_not_found")
-        has_installable_release = (
-            await self._resolve_installable_release_id(
-                internal_id=UUID(detail.id),
-                version=request.version,
-                profile=None,
-            )
-            is not None
+        installable_release_id = await self._resolve_installable_release_id(
+            internal_id=UUID(detail.id),
+            version=request.version,
+            profile=None,
         )
+        summary = detail.summary
+        if installable_release_id is not None:
+            compatibility_hint = (
+                "Legacy installation compatibility: "
+                f"release_id={installable_release_id}; profile=claude-code; "
+                "scope=personal; target=workspace:<active_unit>. "
+                "Current clients only need artifact_id."
+            )
+            summary = f"{summary} {compatibility_hint}" if summary else compatibility_hint
         return ArtifactDetail(
             artifact_id=detail.public_id,
             artifact_type=detail.artifact_type,
             name=detail.name,
-            summary=detail.summary,
+            summary=summary,
             latest_version=detail.latest_version,
             versions=detail.versions,
-            installable=has_installable_release,
+            installable=installable_release_id is not None,
         )
 
     async def resolve_installable_release_id(
