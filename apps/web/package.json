@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@kya/design-system": "workspace:*",
+    "@jean-claude21/kya-platform-sdk": "workspace:*",
     "@neondatabase/auth": "0.5.0-beta",
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-router": "catalog:",

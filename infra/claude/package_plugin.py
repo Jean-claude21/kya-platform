@@ -13,6 +13,9 @@ ROOT = Path(__file__).resolve().parents[2]
 PLUGIN = ROOT / "integrations" / "claude" / "kya-platform"
 MARKETPLACE = ROOT / ".claude-plugin" / "marketplace.json"
 EXPECTED_MCP_URL = "https://mcp.kya-platform.vttlife.com/registry/mcp"
+TEXT_SUFFIXES = frozenset(
+    {".css", ".html", ".js", ".json", ".md", ".mjs", ".py", ".sh", ".txt", ".yaml", ".yml"}
+)
 
 
 def load_json(path: Path) -> dict[str, object]:
@@ -22,9 +25,16 @@ def load_json(path: Path) -> dict[str, object]:
     return value
 
 
+def canonical_bytes(path: Path) -> bytes:
+    content = path.read_bytes()
+    if path.suffix.casefold() in TEXT_SUFFIXES:
+        content = content.decode("utf-8").replace("\r\n", "\n").encode("utf-8")
+    return content
+
+
 def files_under(root: Path) -> dict[str, bytes]:
     return {
-        path.relative_to(root).as_posix(): path.read_bytes()
+        path.relative_to(root).as_posix(): canonical_bytes(path)
         for path in sorted(root.rglob("*"))
         if path.is_file()
     }
@@ -106,7 +116,7 @@ def build(output: Path, version: str) -> str:
             info = ZipInfo(relative, date_time=(1980, 1, 1, 0, 0, 0))
             info.compress_type = ZIP_DEFLATED
             info.external_attr = 0o100644 << 16
-            archive.writestr(info, path.read_bytes())
+            archive.writestr(info, canonical_bytes(path))
     digest = hashlib.sha256(output.read_bytes()).hexdigest()
     print(f"Built {output} (version {version}, sha256 {digest})")
     return digest

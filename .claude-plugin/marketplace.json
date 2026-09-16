@@ -6,14 +6,14 @@
     "url": "https://kya-platform.vttlife.com"
   },
   "description": "Governed Claude integrations published by KYA-Platform.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "plugins": [
     {
       "name": "kya-platform",
       "displayName": "KYA-Platform",
       "source": "./integrations/claude/kya-platform",
       "description": "KYA-Platform MCP connection and governed KYA skills for Claude.",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "author": {
         "name": "KYA-Energy Group",
         "url": "https://kya-platform.vttlife.com"

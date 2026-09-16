@@ -20,6 +20,9 @@ _COMMIT = re.compile(r"^[a-fA-F0-9]{40}$")
 _ALLOWED_ROOTS = frozenset(
     {"agents", "references", "assets", "templates", "scripts", "tests", "schemas", "examples"}
 )
+_TEXT_SUFFIXES = frozenset(
+    {".css", ".html", ".js", ".json", ".md", ".mjs", ".py", ".sh", ".txt", ".yaml", ".yml"}
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -160,7 +163,13 @@ class SkillFactory:
                 and first not in _ALLOWED_ROOTS
             ):
                 raise ValueError(f"unsupported skill path: {relative}")
-            contents[relative] = path.read_bytes()
+            content = path.read_bytes()
+            if path.suffix.casefold() in _TEXT_SUFFIXES:
+                try:
+                    content = content.decode("utf-8").replace("\r\n", "\n").encode("utf-8")
+                except UnicodeDecodeError as error:
+                    raise ValueError(f"text skill file must be valid UTF-8: {relative}") from error
+            contents[relative] = content
         return contents
 
     @staticmethod

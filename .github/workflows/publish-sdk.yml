@@ -1,0 +1,38 @@
+name: Publish KYA-Platform SDK
+
+on:
+  push:
+    tags: ['sdk-v[0-9]+.[0-9]+.[0-9]+']
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Require annotated SDK tag on main
+        run: |
+          git cat-file -t "$GITHUB_REF_NAME" | grep -qx tag
+          git fetch origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+          test "$(git rev-parse origin/main)" = "$GITHUB_SHA"
+          test "$GITHUB_REF_NAME" = "sdk-v$(node -p \"require('./packages/platform-sdk/package.json').version\")"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://npm.pkg.github.com
+          scope: '@jean-claude21'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @jean-claude21/kya-platform-sdk test:unit
+      - run: pnpm --filter @jean-claude21/kya-platform-sdk publish --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,6 +1,6 @@
 :root {
   /* KYA-Platform Signature — official palette and applied tokens */
-  --kya-canvas: #fcfcfa;
+  --kya-canvas: #f7f6f1;
   --kya-surface: #ffffff;
   --kya-ink: #073b36;
   --kya-body: #314c48;
@@ -12,7 +12,9 @@
   --kya-yellow: #e8e748;
   --kya-coffee: #875028;
   --kya-focus: #07564a;
-  --kya-radius: 0px;
+  --kya-radius: 7px;
+  --kya-radius-control: 7px;
+  --kya-radius-surface: 10px;
   --kya-radius-round: 50%;
-  --kya-font: Inter, Arial, sans-serif;
+  --kya-font: 'Segoe UI Variable', 'Segoe UI', Aptos, sans-serif;
 }
