@@ -10,7 +10,8 @@ COPY apps ./apps
 COPY packages ./packages
 COPY tsconfig.json turbo.json ./
 RUN pnpm install --frozen-lockfile
-RUN pnpm --filter @kya/web build
+RUN pnpm --filter @jean-claude21/kya-platform-sdk build \
+    && pnpm --filter @kya/web build
 
 FROM node:24-alpine@sha256:e67514e5d0f6c46656005e1b693b2ec9d52e80b641307de684d4a015ba7a4eaf AS runtime
 ENV NODE_ENV=production
