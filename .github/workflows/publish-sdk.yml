@@ -23,7 +23,8 @@ jobs:
           test "$(git cat-file -t "refs/tags/$GITHUB_REF_NAME")" = "tag"
           TAG_COMMIT="$(git rev-list -n 1 "refs/tags/$GITHUB_REF_NAME")"
           test "$(git rev-parse origin/main)" = "$TAG_COMMIT"
-          test "$GITHUB_REF_NAME" = "sdk-v$(node -p \"require('./packages/platform-sdk/package.json').version\")"
+          VERSION=$(node -p "require('./packages/platform-sdk/package.json').version")
+          test "$GITHUB_REF_NAME" = "sdk-v$VERSION"
       - uses: pnpm/action-setup@v4
         with:
           version: 11.25.0
