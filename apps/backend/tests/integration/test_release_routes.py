@@ -26,7 +26,7 @@ def test_current_design_system_release_is_downloadable(client: TestClient) -> No
 
     assert response.status_code == 200
     assert response.headers["digest"] == (
-        "sha-256=3bad82faf929f0f55aa15234df82807f0d70a5c5742406b08c6770b803c3db08"
+        "sha-256=90f4dba0079d6b504ba66d65eddb29c64e272337312bde648abac3a2fcdea64e"
     )
     assert response.headers["content-disposition"] == (
         'attachment; filename="kya-design-system-0.1.2.zip"'

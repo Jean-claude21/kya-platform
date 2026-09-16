@@ -17,7 +17,7 @@
   },
   "integrity": {
     "algorithm": "sha256",
-    "digest": "8f692fb28d781a34dca8655bc1f779a6f42294d78df6cbe9eff0f7093f6f67d4"
+    "digest": "897bb621dfe65336b54862348089e58958f964f8ef8522ab649b619663c2bebc"
   },
   "compatibility": {
     "codex": ">=2026-09",

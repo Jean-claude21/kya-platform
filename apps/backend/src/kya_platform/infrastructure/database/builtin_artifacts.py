@@ -29,7 +29,7 @@ _VERSION = "0.1.2"
 _ARCHIVE_URL = (
     "https://api.kya-platform.vttlife.com/api/v1/releases/kya-design-system/0.1.2/package"
 )
-_ARCHIVE_DIGEST = "3bad82faf929f0f55aa15234df82807f0d70a5c5742406b08c6770b803c3db08"
+_ARCHIVE_DIGEST = "90f4dba0079d6b504ba66d65eddb29c64e272337312bde648abac3a2fcdea64e"
 _ARCHIVE_DIGESTS = {
     "0.1.1": "0d85fbe28422c84b33daa5ef397b4b8e3a5c3469c265ad10c5ab5d01dba471a6",
     _VERSION: _ARCHIVE_DIGEST,
