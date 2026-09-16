@@ -16,6 +16,7 @@ checks and validation evidence before production.
 - `catalog/sources`: editable sources of real KYA artifacts.
 - `catalog/templates`: governed master templates used to start new artifacts.
 - `catalog/releases`: immutable, validated artifact releases.
+- `integrations/claude`: versioned Claude plugins that bundle approved Skills and MCP connections.
 - `docs`: maintained product, architecture, governance and operations documentation.
 - `specs`: feature intent, plans, tasks and evidence.
 

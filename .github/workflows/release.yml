@@ -29,3 +29,14 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Build the deterministic Claude plugin archive
+        run: python infra/claude/package_plugin.py
+      - name: Attach the Claude plugin archive to release evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: kya-platform-claude-plugin-${{ github.ref_name }}
+          path: dist/kya-platform-claude-plugin-*.zip
+          if-no-files-found: error
