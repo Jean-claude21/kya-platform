@@ -11,3 +11,5 @@ pnpm-lock.yaml
 apps/web/src/routeTree.gen.ts
 apps/web/src/features/studio/design-system-package.gen.ts
 apps/web/prototypes
+# Immutable bytes copied from published catalogue releases and verified in CI.
+integrations/claude/kya-platform/skills

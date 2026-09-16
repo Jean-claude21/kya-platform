@@ -1,11 +1,11 @@
 # KYA Enterprise IT Platform Strategy
 
-| Field | Value |
-|---|---|
-| Status | Proposed target architecture |
-| Audience | Executive leadership, CVSI, Platform, Security, Product and Data teams |
-| Last reviewed | 2026-09-14 |
-| Decision horizon | 2026-2028 |
+| Field             | Value                                                                                |
+| ----------------- | ------------------------------------------------------------------------------------ |
+| Status            | Proposed target architecture                                                         |
+| Audience          | Executive leadership, CVSI, Platform, Security, Product and Data teams               |
+| Last reviewed     | 2026-09-14                                                                           |
+| Decision horizon  | 2026-2028                                                                            |
 | Primary objective | Build a fast, governed and recoverable digital operating system for KYA-Energy Group |
 
 ## Executive decision
@@ -67,17 +67,17 @@ flowchart LR
 
 ## Clear system boundaries
 
-| System | System of record for | Must not become |
-|---|---|---|
-| KYA-Platform | Catalogue, submissions, scopes, approvals, installations and user-visible governance | A Git hosting replacement |
-| KYA Core | Effective rights by entity, unit, workspace, role, resource and time | A password or secret store |
-| GitHub | Source, history, review evidence, automation definitions and immutable releases | The business authorization engine |
-| GHCR | OCI images and versioned distributable packages | A mutable deployment workspace |
-| Infisical | Secrets, machine identities and controlled secret delivery | A business-user directory |
-| Neon | Operational relational data, workflow state and audit metadata | A repository for large binary archives |
-| Coolify | Runtime deployment, health checks and rollback | A source-code approval system |
-| NAS | Local backup, archive and recovery cache | The primary production database or an Internet-facing service |
-| Entra ID | Workforce identity, lifecycle, MFA and managed devices | The source of fine-grained KYA business permissions |
+| System       | System of record for                                                                 | Must not become                                               |
+| ------------ | ------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| KYA-Platform | Catalogue, submissions, scopes, approvals, installations and user-visible governance | A Git hosting replacement                                     |
+| KYA Core     | Effective rights by entity, unit, workspace, role, resource and time                 | A password or secret store                                    |
+| GitHub       | Source, history, review evidence, automation definitions and immutable releases      | The business authorization engine                             |
+| GHCR         | OCI images and versioned distributable packages                                      | A mutable deployment workspace                                |
+| Infisical    | Secrets, machine identities and controlled secret delivery                           | A business-user directory                                     |
+| Neon         | Operational relational data, workflow state and audit metadata                       | A repository for large binary archives                        |
+| Coolify      | Runtime deployment, health checks and rollback                                       | A source-code approval system                                 |
+| NAS          | Local backup, archive and recovery cache                                             | The primary production database or an Internet-facing service |
+| Entra ID     | Workforce identity, lifecycle, MFA and managed devices                               | The source of fine-grained KYA business permissions           |
 
 ## How GitHub strengthens KYA
 
@@ -107,12 +107,12 @@ Skill, MCP server or application into a separate repository prematurely.
 
 Recommended initial repositories:
 
-| Repository | Purpose |
-|---|---|
-| `kya-platform` | KYA Core, API, web application, contracts and shared platform code |
-| `kya-capabilities` | Published Skill, MCP and reusable capability sources when their volume justifies separation |
-| `kya-infrastructure` | Deployment definitions, backup policy, observability and recovery automation |
-| `kya-documentation` | Optional later split for externally consumable or independently governed documentation |
+| Repository           | Purpose                                                                                     |
+| -------------------- | ------------------------------------------------------------------------------------------- |
+| `kya-platform`       | KYA Core, API, web application, contracts and shared platform code                          |
+| `kya-capabilities`   | Published Skill, MCP and reusable capability sources when their volume justifies separation |
+| `kya-infrastructure` | Deployment definitions, backup policy, observability and recovery automation                |
+| `kya-documentation`  | Optional later split for externally consumable or independently governed documentation      |
 
 Use GitHub Issues and Projects for planned work, ADRs for durable architectural decisions, pull
 requests for every controlled change and Releases for immutable publication events.
@@ -308,36 +308,36 @@ and NAS figures are planning estimates, not vendor quotations.
 
 ### Published service prices
 
-| Service | Public price or starting point | Planning note |
-|---|---:|---|
-| GitHub Free | $0 | 2,000 Actions minutes and 500 MB Packages for private use allocation |
-| GitHub Team | $4/user/month | 3,000 Actions minutes, 2 GB Packages, repository rules and team collaboration |
-| GitHub Enterprise | From $21/user/month | SAML/SCIM, managed users, advanced audit and stronger environment governance |
-| GitHub Codespaces | From $0.18/hour compute + $0.07/GB/month storage | Optional; use spending limits and automatic shutdown |
-| Infisical Free | $0 | Suitable only while included human and machine identity limits fit |
-| Infisical Pro | About $20/identity/month annually | Audit, access controls, rotation and SSO-related capabilities; identity count must be modelled |
-| Infisical Advanced | About $40/identity/month annually | Higher-governance features; confirm exact entitlement before purchase |
-| Neon Launch | Usage based; common small workload around $15/month | Actual compute and storage consumption controls cost |
-| Coolify self-hosted | $0 software | KYA operates and secures the control plane |
-| Coolify Cloud | About $5/month for two servers | Additional servers billed separately |
-| Dokploy Hobby | About $4.50/server/month | Limited organization/user model |
-| Dokploy Startup | From $15/month | Up to three servers with broader team features |
-| Microsoft 365 Business Premium | $22/user/month annually | Optional workforce identity, productivity, device and endpoint-security layer |
-| Backblaze B2 | $6.95/TB/month | Off-site S3-compatible backup tier |
+| Service                        |                      Public price or starting point | Planning note                                                                                  |
+| ------------------------------ | --------------------------------------------------: | ---------------------------------------------------------------------------------------------- |
+| GitHub Free                    |                                                  $0 | 2,000 Actions minutes and 500 MB Packages for private use allocation                           |
+| GitHub Team                    |                                       $4/user/month | 3,000 Actions minutes, 2 GB Packages, repository rules and team collaboration                  |
+| GitHub Enterprise              |                                 From $21/user/month | SAML/SCIM, managed users, advanced audit and stronger environment governance                   |
+| GitHub Codespaces              |    From $0.18/hour compute + $0.07/GB/month storage | Optional; use spending limits and automatic shutdown                                           |
+| Infisical Free                 |                                                  $0 | Suitable only while included human and machine identity limits fit                             |
+| Infisical Pro                  |                   About $20/identity/month annually | Audit, access controls, rotation and SSO-related capabilities; identity count must be modelled |
+| Infisical Advanced             |                   About $40/identity/month annually | Higher-governance features; confirm exact entitlement before purchase                          |
+| Neon Launch                    | Usage based; common small workload around $15/month | Actual compute and storage consumption controls cost                                           |
+| Coolify self-hosted            |                                         $0 software | KYA operates and secures the control plane                                                     |
+| Coolify Cloud                  |                      About $5/month for two servers | Additional servers billed separately                                                           |
+| Dokploy Hobby                  |                            About $4.50/server/month | Limited organization/user model                                                                |
+| Dokploy Startup                |                                      From $15/month | Up to three servers with broader team features                                                 |
+| Microsoft 365 Business Premium |                             $22/user/month annually | Optional workforce identity, productivity, device and endpoint-security layer                  |
+| Backblaze B2                   |                                      $6.95/TB/month | Off-site S3-compatible backup tier                                                             |
 
 ### Five-person initial operating estimate
 
-| Cost area | Monthly estimate |
-|---|---:|
-| GitHub Team | $20 |
-| Neon | $15-$50 |
-| Coolify | $0-$5 plus server cost |
-| Application and operations servers | $30-$100 |
-| Off-site backup, first terabyte | About $7 |
-| Infisical | $0 while Free fits; potentially material on paid per-identity plans |
-| Cloudflare baseline | $0 before paid controls |
-| Open source observability | $0 software plus compute/storage |
-| Microsoft 365 Business Premium, optional | $110 |
+| Cost area                                |                                                    Monthly estimate |
+| ---------------------------------------- | ------------------------------------------------------------------: |
+| GitHub Team                              |                                                                 $20 |
+| Neon                                     |                                                             $15-$50 |
+| Coolify                                  |                                              $0-$5 plus server cost |
+| Application and operations servers       |                                                            $30-$100 |
+| Off-site backup, first terabyte          |                                                            About $7 |
+| Infisical                                | $0 while Free fits; potentially material on paid per-identity plans |
+| Cloudflare baseline                      |                                             $0 before paid controls |
+| Open source observability                |                                    $0 software plus compute/storage |
+| Microsoft 365 Business Premium, optional |                                                                $110 |
 
 Expected initial total:
 
@@ -348,12 +348,12 @@ Expected initial total:
 
 ### NAS capital estimate
 
-| Component | Estimated one-time cost |
-|---|---:|
-| Four- or six-bay NAS chassis | $500-$900 |
-| Four 8 TB NAS-grade drives | $600-$900 |
-| UPS | $150-$300 |
-| Initial total | **$1,250-$2,100** |
+| Component                    | Estimated one-time cost |
+| ---------------------------- | ----------------------: |
+| Four- or six-bay NAS chassis |               $500-$900 |
+| Four 8 TB NAS-grade drives   |               $600-$900 |
+| UPS                          |               $150-$300 |
+| Initial total                |       **$1,250-$2,100** |
 
 Four 8 TB disks with double parity provide roughly 16 TB usable before filesystem and snapshot
 overheads.
@@ -413,14 +413,14 @@ have clear owners and automated lifecycle controls.
 
 ## Decision triggers
 
-| Decision | Stay with the current choice while | Upgrade or change when |
-|---|---|---|
-| GitHub Team vs Enterprise | KYA-Platform can carry business approvals and Team rules protect code | Native private-environment reviewers, SAML/SCIM, managed users or enterprise audit are required |
-| Neon Auth vs Entra ID | KYA-Platform is the principal employee-facing application | Company-wide joiner/mover/leaver, device compliance and cross-application SSO are required |
-| No Keycloak vs Keycloak | Managed identity services meet availability and sovereignty needs | Offline/on-prem identity, LDAP federation, complex partner SAML or sovereignty becomes mandatory |
-| Coolify vs Dokploy | Coolify remains stable, supportable and integrated | Measured multi-server, RBAC or orchestration needs are demonstrably better served by Dokploy |
-| Hosted Actions vs self-hosted runners | Included minutes and security isolation are adequate | Cost or private-network builds justify isolated ephemeral runners |
-| Open source scans vs paid GitHub security | CI quality and response process are adequate | Scale, compliance or remediation time justifies integrated paid features |
+| Decision                                  | Stay with the current choice while                                    | Upgrade or change when                                                                           |
+| ----------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| GitHub Team vs Enterprise                 | KYA-Platform can carry business approvals and Team rules protect code | Native private-environment reviewers, SAML/SCIM, managed users or enterprise audit are required  |
+| Neon Auth vs Entra ID                     | KYA-Platform is the principal employee-facing application             | Company-wide joiner/mover/leaver, device compliance and cross-application SSO are required       |
+| No Keycloak vs Keycloak                   | Managed identity services meet availability and sovereignty needs     | Offline/on-prem identity, LDAP federation, complex partner SAML or sovereignty becomes mandatory |
+| Coolify vs Dokploy                        | Coolify remains stable, supportable and integrated                    | Measured multi-server, RBAC or orchestration needs are demonstrably better served by Dokploy     |
+| Hosted Actions vs self-hosted runners     | Included minutes and security isolation are adequate                  | Cost or private-network builds justify isolated ephemeral runners                                |
+| Open source scans vs paid GitHub security | CI quality and response process are adequate                          | Scale, compliance or remediation time justifies integrated paid features                         |
 
 ## Non-negotiable controls
 
@@ -450,4 +450,3 @@ have clear owners and automated lifecycle controls.
 - [Keycloak capabilities](https://www.keycloak.org/)
 - [Microsoft 365 Business Premium](https://www.microsoft.com/en-us/microsoft-365/business/microsoft-365-business-premium)
 - [Backblaze B2 pricing](https://www.backblaze.com/cloud-storage/pricing)
-

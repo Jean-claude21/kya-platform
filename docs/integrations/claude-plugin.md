@@ -15,13 +15,13 @@ OAuth and exposes only the tools allowed by KYA-Platform policy.
 
 This separation is intentional:
 
-| Responsibility | Owner |
-| --- | --- |
-| Install the skill and MCP declaration | Claude plugin manager |
-| Authenticate the person | KYA-Platform OAuth |
-| Decide visible tools and data | KYA-Platform policy engine |
-| Publish immutable skill content | KYA-Platform catalogue |
-| Deliver a reviewed plugin version | GitHub marketplace and CI |
+| Responsibility                        | Owner                      |
+| ------------------------------------- | -------------------------- |
+| Install the skill and MCP declaration | Claude plugin manager      |
+| Authenticate the person               | KYA-Platform OAuth         |
+| Decide visible tools and data         | KYA-Platform policy engine |
+| Publish immutable skill content       | KYA-Platform catalogue     |
+| Deliver a reviewed plugin version     | GitHub marketplace and CI  |
 
 The plugin never embeds credentials. Its MCP request is capped to catalogue installation and
 read-only data scopes; the server may grant fewer scopes based on the user and active unit.
