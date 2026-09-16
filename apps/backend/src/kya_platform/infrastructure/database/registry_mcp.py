@@ -184,6 +184,9 @@ class SqlAlchemyRegistryMcpBackend:
                     name=item.name,
                     summary=item.summary,
                     latest_version=item.latest_version,
+                    owner_workspace_id=item.owner_workspace_id,
+                    visibility=item.visibility,
+                    visibility_scope_unit_id=item.visibility_scope_unit_id,
                 )
                 for item in items
             )
@@ -265,6 +268,12 @@ class SqlAlchemyRegistryMcpBackend:
                     latest_version=version.version,
                     lifecycle=artifact.lifecycle,
                     owner_workspace_id=str(artifact.owner_workspace_id),
+                    visibility=artifact.visibility,
+                    visibility_scope_unit_id=(
+                        str(artifact.visibility_scope_unit_id)
+                        if artifact.visibility_scope_unit_id is not None
+                        else None
+                    ),
                 )
             )
             if len(items) == query.limit:

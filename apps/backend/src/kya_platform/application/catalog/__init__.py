@@ -40,6 +40,8 @@ class CatalogSummary:
     latest_version: str
     lifecycle: str
     owner_workspace_id: str
+    visibility: str | None = None
+    visibility_scope_unit_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

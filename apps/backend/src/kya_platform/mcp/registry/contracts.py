@@ -35,7 +35,7 @@ class Confirmation(StrictMcpContract):
 
 
 class SearchCatalogInput(StrictMcpContract):
-    query: str = Field(min_length=2, max_length=200)
+    query: str = Field(default="", max_length=200)
     types: tuple[ArtifactType, ...] = ()
     workspace: str | None = None
     cursor: str | None = None
@@ -125,6 +125,10 @@ class ArtifactSummary(StrictMcpContract):
     name: str
     summary: str | None = None
     latest_version: str | None = None
+    owner_workspace_id: str | None = None
+    visibility: str | None = None
+    visibility_scope_unit_id: str | None = None
+    effective_permissions: tuple[Literal["view"], ...] = ("view",)
 
 
 class SearchCatalogOutput(StrictMcpContract):

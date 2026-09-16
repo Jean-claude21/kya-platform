@@ -67,7 +67,7 @@ async def test_integrity_route_fails_closed_without_runtime_trust() -> None:
     request = SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace()))
 
     with pytest.raises(HTTPException) as captured:
-        await verify_design_system_release(request)  # type: ignore[arg-type]
+        await verify_design_system_release("0.1.2", request)  # type: ignore[arg-type]
 
     assert captured.value.status_code == 503
 
@@ -88,7 +88,7 @@ async def test_integrity_route_returns_verifiable_runtime_release() -> None:
         id=release_id,
         signature=signature.model_dump(mode="json"),
     )
-    version = SimpleNamespace(id=version_id, version="0.1.1")
+    version = SimpleNamespace(id=version_id, version="0.1.2")
     artifact = SimpleNamespace(slug="kya-design-system")
     file_rows = [
         SimpleNamespace(
@@ -147,7 +147,7 @@ async def test_integrity_route_returns_verifiable_runtime_release() -> None:
         )
     )
 
-    document = await verify_design_system_release(request)  # type: ignore[arg-type]
+    document = await verify_design_system_release("0.1.2", request)  # type: ignore[arg-type]
 
     assert document.release_id == release_id
     assert document.content.digest == package.artifact.integrity.digest

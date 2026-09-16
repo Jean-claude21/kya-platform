@@ -270,7 +270,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     if recovered:
                         logging.getLogger("kya.catalog").info(
                             "builtin_design_system_release_recovered",
-                            extra={"version": "0.1.1"},
+                            extra={"version": "0.1.2"},
                         )
             if resolved_settings.has_github_proposal_configuration:
                 assert resolved_settings.github_app_id is not None

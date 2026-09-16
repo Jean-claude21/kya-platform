@@ -100,7 +100,7 @@ async def test_recovery_adds_a_verified_signed_release(
     release = next(item for item in write.added if isinstance(item, CatalogRelease))
     files = [item for item in write.added if isinstance(item, CatalogPackageFile)]
     event = next(item for item in write.added if isinstance(item, OutboxEvent))
-    assert version.version == "0.1.1"
+    assert version.version == "0.1.2"
     assert version.status == "published"
     assert release.artifact_version_id == version.id
     assert release.content_digest == version.content_digest

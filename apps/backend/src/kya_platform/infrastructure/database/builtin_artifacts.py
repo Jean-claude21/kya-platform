@@ -25,25 +25,32 @@ from kya_platform.infrastructure.database.models import (
     OutboxEvent,
 )
 
-_VERSION = "0.1.1"
+_VERSION = "0.1.2"
 _ARCHIVE_URL = (
-    "https://api.kya-platform.vttlife.com/api/v1/releases/kya-design-system/0.1.1/package"
+    "https://api.kya-platform.vttlife.com/api/v1/releases/kya-design-system/0.1.2/package"
 )
-_ARCHIVE_DIGEST = "0d85fbe28422c84b33daa5ef397b4b8e3a5c3469c265ad10c5ab5d01dba471a6"
+_ARCHIVE_DIGEST = "3bad82faf929f0f55aa15234df82807f0d70a5c5742406b08c6770b803c3db08"
+_ARCHIVE_DIGESTS = {
+    "0.1.1": "0d85fbe28422c84b33daa5ef397b4b8e3a5c3469c265ad10c5ab5d01dba471a6",
+    _VERSION: _ARCHIVE_DIGEST,
+}
 
 
-def design_system_archive_bytes() -> bytes:
+def design_system_archive_bytes(version: str = _VERSION) -> bytes:
     """Read and verify the packaged builtin release from the application image."""
 
+    expected_digest = _ARCHIVE_DIGESTS.get(version)
+    if expected_digest is None:
+        raise ValueError("unknown builtin Design System release")
     candidates = (
-        Path("/app/catalog/releases/kya-design-system/0.1.1.zip"),
-        Path("catalog/releases/kya-design-system/0.1.1.zip"),
+        Path(f"/app/catalog/releases/kya-design-system/{version}.zip"),
+        Path(f"catalog/releases/kya-design-system/{version}.zip"),
     )
     path = next((candidate for candidate in candidates if candidate.is_file()), None)
     if path is None:
         raise RuntimeError("builtin Design System archive is unavailable")
     archive = path.read_bytes()
-    if hashlib.sha256(archive).hexdigest() != _ARCHIVE_DIGEST:
+    if hashlib.sha256(archive).hexdigest() != expected_digest:
         raise RuntimeError("builtin Design System archive digest mismatch")
     return archive
 

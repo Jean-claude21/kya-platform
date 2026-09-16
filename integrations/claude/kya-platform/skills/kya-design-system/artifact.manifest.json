@@ -3,7 +3,7 @@
   "id": "kya:skill:kya-design-system",
   "type": "skill",
   "name": "KYA Design System",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "summary": "Official visual, interaction and governance rules for KYA-Platform experiences.",
   "owners": {
     "business": "communication",
@@ -12,12 +12,12 @@
   },
   "source": {
     "repository": "https://github.com/Jean-claude21/kya-platform",
-    "commit": "34e466d4629bb2e1159bc687f32b6fa5af4b6b2f",
+    "commit": "3b7031f46f9260eb8fe692246d32d5d7a01fd8a0",
     "path": "catalog/templates/skill/kya-design-system"
   },
   "integrity": {
     "algorithm": "sha256",
-    "digest": "798d5435b59bcb0db9efa1b57d448dbcc5b572a014549701ad1a6a5a227bea1c"
+    "digest": "8f692fb28d781a34dca8655bc1f779a6f42294d78df6cbe9eff0f7093f6f67d4"
   },
   "compatibility": {
     "codex": ">=2026-09",
