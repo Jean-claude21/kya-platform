@@ -1,6 +1,7 @@
 import { KyaPlatformClient, createIdempotencyKey } from '@jean-claude21/kya-platform-sdk';
 
 import { getAccessToken } from '../auth/client';
+import { getActiveContext } from './active-context';
 
 export type LoadState<T> =
   | { status: 'loading'; data: null; error: null }
@@ -13,7 +14,7 @@ if (!apiUrl) throw new Error('VITE_KYA_API_URL is required');
 export const platformClient = new KyaPlatformClient({
   apiUrl,
   getAccessToken,
-  getActiveContext: () => ({ unitId: 'group' }),
+  getActiveContext,
 });
 
 export async function platformRequest<T>(path: string, init?: RequestInit): Promise<T> {

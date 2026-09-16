@@ -15,6 +15,7 @@ import { SecretAccessWorkbench } from '../features/secrets/secret-access-workben
 import { AuditTimeline } from '../features/audit/audit-timeline';
 import { authClient } from '../auth/client';
 import { platformRequest } from '../platform/api';
+import { getActiveUnitId, setActiveUnitId } from '../platform/active-context';
 
 export type Module =
   'Accueil' | 'Catalogue' | 'Apps' | 'MCP' | 'Skills' | 'Studio' | 'Administration' | AdminTarget;
@@ -27,9 +28,31 @@ const navigation: Array<{ target: Module; label: string; icon: IconName }> = [
 ];
 const isPreview = import.meta.env.DEV && import.meta.env.VITE_KYA_PREVIEW_MODE === 'app';
 
+type ShellUnit = {
+  key: string;
+  name: string;
+  type_key: string;
+};
+
+const previewUnits: ShellUnit[] = [
+  { key: 'direction-systemes', name: 'Direction des Systèmes', type_key: 'direction' },
+  { key: 'communication', name: 'Communication', type_key: 'direction' },
+  { key: 'stagiaires', name: 'Espace stagiaires', type_key: 'team' },
+];
+const previewDefaultUnit: ShellUnit = {
+  key: 'direction-systemes',
+  name: 'Direction des Systèmes',
+  type_key: 'direction',
+};
+
 export function PlatformShell() {
   const [activeModule, setActiveModule] = useState<Module>('Accueil');
-  const [unit, setUnit] = useState(isPreview ? 'Direction des Systèmes' : 'Groupe');
+  const [activeUnit, setActiveUnit] = useState<ShellUnit>(
+    isPreview
+      ? previewDefaultUnit
+      : { key: getActiveUnitId(), name: 'Contexte en cours…', type_key: 'group' },
+  );
+  const [availableUnits, setAvailableUnits] = useState<ShellUnit[]>(isPreview ? previewUnits : []);
   const [query, setQuery] = useState('');
   const [catalogQuery, setCatalogQuery] = useState('');
   const [email, setEmail] = useState('Compte KYA');
@@ -43,9 +66,20 @@ export function PlatformShell() {
   useEffect(() => {
     if (isPreview) return;
     let active = true;
-    void platformRequest<{ email: string | null }>('/account/me')
-      .then((account) => {
-        if (active) setEmail(account.email ?? 'Compte KYA');
+    void platformRequest<{ email: string | null; active_unit_id: string }>('/account/me')
+      .then(async (account) => {
+        setActiveUnitId(account.active_unit_id);
+        const [current, children] = await Promise.all([
+          platformRequest<ShellUnit>(`/core/organization/${account.active_unit_id}`),
+          platformRequest<{ items: ShellUnit[] }>(
+            `/core/organization/${account.active_unit_id}/children?limit=100`,
+          ),
+        ]);
+        if (active) {
+          setEmail(account.email ?? 'Compte KYA');
+          setActiveUnit(current);
+          setAvailableUnits([current, ...children.items]);
+        }
       })
       .catch(() => {
         if (active) setAccountError('Les informations du compte sont indisponibles.');
@@ -84,7 +118,14 @@ export function PlatformShell() {
   }
   let screen;
   if (activeModule === 'Accueil')
-    screen = <PersonalHome onNavigate={navigate} unit={unit} query={query} preview={isPreview} />;
+    screen = (
+      <PersonalHome
+        onNavigate={navigate}
+        unit={activeUnit.name}
+        query={query}
+        preview={isPreview}
+      />
+    );
   else if (activeModule === 'Catalogue' || activeModule === 'Apps' || activeModule === 'Skills') {
     screen = (
       <CatalogWorkbench
@@ -143,8 +184,8 @@ export function PlatformShell() {
         </a>
         <div className="signature-context">
           <label>
-            <span>Entité</span>
-            <select aria-label="Entité active" value="KYA-Energy Group" disabled>
+            <span>Organisation</span>
+            <select aria-label="Organisation active" value="KYA-Energy Group" disabled>
               <option>KYA-Energy Group</option>
             </select>
           </label>
@@ -152,17 +193,19 @@ export function PlatformShell() {
             <span>Unité{isPreview ? ' · aperçu' : ' active'}</span>
             <select
               aria-label="Unité active"
-              value={unit}
-              disabled={!isPreview}
+              value={activeUnit.key}
+              disabled={availableUnits.length < 2}
               onChange={(event) => {
-                setUnit(event.target.value);
+                const selected = availableUnits.find((unit) => unit.key === event.target.value);
+                if (!selected) return;
+                setActiveUnitId(selected.key);
+                setActiveUnit(selected);
               }}
             >
-              {(isPreview
-                ? ['Direction des Systèmes', 'Communication', 'Espace stagiaires']
-                : ['Groupe']
-              ).map((name) => (
-                <option key={name}>{name}</option>
+              {availableUnits.map((unit) => (
+                <option key={unit.key} value={unit.key}>
+                  {unit.name}
+                </option>
               ))}
             </select>
           </label>
@@ -243,7 +286,7 @@ export function PlatformShell() {
           id="workspace-content"
           ref={content}
           tabIndex={-1}
-          key={activeModule}
+          key={`${activeModule}-${activeUnit.key}`}
         >
           {activeModule !== 'Accueil' && (
             <button

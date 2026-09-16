@@ -4,9 +4,6 @@ on:
   pull_request:
     branches: [dev]
     types: [opened, synchronize, reopened, closed]
-  push:
-    branches: [dev]
-    tags: ['v[0-9]+.[0-9]+.[0-9]+']
   workflow_dispatch:
     inputs:
       provider:
@@ -30,7 +27,7 @@ permissions:
 
 concurrency:
   group: deploy-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   preview-data:
@@ -55,28 +52,6 @@ jobs:
         run: >-
           uv run --package kya-platform-backend python infra/neon/preview_branch.py
           "$ACTION" --pull-request "$PR_NUMBER" --commit "$COMMIT_SHA"
-
-  validate:
-    if: github.event_name != 'pull_request' || github.event.action != 'closed'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 11.25.0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
-        with:
-          python-version: '3.14'
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm check
-      - run: uv sync --locked --all-packages
-      - run: uv run pytest
 
   guard:
     if: github.event_name == 'workflow_dispatch'

@@ -6,7 +6,7 @@
 export const organizationalUnitTypeLabels: Record<string, string> = {
   group: 'Groupe',
   country: 'Pays',
-  entity: 'Entité',
+  entity: 'Filiale',
   agency: 'Agence',
   direction: 'Direction',
   department: 'Département',

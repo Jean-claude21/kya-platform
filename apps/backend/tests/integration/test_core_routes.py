@@ -24,7 +24,7 @@ from kya_platform.domain.core import (
     Project,
     ProjectStatus,
 )
-from kya_platform.domain.organization import DateRange, OrganizationalUnit
+from kya_platform.domain.organization import DateRange, OrganizationalUnit, OrganizationalUnitType
 
 ALICE = UUID("01993420-0000-7000-8000-000000000001")
 CVSI = UUID("01993420-0000-7000-8000-000000000002")
@@ -78,6 +78,13 @@ class CoreStub:
         self.created_units: list[OrganizationalUnit] = []
         self.created_projects: list[Project] = []
         self.write_error: Exception | None = None
+
+    async def list_unit_types(self) -> Sequence[OrganizationalUnitType]:
+        return (
+            OrganizationalUnitType("group", "Groupe"),
+            OrganizationalUnitType("entity", "Filiale", frozenset({"group"})),
+            OrganizationalUnitType("agency", "Agence", frozenset({"group", "entity"})),
+        )
 
     async def get_unit(self, key: str) -> OrganizationalUnit | None:
         return self.unit if key == self.unit.key else None
@@ -255,6 +262,9 @@ def test_organization_read_list_and_create_contracts(app: FastAPI) -> None:
         children = client.get(
             "/api/v1/core/organization/groupe-kya/children?limit=10", headers=headers()
         )
+        unit_types = client.get(
+            "/api/v1/core/organization/groupe-kya/unit-types", headers=headers()
+        )
         created = client.post(
             "/api/v1/core/organization/groupe-kya/children",
             headers=headers(),
@@ -269,6 +279,7 @@ def test_organization_read_list_and_create_contracts(app: FastAPI) -> None:
     assert unit.status_code == 200
     assert missing.status_code == 404
     assert children.json()["items"][0]["key"] == "direction-cvsi"
+    assert unit_types.json()["items"][1]["label"] == "Filiale"
     assert created.status_code == 201
     assert core.created_units[0].key == "agence-lome"
 

@@ -34,7 +34,7 @@ jobs:
           cache: pnpm
           registry-url: https://npm.pkg.github.com
           scope: '@jean-claude21'
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --filter @jean-claude21/kya-platform-sdk...
       - run: pnpm --filter @jean-claude21/kya-platform-sdk test:unit
       - run: pnpm --filter @jean-claude21/kya-platform-sdk publish --no-git-checks
         env:
