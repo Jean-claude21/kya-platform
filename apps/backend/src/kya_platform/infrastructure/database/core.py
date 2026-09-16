@@ -24,7 +24,7 @@ from kya_platform.domain.core import (
     ProjectStatus,
     RecordStatus,
 )
-from kya_platform.domain.organization import DateRange, OrganizationalUnit
+from kya_platform.domain.organization import DateRange, OrganizationalUnit, OrganizationalUnitType
 from kya_platform.infrastructure.database.models import (
     CoreClientAccount,
     CoreOrganizationalUnit,
@@ -44,6 +44,15 @@ def _unit(row: CoreOrganizationalUnit) -> OrganizationalUnit:
         row.type_key,
         row.name,
         DateRange(row.valid_from, row.valid_until),
+    )
+
+
+def _unit_type(row: CoreOrganizationalUnitType) -> OrganizationalUnitType:
+    return OrganizationalUnitType(
+        key=row.key,
+        label=row.label,
+        allowed_parent_types=frozenset(row.allowed_parent_types),
+        is_temporary=row.is_temporary,
     )
 
 
@@ -106,6 +115,15 @@ def _event(
 class SqlAlchemyCoreRepository:
     def __init__(self, sessions: async_sessionmaker[AsyncSession]) -> None:
         self._sessions = sessions
+
+    async def list_unit_types(self) -> Sequence[OrganizationalUnitType]:
+        async with self._sessions() as session:
+            rows = await session.scalars(
+                select(CoreOrganizationalUnitType)
+                .where(CoreOrganizationalUnitType.status == "active")
+                .order_by(CoreOrganizationalUnitType.is_temporary, CoreOrganizationalUnitType.label)
+            )
+            return tuple(_unit_type(row) for row in rows)
 
     async def get_unit(self, key: str) -> OrganizationalUnit | None:
         async with self._sessions() as session:

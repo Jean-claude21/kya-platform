@@ -7,7 +7,7 @@ from typing import Protocol
 from uuid import UUID
 
 from kya_platform.domain.core import ClientAccount, Party, Project
-from kya_platform.domain.organization import OrganizationalUnit
+from kya_platform.domain.organization import OrganizationalUnit, OrganizationalUnitType
 
 
 class CoreConflictError(RuntimeError):
@@ -42,6 +42,8 @@ class ClientRecord:
 
 
 class CoreRepository(Protocol):
+    async def list_unit_types(self) -> Sequence[OrganizationalUnitType]: ...
+
     async def get_unit(self, key: str) -> OrganizationalUnit | None: ...
 
     async def list_child_units(
@@ -86,6 +88,9 @@ class CoreService:
 
     def __init__(self, repository: CoreRepository) -> None:
         self._repository = repository
+
+    async def list_unit_types(self) -> Sequence[OrganizationalUnitType]:
+        return await self._repository.list_unit_types()
 
     async def get_unit(self, key: str) -> OrganizationalUnit | None:
         return await self._repository.get_unit(key)
