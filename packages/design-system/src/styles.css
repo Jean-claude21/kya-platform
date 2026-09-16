@@ -18,13 +18,13 @@
   --kya-ink: #073b36;
   --kya-muted: #667378;
   --kya-line: #dce3df;
-  --kya-ground: #fcfcfa;
+  --kya-ground: #f7f6f1;
   --kya-surface: #ffffff;
-  --kya-radius-sm: 0px;
-  --kya-radius-md: 0px;
+  --kya-radius-sm: 7px;
+  --kya-radius-md: 10px;
   --kya-shadow-raised: 0 18px 44px rgba(6, 61, 58, 0.09);
   --kya-focus: 0 0 0 3px rgba(28, 161, 140, 0.24);
-  font-family: Inter, Arial, sans-serif;
+  font-family: 'Segoe UI Variable', 'Segoe UI', Aptos, sans-serif;
 }
 
 *,

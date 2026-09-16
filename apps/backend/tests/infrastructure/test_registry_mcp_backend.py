@@ -133,6 +133,18 @@ async def test_search_ignores_malformed_policy_ids_and_returns_only_allowed_rows
 
 
 @pytest.mark.asyncio
+async def test_search_accepts_empty_query_for_a_complete_authorized_listing() -> None:
+    session = Session(scalar_values=[], results=[Result([rows()])])
+    backend = SqlAlchemyRegistryMcpBackend(Sessions(session))  # type: ignore[arg-type]
+
+    result = await backend.search_catalog(
+        SearchCatalogInput(types=("skill",)), allowed_ids=(str(ALLOWED),)
+    )
+
+    assert [item.artifact_id for item in result.items] == ["kya:skill:document-standard"]
+
+
+@pytest.mark.asyncio
 async def test_invalid_workspace_filter_fails_closed_without_query() -> None:
     session = Session(scalar_values=[], results=[])
     backend = SqlAlchemyRegistryMcpBackend(Sessions(session))  # type: ignore[arg-type]

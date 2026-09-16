@@ -43,6 +43,18 @@ def test_initializes_and_packages_a_discoverable_skill(tmp_path: Path) -> None:
         assert manifest["integrity"]["digest"] != "0" * 64
 
 
+def test_package_normalizes_text_files_for_cross_platform_archives(tmp_path: Path) -> None:
+    factory = SkillFactory()
+    root = factory.initialize(tmp_path, blueprint())
+    skill = root / "SKILL.md"
+    skill.write_bytes(skill.read_bytes().replace(b"\n", b"\r\n"))
+
+    archive, _ = factory.package(root)
+
+    with zipfile.ZipFile(BytesIO(archive)) as packaged:
+        assert b"\r\n" not in packaged.read("SKILL.md")
+
+
 def test_refuses_overwrite_and_unsupported_paths(tmp_path: Path) -> None:
     factory = SkillFactory()
     root = factory.initialize(tmp_path, blueprint())

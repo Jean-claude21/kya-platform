@@ -13,7 +13,7 @@ from kya_platform.contracts.release_integrity import (
     build_release_integrity_document,
 )
 from kya_platform.infrastructure.database.builtin_artifacts import (
-    _ARCHIVE_DIGEST,
+    _ARCHIVE_DIGESTS,
     design_system_archive_bytes,
 )
 from kya_platform.infrastructure.database.models import (
@@ -26,26 +26,29 @@ from kya_platform.infrastructure.database.models import (
 router = APIRouter(prefix="/releases", tags=["releases"])
 
 
-@router.get("/kya-design-system/0.1.1/package", response_class=Response)
-async def download_design_system_release() -> Response:
+@router.get("/kya-design-system/{version}/package", response_class=Response)
+async def download_design_system_release(version: str) -> Response:
     """Return the immutable signed package; authorization still gates its discovery."""
 
+    digest = _ARCHIVE_DIGESTS.get(version)
+    if digest is None:
+        raise HTTPException(status_code=404, detail="release not found")
     return Response(
-        content=design_system_archive_bytes(),
+        content=design_system_archive_bytes(version),
         media_type="application/zip",
         headers={
             "Cache-Control": "public, max-age=31536000, immutable",
-            "Digest": f"sha-256={_ARCHIVE_DIGEST}",
-            "Content-Disposition": 'attachment; filename="kya-design-system-0.1.1.zip"',
+            "Digest": f"sha-256={digest}",
+            "Content-Disposition": f'attachment; filename="kya-design-system-{version}.zip"',
         },
     )
 
 
 @router.get(
-    "/kya-design-system/0.1.1/integrity",
+    "/kya-design-system/{version}/integrity",
     response_model=ReleaseIntegrityDocument,
 )
-async def verify_design_system_release(request: Request) -> ReleaseIntegrityDocument:
+async def verify_design_system_release(version: str, request: Request) -> ReleaseIntegrityDocument:
     """Expose the exact content and signature proof required by an installing client."""
 
     sessions = getattr(request.app.state, "catalog_sessions", None)
@@ -62,19 +65,19 @@ async def verify_design_system_release(request: Request) -> ReleaseIntegrityDocu
             .join(CatalogArtifact, CatalogArtifact.id == CatalogArtifactVersion.artifact_id)
             .where(
                 CatalogArtifact.slug == "kya-design-system",
-                CatalogArtifactVersion.version == "0.1.1",
+                CatalogArtifactVersion.version == version,
                 CatalogRelease.status == "published",
             )
         )
         row = result.first()
         if row is None:
             raise HTTPException(status_code=404, detail="release not found")
-        release, version, artifact = row
+        release, version_row, artifact = row
         file_rows = (
             (
                 await session.execute(
                     select(CatalogPackageFile)
-                    .where(CatalogPackageFile.version_id == version.id)
+                    .where(CatalogPackageFile.version_id == version_row.id)
                     .order_by(CatalogPackageFile.path)
                 )
             )
@@ -97,12 +100,12 @@ async def verify_design_system_release(request: Request) -> ReleaseIntegrityDocu
             )
             for item in file_rows
         ]
-        archive = design_system_archive_bytes()
+        archive = design_system_archive_bytes(version)
         return build_release_integrity_document(
             release_id=release.id,
-            artifact_version_id=version.id,
+            artifact_version_id=version_row.id,
             artifact_slug=artifact.slug,
-            version=version.version,
+            version=version_row.version,
             archive_digest=hashlib.sha256(archive).hexdigest(),
             files=files,
             signature=signature,

@@ -56,6 +56,11 @@ def test_input_schemas_reject_undeclared_fields() -> None:
         SearchCatalogInput.model_validate({"query": "solaire", "secret": "leak"})
 
 
+def test_catalog_search_accepts_listing_and_single_character_queries() -> None:
+    assert SearchCatalogInput().query == ""
+    assert SearchCatalogInput(query="e").query == "e"
+
+
 @pytest.mark.parametrize(
     "payload",
     [
@@ -304,6 +309,25 @@ async def test_registry_server_executes_authorized_search_in_memory() -> None:
     assert result.is_error is False
     assert result.structured_content["items"][0]["artifact_id"] == ("kya:skill:business-method")
     assert policy.lists[0].user == "user:alice"
+
+
+@pytest.mark.asyncio
+async def test_registry_server_lists_authorized_catalog_without_query() -> None:
+    policy = RecordingPolicy(allowed=True, checks=[])
+    server = create_registry_server(
+        backend=SearchBackend(),
+        authorization=AuthorizationService(policy),
+        token_verifier=NoopTokenVerifier(),
+        issuer_url="https://auth.example.test",
+        resource_url="https://registry.example.test/mcp",
+        access_token_provider=access_token,
+    )
+
+    async with Client(server) as client:
+        result = await client.call_tool("search_catalog", {"types": ["skill"]})
+
+    assert result.is_error is False
+    assert result.structured_content["items"][0]["effective_permissions"] == ["view"]
 
 
 @pytest.mark.asyncio

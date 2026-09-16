@@ -283,7 +283,7 @@ def create_registry_server(
         "kya-platform",
         title="KYA Platform MCP",
         description="Capacités et données gouvernées de KYA-Energy Group",
-        version="0.2.4",
+        version="0.2.5",
         token_verifier=token_verifier,
         access_token_provider=access_token_provider,
         tool_visibility=guard.is_visible,
@@ -297,12 +297,12 @@ def create_registry_server(
 
     @server.tool(name="search_catalog", structured_output=True)
     async def search_catalog(
-        query: str,
+        query: str = "",
         types: list[ArtifactType] | None = None,
         workspace: str | None = None,
         cursor: str | None = None,
     ) -> SearchCatalogOutput:
-        """Rechercher uniquement les artefacts que l'appelant peut découvrir."""
+        """Lister ou rechercher uniquement les artefacts autorisés pour l'appelant."""
         allowed_ids = await guard.allowed_artifact_ids("search_catalog")
         return await backend.search_catalog(
             SearchCatalogInput(
