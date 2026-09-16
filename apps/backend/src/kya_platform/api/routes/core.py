@@ -24,7 +24,7 @@ from kya_platform.domain.core import (
     Project,
     ProjectStatus,
 )
-from kya_platform.domain.organization import DateRange, OrganizationalUnit
+from kya_platform.domain.organization import DateRange, OrganizationalUnit, OrganizationalUnitType
 from kya_platform.observability import ApiError
 
 router = APIRouter(prefix="/core", tags=["kya-core"])
@@ -65,6 +65,17 @@ class UnitResponse(BaseModel):
 
 class UnitListResponse(BaseModel):
     items: list[UnitResponse]
+
+
+class UnitTypeResponse(BaseModel):
+    key: str
+    label: str
+    allowed_parent_types: list[str]
+    is_temporary: bool
+
+
+class UnitTypeListResponse(BaseModel):
+    items: list[UnitTypeResponse]
 
 
 class ClientCreateRequest(PeriodRequest):
@@ -137,6 +148,15 @@ def _unit_response(unit: OrganizationalUnit) -> UnitResponse:
     )
 
 
+def _unit_type_response(unit_type: OrganizationalUnitType) -> UnitTypeResponse:
+    return UnitTypeResponse(
+        key=unit_type.key,
+        label=unit_type.label,
+        allowed_parent_types=sorted(unit_type.allowed_parent_types),
+        is_temporary=unit_type.is_temporary,
+    )
+
+
 def _client_response(record: ClientRecord) -> ClientResponse:
     return ClientResponse(
         id=record.account.id,
@@ -201,6 +221,16 @@ async def get_unit(
     _principal: Annotated[AuthorizedPrincipal, Depends(view_unit)],
 ) -> UnitResponse:
     return _unit_response(await _required_unit(_service(request), unit_key))
+
+
+@router.get("/organization/{unit_key}/unit-types", response_model=UnitTypeListResponse)
+async def list_unit_types(
+    unit_key: str,
+    request: Request,
+    _principal: Annotated[AuthorizedPrincipal, Depends(view_unit)],
+) -> UnitTypeListResponse:
+    records = await _service(request).list_unit_types()
+    return UnitTypeListResponse(items=[_unit_type_response(item) for item in records])
 
 
 @router.get("/organization/{unit_key}/children", response_model=UnitListResponse)

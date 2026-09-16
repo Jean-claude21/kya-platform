@@ -15,7 +15,7 @@ from kya_platform.domain.core import (
     Project,
     ProjectStatus,
 )
-from kya_platform.domain.organization import DateRange, OrganizationalUnit
+from kya_platform.domain.organization import DateRange, OrganizationalUnit, OrganizationalUnitType
 
 UNIT = UUID("01993410-0000-7000-8000-000000000001")
 ACTOR = UUID("01993410-0000-7000-8000-000000000002")
@@ -26,6 +26,10 @@ class RecordingRepository:
     def __init__(self) -> None:
         self.command: tuple[str, UUID, UUID] | None = None
         self.calls: list[str] = []
+
+    async def list_unit_types(self) -> Sequence[OrganizationalUnitType]:
+        self.calls.append("list_unit_types")
+        return ()
 
     async def get_unit(self, key: str) -> OrganizationalUnit | None:
         self.calls.append("get_unit")
@@ -139,6 +143,7 @@ async def test_service_delegates_every_core_use_case() -> None:
     )
 
     assert await service.get_unit(unit.key) is None
+    assert await service.list_unit_types() == ()
     assert await service.list_child_units(unit.key, at=period.valid_from, limit=10) == ()
     assert await service.create_child_unit("group", unit, command=command) == unit
     assert await service.list_clients(unit.key, limit=10) == ()
@@ -149,6 +154,7 @@ async def test_service_delegates_every_core_use_case() -> None:
     assert await service.create_project(unit.key, project, command=command) == project
     assert repository.calls == [
         "get_unit",
+        "list_unit_types",
         "list_child_units",
         "create_child_unit",
         "list_clients",

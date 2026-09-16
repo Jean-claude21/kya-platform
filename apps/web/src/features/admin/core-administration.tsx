@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Icon, StatusBadge } from '@kya/design-system';
 import { platformRequest } from '../../platform/api';
-import { organizationalUnitTypeLabel } from '../../platform/organizational-units';
+import { getActiveUnitId } from '../../platform/active-context';
 
 type Client = {
   id: string;
@@ -48,9 +48,10 @@ export function CoreAdministration() {
   const [error, setError] = useState('');
   useEffect(() => {
     let active = true;
+    const unitKey = getActiveUnitId();
     void Promise.all([
-      platformRequest<List<Client>>('/core/organization/group/clients'),
-      platformRequest<List<Project>>('/core/organization/group/projects'),
+      platformRequest<List<Client>>(`/core/organization/${unitKey}/clients`),
+      platformRequest<List<Project>>(`/core/organization/${unitKey}/projects`),
     ])
       .then(([clientList, projectList]) => {
         if (active) {
@@ -101,7 +102,7 @@ export function CoreAdministration() {
         <section className="core-records">
           <header>
             <div>
-              <span>Lecture directe · unité {organizationalUnitTypeLabel('group')}</span>
+              <span>Lecture directe · unité {getActiveUnitId()}</span>
               <h2>Référentiels actuels</h2>
             </div>
             {error && <StatusBadge tone="warning">{error}</StatusBadge>}
