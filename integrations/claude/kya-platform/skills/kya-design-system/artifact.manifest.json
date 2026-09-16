@@ -1,0 +1,32 @@
+{
+  "schemaVersion": "1",
+  "id": "kya:skill:kya-design-system",
+  "type": "skill",
+  "name": "KYA Design System",
+  "version": "0.1.1",
+  "summary": "Official visual, interaction and governance rules for KYA-Platform experiences.",
+  "owners": {
+    "business": "communication",
+    "technical": "cvsi-platform",
+    "workspace": "kya-platform"
+  },
+  "source": {
+    "repository": "https://github.com/Jean-claude21/kya-platform",
+    "commit": "34e466d4629bb2e1159bc687f32b6fa5af4b6b2f",
+    "path": "catalog/templates/skill/kya-design-system"
+  },
+  "integrity": {
+    "algorithm": "sha256",
+    "digest": "798d5435b59bcb0db9efa1b57d448dbcc5b572a014549701ad1a6a5a227bea1c"
+  },
+  "compatibility": {
+    "codex": ">=2026-09",
+    "claude-code": ">=2026-09",
+    "portable-zip": ">=2026-09"
+  },
+  "dependencies": [],
+  "scopes": [
+    "skill.discover"
+  ],
+  "risk": "read"
+}

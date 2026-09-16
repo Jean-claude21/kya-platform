@@ -84,3 +84,21 @@ jobs:
           python-version: '3.14'
       - run: uv sync --locked --all-packages
       - run: uv run mkdocs build --strict
+
+  claude-plugin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Validate the KYA-Platform Claude plugin
+        run: python infra/claude/package_plugin.py --check
+      - name: Build the deterministic Claude plugin archive
+        run: python infra/claude/package_plugin.py
+      - name: Upload the Claude plugin archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: kya-platform-claude-plugin
+          path: dist/kya-platform-claude-plugin-*.zip
+          if-no-files-found: error
