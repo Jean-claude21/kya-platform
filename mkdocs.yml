@@ -31,6 +31,7 @@ nav:
   - Home: index.md
   - Architecture:
       - Overview: architecture/overview.md
+      - Application integration contract: architecture/app-integration-contract.md
       - Enterprise IT platform strategy: architecture/enterprise-it-platform-strategy.md
       - Decisions:
           - FastAPI backend: adr/0001-fastapi-backend.md
