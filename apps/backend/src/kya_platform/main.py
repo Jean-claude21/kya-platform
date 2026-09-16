@@ -1,0 +1,526 @@
+"""FastAPI application factory and process entry point."""
+
+import base64
+import logging
+from collections.abc import AsyncIterator
+from contextlib import AsyncExitStack, asynccontextmanager
+from typing import cast
+
+import httpx
+import uvicorn
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from mcp.server.auth.provider import ProviderTokenVerifier
+from mcp.server.auth.routes import create_auth_routes
+from mcp.server.auth.settings import AuthSettings, ClientRegistrationOptions, RevocationOptions
+from mcp.server.transport_security import TransportSecuritySettings
+from pydantic import SecretStr
+from starlette.routing import Route
+from starlette.types import ASGIApp, Receive, Scope, Send
+
+from kya_platform.api.router import api_router
+from kya_platform.api.security import configure_security_runtime
+from kya_platform.application.artifact_registry import ArtifactRegistryService
+from kya_platform.application.audit import AuditQueryService, AuditWriter
+from kya_platform.application.content import ContentService
+from kya_platform.application.core import CoreService
+from kya_platform.application.data import DataService
+from kya_platform.application.intelligence import IntelligenceService
+from kya_platform.application.mcp_profiles import McpPreferenceService, McpProfileService
+from kya_platform.application.mcp_profiles.runtime import (
+    McpToolProfileRuntime,
+    ToolProfileMode,
+    ToolProfileRequest,
+)
+from kya_platform.application.proposal import ProposalService, ProposalUnitOfWorkFactory
+from kya_platform.application.publication import (
+    PublicationService,
+    PublicationUnitOfWorkFactory,
+)
+from kya_platform.application.publication.integrity import (
+    Ed25519ArtifactSigner,
+    InMemoryTrustStore,
+    TrustedSigningKey,
+)
+from kya_platform.application.scope_promotion import (
+    ScopePromotionService,
+    ScopePromotionUnitOfWorkFactory,
+)
+from kya_platform.application.source_lifecycle import SourceLifecycleService
+from kya_platform.authorization import AuthorizationService
+from kya_platform.bootstrap import BootstrapService
+from kya_platform.config import Settings, get_settings
+from kya_platform.domain.mcp_profiles import ToolDescriptor
+from kya_platform.infrastructure.database.artifact_registry import SqlAlchemyArtifactRegistry
+from kya_platform.infrastructure.database.audit import SqlAlchemyAuditRepository
+from kya_platform.infrastructure.database.bootstrap import SqlAlchemyBootstrapClaimRepository
+from kya_platform.infrastructure.database.builtin_artifacts import (
+    ensure_design_system_recovery_release,
+)
+from kya_platform.infrastructure.database.content import SqlAlchemyContentRepository
+from kya_platform.infrastructure.database.core import SqlAlchemyCoreRepository
+from kya_platform.infrastructure.database.data import SqlAlchemyDataRepository
+from kya_platform.infrastructure.database.identity import SqlAlchemyIdentityMapping
+from kya_platform.infrastructure.database.intelligence import SqlAlchemyIntelligenceRepository
+from kya_platform.infrastructure.database.mcp_profiles import SqlAlchemyMcpProfileRegistry
+from kya_platform.infrastructure.database.oauth_broker import VALID_SCOPES, OAuthBroker
+from kya_platform.infrastructure.database.proposal import SqlAlchemyProposalUnitOfWork
+from kya_platform.infrastructure.database.publication import (
+    SqlAlchemyAttestationRepository,
+    SqlAlchemyPublicationUnitOfWork,
+)
+from kya_platform.infrastructure.database.registry_mcp import SqlAlchemyRegistryMcpBackend
+from kya_platform.infrastructure.database.scope_promotion import SqlAlchemyScopePromotionUnitOfWork
+from kya_platform.infrastructure.database.secrets import SqlAlchemySecretReferenceRepository
+from kya_platform.infrastructure.database.session import create_engine, create_session_factory
+from kya_platform.infrastructure.database.source_lifecycle import (
+    SqlAlchemySourceLifecycleRepository,
+)
+from kya_platform.infrastructure.database.workspaces import SqlAlchemyWorkspaceRepository
+from kya_platform.infrastructure.github import GitHubAppPullRequestAdapter
+from kya_platform.infrastructure.infisical import (
+    HttpxInfisicalTransport,
+    InfisicalMachineIdentityAdapter,
+    InfisicalSecretResolver,
+)
+from kya_platform.infrastructure.openfga import OpenFgaHttpAdapter
+from kya_platform.mcp.bootstrap import create_bootstrap_server
+from kya_platform.mcp.registry.profiles import SYSTEM_PROFILES, TOOL_REGISTRATIONS
+from kya_platform.mcp.registry.runtime import (
+    StateAuthorizationPort,
+    StateDataMcpAuditSink,
+    StateDataMcpBackend,
+    StateIntelligenceMcpBackend,
+    StateRegistryBackend,
+    StateToolSetProvider,
+)
+from kya_platform.mcp.registry.server import create_registry_server
+from kya_platform.observability import (
+    CorrelationMiddleware,
+    configure_logging,
+    install_error_handlers,
+)
+from kya_platform.observability.telemetry import TelemetryRuntime
+
+
+class CanonicalMcpEndpoint:
+    """Serve the exact connector URL without relying on redirect support."""
+
+    def __init__(self, app: ASGIApp, mount_path: str) -> None:
+        self._app = app
+        self._mount_path = mount_path
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        inner_scope = dict(scope)
+        inner_scope["root_path"] = f"{scope.get('root_path', '')}{self._mount_path}"
+        inner_scope["path"] = "/"
+        inner_scope["raw_path"] = b"/"
+        await self._app(inner_scope, receive, send)
+
+
+class LoggingToolProfileShadowSink:
+    """Emit comparison evidence without principal, token or secret values."""
+
+    async def record(
+        self,
+        *,
+        request: ToolProfileRequest,
+        legacy_tool_keys: tuple[str, ...],
+        effective_tool_keys: tuple[str, ...],
+        dependency_failed: bool,
+    ) -> None:
+        logging.getLogger("kya.mcp.profiles").info(
+            "mcp_tool_profile_comparison",
+            extra={
+                "active_unit": request.active_unit_key,
+                "client_id": request.client_id,
+                "legacy_count": len(legacy_tool_keys),
+                "effective_count": len(effective_tool_keys),
+                "diverged": legacy_tool_keys != effective_tool_keys,
+                "dependency_failed": dependency_failed,
+            },
+        )
+
+
+def create_app(settings: Settings | None = None) -> FastAPI:
+    """Build an isolated application instance for runtime or tests."""
+
+    resolved_settings = settings or get_settings()
+    configure_logging(resolved_settings.log_level)
+    telemetry = TelemetryRuntime.create(resolved_settings)
+    bootstrap_mcp = create_bootstrap_server(environment=resolved_settings.environment)
+    bootstrap_mcp_app = bootstrap_mcp.streamable_http_app(
+        streamable_http_path="/",
+        json_response=True,
+        stateless_http=True,
+        transport_security=TransportSecuritySettings(
+            enable_dns_rebinding_protection=True,
+            allowed_hosts=list(resolved_settings.mcp_allowed_hosts),
+            allowed_origins=list(resolved_settings.mcp_allowed_origins),
+        ),
+    )
+    registry_mcp_app: ASGIApp | None = None
+    database_engine = None
+    session_factory = None
+    oauth_broker: OAuthBroker | None = None
+    if resolved_settings.database_url is not None:
+        database_engine = create_engine(resolved_settings.database_url)
+        session_factory = create_session_factory(database_engine)
+        if resolved_settings.oauth_broker_enabled:
+            key = resolved_settings.oauth_client_secret_key
+            if key is None:
+                raise RuntimeError("validated OAuth broker key is missing")
+            oauth_broker = OAuthBroker(
+                session_factory,
+                issuer_url=resolved_settings.oauth_issuer_url,
+                resource_url=resolved_settings.registry_mcp_resource_url,
+                consent_url=resolved_settings.oauth_consent_url,
+                client_secret_key=key.get_secret_value(),
+                access_token_ttl_seconds=resolved_settings.oauth_access_token_ttl_seconds,
+                refresh_token_ttl_seconds=resolved_settings.oauth_refresh_token_ttl_seconds,
+            )
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        infisical_http_client: httpx.AsyncClient | None = None
+        openfga_http_client: httpx.AsyncClient | None = None
+        # Test settings may intentionally use a non-routable database URL to
+        # validate configuration wiring. Catalogue synchronization is an
+        # operational startup concern and is covered by repository tests.
+        if session_factory is not None:
+            app.state.catalog_sessions = session_factory
+            audit_repository = SqlAlchemyAuditRepository(session_factory)
+            app.state.audit_queries = AuditQueryService(audit_repository)
+            app.state.audit_writer = AuditWriter(audit_repository)
+            app.state.identity_mapping = SqlAlchemyIdentityMapping(session_factory)
+            app.state.bootstrap_claims = SqlAlchemyBootstrapClaimRepository(session_factory)
+            app.state.core_service = CoreService(SqlAlchemyCoreRepository(session_factory))
+            workspace_repository = SqlAlchemyWorkspaceRepository(session_factory)
+            app.state.workspace_queries = workspace_repository
+            app.state.workspace_commands = workspace_repository
+            app.state.secret_references = SqlAlchemySecretReferenceRepository(session_factory)
+            app.state.content_service = ContentService(SqlAlchemyContentRepository(session_factory))
+            app.state.intelligence_service = IntelligenceService(
+                SqlAlchemyIntelligenceRepository(session_factory), app.state.content_service
+            )
+            app.state.data_service = DataService(SqlAlchemyDataRepository(session_factory))
+            app.state.source_lifecycle_service = SourceLifecycleService(
+                SqlAlchemySourceLifecycleRepository(session_factory)
+            )
+            app.state.artifact_registry = ArtifactRegistryService(
+                SqlAlchemyArtifactRegistry(session_factory)
+            )
+            app.state.registry_mcp_backend = SqlAlchemyRegistryMcpBackend(session_factory)
+            mcp_profile_repository = SqlAlchemyMcpProfileRegistry(session_factory)
+            app.state.mcp_profile_service = McpProfileService(mcp_profile_repository)
+            app.state.mcp_profile_repository = mcp_profile_repository
+            app.state.mcp_preference_service = McpPreferenceService(mcp_profile_repository)
+            if resolved_settings.environment != "test":
+                await app.state.mcp_profile_service.synchronize(
+                    TOOL_REGISTRATIONS,
+                    SYSTEM_PROFILES,
+                )
+            if resolved_settings.mcp_tool_profile_mode != "off":
+                app.state.mcp_tool_profile_runtime = McpToolProfileRuntime(
+                    tools=tuple(
+                        ToolDescriptor(
+                            item.key,
+                            item.namespace,
+                            item.oauth_scope,
+                        )
+                        for item in TOOL_REGISTRATIONS
+                    ),
+                    authorization=AuthorizationService(StateAuthorizationPort(app.state)),
+                    preferences=mcp_profile_repository,
+                    shadow_sink=LoggingToolProfileShadowSink(),
+                    mode=ToolProfileMode(resolved_settings.mcp_tool_profile_mode),
+                )
+            signing_key = resolved_settings.artifact_signing_private_key
+            if signing_key is not None:
+                encoded = signing_key.get_secret_value()
+                raw_key = base64.urlsafe_b64decode(encoded + "=" * (-len(encoded) % 4))
+                signer = Ed25519ArtifactSigner.from_private_key_bytes(
+                    resolved_settings.artifact_signing_key_id,
+                    raw_key,
+                )
+                trust_store = InMemoryTrustStore(
+                    (
+                        TrustedSigningKey(
+                            key_id=signer.key_id,
+                            public_key=signer.public_key_bytes(),
+                        ),
+                    )
+                )
+                app.state.artifact_trust_store = trust_store
+                publication_service = PublicationService(
+                    cast(
+                        PublicationUnitOfWorkFactory,
+                        lambda: SqlAlchemyPublicationUnitOfWork(session_factory, signer),
+                    )
+                )
+                app.state.publication_service = publication_service
+                app.state.registry_mcp_backend = SqlAlchemyRegistryMcpBackend(
+                    session_factory,
+                    trust_store,
+                    publication_service,
+                )
+                app.state.attestation_repository = SqlAlchemyAttestationRepository(session_factory)
+                if resolved_settings.environment != "test":
+                    recovered = await ensure_design_system_recovery_release(session_factory, signer)
+                    if recovered:
+                        logging.getLogger("kya.catalog").info(
+                            "builtin_design_system_release_recovered",
+                            extra={"version": "0.1.1"},
+                        )
+            if resolved_settings.has_github_proposal_configuration:
+                assert resolved_settings.github_app_id is not None
+                assert resolved_settings.github_app_installation_id is not None
+                assert resolved_settings.github_app_private_key is not None
+                assert resolved_settings.github_proposal_repository is not None
+                github_http_client = httpx.AsyncClient(timeout=30.0)
+                pull_requests = GitHubAppPullRequestAdapter(
+                    github_http_client,
+                    app_id=resolved_settings.github_app_id,
+                    installation_id=resolved_settings.github_app_installation_id,
+                    private_key=resolved_settings.github_app_private_key,
+                    base_branch=resolved_settings.github_proposal_base_branch,
+                )
+                app.state.proposal_service = ProposalService(
+                    cast(
+                        ProposalUnitOfWorkFactory,
+                        lambda: SqlAlchemyProposalUnitOfWork(session_factory),
+                    ),
+                    pull_requests,
+                )
+                app.state.proposal_repository = resolved_settings.github_proposal_repository
+        app.state.infisical_secret_resolver = None
+        if resolved_settings.has_infisical_configuration:
+            api_url = resolved_settings.infisical_api_url
+            client_id = resolved_settings.infisical_client_id
+            client_secret = resolved_settings.infisical_client_secret
+            project_id = resolved_settings.infisical_project_id
+            if api_url is None or client_id is None or client_secret is None or project_id is None:
+                raise RuntimeError("validated Infisical configuration is incomplete")
+            infisical_http_client = httpx.AsyncClient(timeout=10.0)
+            transport = HttpxInfisicalTransport(infisical_http_client)
+            authentication = InfisicalMachineIdentityAdapter(
+                transport,
+                api_url,
+                client_id,
+                SecretStr(client_secret.get_secret_value()),
+                resolved_settings.infisical_organization_slug,
+                resolved_settings.infisical_maximum_token_ttl_seconds,
+            )
+            app.state.infisical_secret_resolver = InfisicalSecretResolver(
+                transport,
+                authentication,
+                project_id,
+                resolved_settings.infisical_environment,
+                resolved_settings.infisical_secret_path,
+            )
+        if resolved_settings.openfga_api_url is not None:
+            api_token = resolved_settings.openfga_api_token
+            store_id = resolved_settings.openfga_store_id
+            model_id = resolved_settings.openfga_model_id
+            if api_token is None or store_id is None or model_id is None:
+                raise RuntimeError("validated OpenFGA configuration is incomplete")
+            openfga_http_client = httpx.AsyncClient(timeout=5.0)
+            app.state.authorization = OpenFgaHttpAdapter(
+                openfga_http_client,
+                api_url=resolved_settings.openfga_api_url,
+                api_token=api_token,
+                store_id=store_id,
+                model_id=model_id,
+            )
+        authorization_port = app.state.authorization
+        if authorization_port is not None and session_factory is not None:
+            app.state.scope_promotion_service = ScopePromotionService(
+                cast(
+                    ScopePromotionUnitOfWorkFactory,
+                    lambda: SqlAlchemyScopePromotionUnitOfWork(session_factory),
+                ),
+                authorization_port,
+            )
+        claims = app.state.bootstrap_claims
+        authorization = app.state.authorization
+        if resolved_settings.has_bootstrap_configuration and (
+            claims is None or authorization is None
+        ):
+            raise RuntimeError("bootstrap requires database and OpenFGA configuration")
+        if claims is not None:
+            app.state.bootstrap_service = BootstrapService(
+                repository=claims,
+                grant=authorization,
+                owner_email=resolved_settings.bootstrap_owner_email,
+                claim_code_hash=resolved_settings.bootstrap_claim_code_hash,
+            )
+
+        # The MCP SDK's HTTP manager is deliberately single-start. Unit/integration
+        # tests reuse one FastAPI instance across several TestClient lifespans, so
+        # they exercise the server in-process instead of starting that manager.
+        @asynccontextmanager
+        async def mcp_lifespan() -> AsyncIterator[None]:
+            if resolved_settings.environment == "test":
+                yield
+                return
+            async with AsyncExitStack() as stack:
+                await stack.enter_async_context(
+                    bootstrap_mcp_app.router.lifespan_context(bootstrap_mcp_app)
+                )
+                if registry_mcp_app is not None:
+                    await stack.enter_async_context(
+                        registry_mcp_app.router.lifespan_context(registry_mcp_app)  # type: ignore[attr-defined]
+                    )
+                yield
+
+        async with mcp_lifespan():
+            app.state.is_ready = True
+            try:
+                yield
+            finally:
+                app.state.is_ready = False
+                if infisical_http_client is not None:
+                    await infisical_http_client.aclose()
+                if openfga_http_client is not None:
+                    await openfga_http_client.aclose()
+                if database_engine is not None:
+                    await database_engine.dispose()
+                telemetry.shutdown()
+
+    application = FastAPI(
+        title=resolved_settings.app_name,
+        version=resolved_settings.version,
+        docs_url="/api/docs" if resolved_settings.environment != "production" else None,
+        redoc_url=None,
+        openapi_url="/api/openapi.json",
+        lifespan=lifespan,
+    )
+    application.state.settings = resolved_settings
+    application.state.is_ready = False
+    application.state.audit_queries = None
+    application.state.audit_writer = None
+    application.state.bootstrap_claims = None
+    application.state.bootstrap_service = None
+    application.state.core_service = None
+    application.state.content_service = None
+    application.state.intelligence_service = None
+    application.state.data_service = None
+    application.state.source_lifecycle_service = None
+    application.state.artifact_registry = None
+    application.state.publication_service = None
+    application.state.proposal_service = None
+    application.state.proposal_repository = None
+    application.state.scope_promotion_service = None
+    application.state.attestation_repository = None
+    application.state.registry_mcp_backend = None
+    application.state.workspace_queries = None
+    application.state.workspace_commands = None
+    application.state.secret_references = None
+    application.state.mcp_profile_service = None
+    application.state.mcp_profile_repository = None
+    application.state.mcp_preference_service = None
+    application.state.mcp_tool_profile_runtime = None
+    application.state.oauth_broker = oauth_broker
+    configure_security_runtime(application.state, resolved_settings)
+    if resolved_settings.has_registry_mcp_configuration:
+        authorization_server_url = resolved_settings.registry_mcp_authorization_server_url
+        if oauth_broker is None or authorization_server_url is None:
+            raise RuntimeError("validated Registry MCP authentication is incomplete")
+        registry_mcp = create_registry_server(
+            backend=StateRegistryBackend(application.state),
+            authorization=AuthorizationService(StateAuthorizationPort(application.state)),
+            token_verifier=ProviderTokenVerifier(oauth_broker),
+            issuer_url=authorization_server_url,
+            resource_url=resolved_settings.registry_mcp_resource_url,
+            data_backend=StateDataMcpBackend(application.state),
+            data_audit=StateDataMcpAuditSink(application.state),
+            intelligence_backend=StateIntelligenceMcpBackend(application.state),
+            tool_set_provider=(
+                StateToolSetProvider(application.state)
+                if resolved_settings.mcp_tool_profile_mode != "off"
+                else None
+            ),
+        )
+        registry_mcp_app = registry_mcp.streamable_http_app(
+            streamable_http_path="/",
+            json_response=True,
+            stateless_http=True,
+            transport_security=TransportSecuritySettings(
+                enable_dns_rebinding_protection=True,
+                allowed_hosts=list(resolved_settings.mcp_allowed_hosts),
+                allowed_origins=list(resolved_settings.mcp_allowed_origins),
+            ),
+        )
+    if resolved_settings.cors_allowed_origins:
+        application.add_middleware(
+            CORSMiddleware,
+            allow_origins=list(resolved_settings.cors_allowed_origins),
+            allow_credentials=False,
+            allow_methods=["GET", "POST", "OPTIONS"],
+            allow_headers=["Authorization", "Content-Type", "X-KYA-Unit-ID"],
+        )
+    application.add_middleware(
+        CorrelationMiddleware,
+        tracer=telemetry.tracer,
+        meter=telemetry.meter,
+    )
+    install_error_handlers(application)
+    application.include_router(api_router, prefix="/api/v1")
+    if oauth_broker is not None:
+        oauth_issuer = AuthSettings(
+            issuer_url=resolved_settings.oauth_issuer_url,
+            resource_server_url=None,
+        ).issuer_url
+        application.router.routes.extend(
+            create_auth_routes(
+                provider=oauth_broker,
+                issuer_url=oauth_issuer,
+                service_documentation_url=None,
+                client_registration_options=ClientRegistrationOptions(
+                    enabled=True,
+                    valid_scopes=sorted(VALID_SCOPES),
+                    default_scopes=["catalog:read"],
+                ),
+                revocation_options=RevocationOptions(enabled=True),
+            )
+        )
+    application.router.routes.append(
+        Route(
+            "/mcp",
+            CanonicalMcpEndpoint(bootstrap_mcp_app, "/mcp"),
+            include_in_schema=False,
+        )
+    )
+    application.mount("/mcp", bootstrap_mcp_app)
+    if registry_mcp_app is not None:
+        metadata_path = "/.well-known/oauth-protected-resource/registry/mcp"
+        application.router.routes.append(
+            Route(metadata_path, registry_mcp_app, include_in_schema=False)
+        )
+        application.router.routes.append(
+            Route(
+                "/registry/mcp",
+                CanonicalMcpEndpoint(registry_mcp_app, "/registry/mcp"),
+                include_in_schema=False,
+            )
+        )
+        application.router.routes.append(
+            Route(
+                "/registry/mcp/",
+                CanonicalMcpEndpoint(registry_mcp_app, "/registry/mcp"),
+                include_in_schema=False,
+            )
+        )
+    return application
+
+
+app = create_app()
+
+
+def run() -> None:
+    """Run the local development server."""
+
+    uvicorn.run("kya_platform.main:app", host="0.0.0.0", port=8000, reload=False)  # noqa: S104
+
+
+__all__ = ["app", "create_app", "run"]

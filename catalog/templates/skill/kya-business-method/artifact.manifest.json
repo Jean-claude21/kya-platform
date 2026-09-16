@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "1",
+  "id": "kya:skill:kya-business-method",
+  "type": "skill",
+  "name": "KYA Business Method",
+  "version": "0.1.0",
+  "summary": "Template for a business-owned, governed and testable KYA method.",
+  "owners": {
+    "business": "replace-with-owning-direction",
+    "technical": "cvsi-platform",
+    "workspace": "replace-with-workspace"
+  },
+  "source": {
+    "repository": "https://github.com/kya-energy/replace-me",
+    "commit": "0000000000000000000000000000000000000000",
+    "path": "catalog/sources/skills/kya-business-method"
+  },
+  "integrity": {
+    "algorithm": "sha256",
+    "digest": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "compatibility": {
+    "codex": ">=2026-09"
+  },
+  "dependencies": [],
+  "scopes": ["skill.discover"],
+  "risk": "read"
+}

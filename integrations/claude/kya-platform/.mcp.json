@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "kya-platform": {
+      "type": "http",
+      "url": "https://mcp.kya-platform.vttlife.com/registry/mcp",
+      "oauth": {
+        "scopes": "catalog:read catalog:install data:read data:content:read"
+      }
+    }
+  }
+}

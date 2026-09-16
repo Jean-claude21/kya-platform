@@ -1,0 +1,706 @@
+"""Register governed Data Foundation capabilities on the KYA MCP gateway."""
+
+from collections.abc import Awaitable, Callable, Sequence
+from datetime import UTC, datetime, timedelta
+from typing import Protocol, TypeVar, cast
+from uuid import UUID, uuid7
+
+from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver.exceptions import ToolError
+
+from kya_platform.application.data import CommandMetadata, IngestionRunReport, SnapshotLineage
+from kya_platform.application.reliability import JsonValue, canonical_request_hash
+from kya_platform.application.source_lifecycle import (
+    SourceFlowConflictError,
+    SourceFlowReferenceError,
+    SourceFlowStateError,
+)
+from kya_platform.domain.content import ContentSearchHit
+from kya_platform.domain.data import (
+    DataAsset,
+    DataAssetLayer,
+    DataContract,
+    DataPipeline,
+    DataSnapshot,
+    DataSource,
+    DataStatus,
+    IngestionRun,
+    QualityRule,
+    RunStatus,
+)
+from kya_platform.domain.source_lifecycle import (
+    IngestionSchedule,
+    SourceFlow,
+    SourceFlowDraft,
+    SourceFlowHealth,
+)
+from kya_platform.mcp.data.contracts import (
+    ContentExcerptResult,
+    ContentHitDetail,
+    ContentSearchResult,
+    DataAssetDetail,
+    DataAssetSummary,
+    DataContractDetail,
+    DataDiscoveryResult,
+    IngestionAccepted,
+    IngestionRunDetail,
+    LineageResult,
+    QualityResultDetail,
+    SnapshotListResult,
+    SnapshotSummary,
+    SourceFlowDefinitionInput,
+    SourceFlowDetail,
+    SourceFlowHealthDetail,
+    SourceScheduleInput,
+)
+from kya_platform.mcp.registry.contracts import Confirmation
+from kya_platform.mcp.registry.server import RegistryGuard
+
+T = TypeVar("T")
+
+
+class DataMcpBackend(Protocol):
+    async def resolve_unit_id(self, unit_key: str) -> UUID | None: ...
+
+    async def search_assets(
+        self, unit_key: str, query: str, *, limit: int
+    ) -> Sequence[DataAsset]: ...
+
+    async def get_asset(self, unit_key: str, asset_key: str) -> DataAsset | None: ...
+
+    async def get_contract(
+        self, unit_key: str, asset_key: str, *, version: str | None = None
+    ) -> DataContract | None: ...
+
+    async def list_snapshots(
+        self, unit_key: str, asset_key: str, *, limit: int
+    ) -> Sequence[DataSnapshot]: ...
+
+    async def trace_lineage(self, unit_key: str, snapshot_id: UUID) -> SnapshotLineage | None: ...
+
+    async def get_pipeline(self, unit_key: str, pipeline_key: str) -> DataPipeline | None: ...
+
+    async def get_run_report(self, unit_key: str, run_id: UUID) -> IngestionRunReport | None: ...
+
+    async def search_public_content(
+        self,
+        unit_key: str,
+        query: str,
+        *,
+        asset_keys: tuple[str, ...],
+        limit: int,
+    ) -> Sequence[ContentSearchHit]: ...
+
+    async def get_public_excerpt(
+        self, unit_key: str, chunk_id: UUID
+    ) -> ContentSearchHit | None: ...
+
+    async def start_run(
+        self, unit_key: str, run: IngestionRun, *, command: CommandMetadata
+    ) -> IngestionRun: ...
+
+    async def configure_source_flow(
+        self,
+        unit_key: str,
+        draft: SourceFlowDraft,
+        *,
+        schedule: IngestionSchedule | None,
+        command: CommandMetadata,
+    ) -> SourceFlow: ...
+
+    async def get_source_flow_health(
+        self, unit_key: str, flow_key: str
+    ) -> SourceFlowHealth | None: ...
+
+    async def transition_source_flow(
+        self,
+        unit_key: str,
+        flow_key: str,
+        status: DataStatus,
+        *,
+        expected_revision: int,
+        command: CommandMetadata,
+    ) -> SourceFlow: ...
+
+    async def schedule_source_flow(
+        self,
+        unit_key: str,
+        flow_key: str,
+        schedule: IngestionSchedule,
+        *,
+        expected_revision: int,
+        command: CommandMetadata,
+    ) -> SourceFlow: ...
+
+
+class DataMcpAuditSink(Protocol):
+    async def ensure_available(self) -> None: ...
+
+    async def record(
+        self,
+        *,
+        actor_id: UUID,
+        active_unit: str,
+        tool_name: str,
+        target_type: str,
+        target_id: str,
+        decision: str,
+        outcome: str,
+        correlation_id: UUID,
+    ) -> None: ...
+
+
+class GovernedDataExecution:
+    def __init__(self, guard: RegistryGuard, audit: DataMcpAuditSink) -> None:
+        self._guard = guard
+        self._audit = audit
+
+    async def run(
+        self,
+        tool_name: str,
+        *,
+        target_type: str,
+        target_id: str,
+        operation: Callable[[str, UUID, UUID], Awaitable[T]],
+    ) -> T:
+        await self._audit.ensure_available()
+        actor_id = self._guard.principal_id(tool_name)
+        active_unit = self._guard.active_unit(tool_name)
+        correlation_id = uuid7()
+        try:
+            await self._guard.require(tool_name, active_unit)
+        except ToolError:
+            await self._audit.record(
+                actor_id=actor_id,
+                active_unit=active_unit,
+                tool_name=tool_name,
+                target_type=target_type,
+                target_id=target_id,
+                decision="denied",
+                outcome="rejected",
+                correlation_id=correlation_id,
+            )
+            raise
+        try:
+            result = await operation(active_unit, actor_id, correlation_id)
+        except Exception:
+            await self._audit.record(
+                actor_id=actor_id,
+                active_unit=active_unit,
+                tool_name=tool_name,
+                target_type=target_type,
+                target_id=target_id,
+                decision="allowed",
+                outcome="failed",
+                correlation_id=correlation_id,
+            )
+            raise
+        await self._audit.record(
+            actor_id=actor_id,
+            active_unit=active_unit,
+            tool_name=tool_name,
+            target_type=target_type,
+            target_id=target_id,
+            decision="allowed",
+            outcome="succeeded",
+            correlation_id=correlation_id,
+        )
+        return result
+
+
+def register_data_tools(
+    server: MCPServer[None],
+    *,
+    backend: DataMcpBackend,
+    guard: RegistryGuard,
+    audit: DataMcpAuditSink,
+) -> None:
+    """Add a bounded Data toolset; storage references and secrets stay server-side."""
+
+    execution = GovernedDataExecution(guard, audit)
+
+    def command(
+        actor: UUID,
+        correlation: UUID,
+        idempotency_key: str,
+        body: object,
+    ) -> CommandMetadata:
+        now = datetime.now(UTC)
+        return CommandMetadata(
+            actor,
+            correlation,
+            idempotency_key,
+            canonical_request_hash(cast(JsonValue, body)),
+            now + timedelta(hours=24),
+        )
+
+    @server.tool(name="discover_data_assets", structured_output=True)
+    async def discover_data_assets(query: str, limit: int = 20) -> DataDiscoveryResult:
+        """Trouver les actifs visibles dans l'unité KYA active."""
+        if not 2 <= len(query.strip()) <= 200:
+            raise ToolError("query_length_invalid")
+        if not 1 <= limit <= 50:
+            raise ToolError("limit_invalid")
+
+        async def search(unit: str, actor: UUID, correlation: UUID) -> DataDiscoveryResult:
+            del actor
+            items = await backend.search_assets(unit, query, limit=limit + 1)
+            return DataDiscoveryResult(
+                items=tuple(DataAssetSummary.from_domain(item) for item in items[:limit]),
+                active_unit=unit,
+                has_more=len(items) > limit,
+                correlation_id=correlation,
+            )
+
+        return await execution.run(
+            "discover_data_assets",
+            target_type="data_catalog",
+            target_id="active-unit",
+            operation=search,
+        )
+
+    @server.tool(name="get_data_asset", structured_output=True)
+    async def get_data_asset(asset_key: str) -> DataAssetDetail:
+        """Lire les métadonnées gouvernées d'un actif, jamais ses secrets."""
+
+        async def get(unit: str, actor: UUID, correlation: UUID) -> DataAssetDetail:
+            del actor
+            asset = await backend.get_asset(unit, asset_key)
+            if asset is None:
+                raise ToolError("data_asset_not_found")
+            return DataAssetDetail.from_detail(asset, active_unit=unit, correlation_id=correlation)
+
+        return await execution.run(
+            "get_data_asset",
+            target_type="data_asset",
+            target_id=asset_key,
+            operation=get,
+        )
+
+    @server.tool(name="get_data_contract", structured_output=True)
+    async def get_data_contract(asset_key: str, version: str | None = None) -> DataContractDetail:
+        """Lire le schéma, la qualité, la fraîcheur et la rétention applicables."""
+
+        async def get(unit: str, actor: UUID, correlation: UUID) -> DataContractDetail:
+            del actor
+            contract = await backend.get_contract(unit, asset_key, version=version)
+            if contract is None:
+                raise ToolError("data_contract_not_found")
+            return DataContractDetail.from_domain(
+                contract,
+                asset_key=asset_key,
+                active_unit=unit,
+                correlation_id=correlation,
+            )
+
+        return await execution.run(
+            "get_data_contract",
+            target_type="data_asset",
+            target_id=asset_key,
+            operation=get,
+        )
+
+    @server.tool(name="list_data_snapshots", structured_output=True)
+    async def list_data_snapshots(asset_key: str, limit: int = 20) -> SnapshotListResult:
+        """Lister des preuves de données sans exposer les emplacements de stockage."""
+        if not 1 <= limit <= 50:
+            raise ToolError("limit_invalid")
+
+        async def listing(unit: str, actor: UUID, correlation: UUID) -> SnapshotListResult:
+            del actor
+            asset = await backend.get_asset(unit, asset_key)
+            if asset is None:
+                raise ToolError("data_asset_not_found")
+            items = await backend.list_snapshots(unit, asset_key, limit=limit + 1)
+            return SnapshotListResult(
+                asset_key=asset_key,
+                items=tuple(SnapshotSummary.from_domain(item) for item in items[:limit]),
+                active_unit=unit,
+                has_more=len(items) > limit,
+                correlation_id=correlation,
+            )
+
+        return await execution.run(
+            "list_data_snapshots",
+            target_type="data_asset",
+            target_id=asset_key,
+            operation=listing,
+        )
+
+    @server.tool(name="trace_data_lineage", structured_output=True)
+    async def trace_data_lineage(snapshot_id: UUID) -> LineageResult:
+        """Expliquer les dépendances exactes d'un snapshot visible."""
+
+        async def trace(unit: str, actor: UUID, correlation: UUID) -> LineageResult:
+            del actor
+            lineage = await backend.trace_lineage(unit, snapshot_id)
+            if lineage is None:
+                raise ToolError("data_snapshot_not_found")
+            return LineageResult(
+                snapshot_id=lineage.snapshot_id,
+                input_snapshot_ids=lineage.input_snapshot_ids,
+                output_snapshot_ids=lineage.output_snapshot_ids,
+                active_unit=unit,
+                correlation_id=correlation,
+            )
+
+        return await execution.run(
+            "trace_data_lineage",
+            target_type="data_snapshot",
+            target_id=str(snapshot_id),
+            operation=trace,
+        )
+
+    @server.tool(name="start_ingestion", structured_output=True)
+    async def start_ingestion(
+        pipeline_key: str,
+        idempotency_key: str,
+        confirmation: Confirmation,
+    ) -> IngestionAccepted:
+        """Créer une exécution durable ; le connecteur déterministe la traitera ensuite."""
+        del confirmation
+        if not 16 <= len(idempotency_key) <= 200:
+            raise ToolError("idempotency_key_invalid")
+
+        async def start(unit: str, actor: UUID, correlation: UUID) -> IngestionAccepted:
+            pipeline = await backend.get_pipeline(unit, pipeline_key)
+            if pipeline is None:
+                raise ToolError("data_pipeline_not_found")
+            started_at = datetime.now(UTC)
+            run = IngestionRun(uuid7(), pipeline.id, actor, RunStatus.STARTED, started_at)
+            request_hash = canonical_request_hash(
+                {
+                    "pipeline_key": pipeline_key,
+                    "active_unit": unit,
+                    "confirmed": True,
+                }
+            )
+            persisted = await backend.start_run(
+                unit,
+                run,
+                command=CommandMetadata(
+                    actor_id=actor,
+                    correlation_id=correlation,
+                    idempotency_key=idempotency_key,
+                    request_hash=request_hash,
+                    expires_at=started_at + timedelta(hours=24),
+                ),
+            )
+            return IngestionAccepted(
+                run_id=persisted.id,
+                pipeline_key=pipeline_key,
+                status=persisted.status.value,
+                started_at=persisted.started_at,
+                active_unit=unit,
+                correlation_id=correlation,
+            )
+
+        return await execution.run(
+            "start_ingestion",
+            target_type="data_pipeline",
+            target_id=pipeline_key,
+            operation=start,
+        )
+
+    @server.tool(name="search_data_content", structured_output=True)
+    async def search_data_content(
+        query: str,
+        asset_keys: tuple[str, ...] = (),
+        limit: int = 5,
+    ) -> ContentSearchResult:
+        """Rechercher des passages publics KYA, cités et explicitement non fiables."""
+        normalized = query.strip()
+        if not 2 <= len(normalized) <= 300:
+            raise ToolError("query_length_invalid")
+        if not 1 <= limit <= 10:
+            raise ToolError("limit_invalid")
+        if len(asset_keys) > 10:
+            raise ToolError("asset_filter_limit_invalid")
+
+        async def search(unit: str, actor: UUID, correlation: UUID) -> ContentSearchResult:
+            del actor
+            hits = await backend.search_public_content(
+                unit,
+                normalized,
+                asset_keys=asset_keys,
+                limit=limit + 1,
+            )
+            return ContentSearchResult(
+                items=tuple(ContentHitDetail.from_domain(hit) for hit in hits[:limit]),
+                active_unit=unit,
+                search_mode="lexical",
+                has_more=len(hits) > limit,
+                correlation_id=correlation,
+            )
+
+        return await execution.run(
+            "search_data_content",
+            target_type="data_content",
+            target_id="public-index",
+            operation=search,
+        )
+
+    @server.tool(name="get_data_excerpt", structured_output=True)
+    async def get_data_excerpt(chunk_id: UUID) -> ContentExcerptResult:
+        """Relire exactement un passage public à partir de sa citation stable."""
+
+        async def get(unit: str, actor: UUID, correlation: UUID) -> ContentExcerptResult:
+            del actor
+            hit = await backend.get_public_excerpt(unit, chunk_id)
+            if hit is None:
+                raise ToolError("data_content_excerpt_not_found")
+            return ContentExcerptResult(
+                item=ContentHitDetail.from_domain(hit),
+                active_unit=unit,
+                correlation_id=correlation,
+            )
+
+        return await execution.run(
+            "get_data_excerpt",
+            target_type="data_content_chunk",
+            target_id=str(chunk_id),
+            operation=get,
+        )
+
+    @server.tool(name="get_ingestion_run", structured_output=True)
+    async def get_ingestion_run(run_id: UUID) -> IngestionRunDetail:
+        """Suivre une collecte et ses contrôles qualité sans exposer le stockage."""
+
+        async def get(unit: str, actor: UUID, correlation: UUID) -> IngestionRunDetail:
+            del actor
+            report = await backend.get_run_report(unit, run_id)
+            if report is None:
+                raise ToolError("data_ingestion_run_not_found")
+            return IngestionRunDetail(
+                run_id=report.run.id,
+                pipeline_key=report.pipeline_key,
+                status=report.run.status.value,
+                started_at=report.run.started_at,
+                completed_at=report.run.completed_at,
+                error_code=report.run.error_code,
+                snapshot=(
+                    SnapshotSummary.from_domain(report.snapshot)
+                    if report.snapshot is not None
+                    else None
+                ),
+                quality_results=tuple(
+                    QualityResultDetail.from_domain(result) for result in report.quality_results
+                ),
+                active_unit=unit,
+                correlation_id=correlation,
+            )
+
+        return await execution.run(
+            "get_ingestion_run",
+            target_type="data_run",
+            target_id=str(run_id),
+            operation=get,
+        )
+
+    @server.tool(name="get_source_flow_health", structured_output=True)
+    async def get_source_flow_health(flow_key: str) -> SourceFlowHealthDetail:
+        """Consulter l'état, la prochaine collecte et la qualité d'un flux autorisé."""
+
+        async def get(unit: str, actor: UUID, correlation: UUID) -> SourceFlowHealthDetail:
+            del actor
+            health = await backend.get_source_flow_health(unit, flow_key)
+            if health is None:
+                raise ToolError("source_flow_not_found")
+            return SourceFlowHealthDetail.from_domain(
+                health, active_unit=unit, correlation_id=correlation
+            )
+
+        return await execution.run(
+            "get_source_flow_health",
+            target_type="source_flow",
+            target_id=flow_key,
+            operation=get,
+        )
+
+    @server.tool(name="configure_source_flow", structured_output=True)
+    async def configure_source_flow(
+        definition: SourceFlowDefinitionInput,
+        idempotency_key: str,
+        confirmation: Confirmation,
+    ) -> SourceFlowDetail:
+        """Créer atomiquement une source, son actif, son contrat, son pipeline et son planning."""
+        del confirmation
+        if not 16 <= len(idempotency_key) <= 200:
+            raise ToolError("idempotency_key_invalid")
+
+        async def configure(unit: str, actor: UUID, correlation: UUID) -> SourceFlowDetail:
+            owner = await backend.resolve_unit_id(unit)
+            if owner is None:
+                raise ToolError("active_unit_not_found")
+            status = DataStatus.ACTIVE if definition.activate else DataStatus.DRAFT
+            source = DataSource(
+                uuid7(),
+                f"{definition.key}-source",
+                f"{definition.name} — source",
+                definition.source_kind,
+                owner,
+                secret_reference=definition.secret_reference,
+                status=status,
+                configuration=definition.source_configuration,
+            )
+            asset = DataAsset(
+                uuid7(),
+                f"{definition.key}-raw",
+                f"{definition.name} — données brutes",
+                owner,
+                DataAssetLayer.RAW,
+                definition.classification,
+                status,
+            )
+            definition_body = definition.model_dump(mode="json")
+            contract = DataContract(
+                uuid7(),
+                asset.id,
+                definition.contract_version,
+                definition.schema_document,
+                canonical_request_hash(cast(JsonValue, definition_body)),
+                tuple(QualityRule(**item.model_dump()) for item in definition.quality_rules),
+                freshness_minutes=definition.freshness_minutes,
+                retention_days=definition.retention_days,
+            )
+            pipeline = DataPipeline(
+                uuid7(),
+                definition.key,
+                definition.name,
+                owner,
+                source.id,
+                UUID(int=0),
+                asset.id,
+                status,
+            )
+            schedule = (
+                IngestionSchedule(
+                    uuid7(),
+                    pipeline.id,
+                    definition.schedule.interval_minutes,
+                    definition.schedule.next_run_at,
+                    definition.schedule.enabled,
+                )
+                if definition.schedule is not None
+                else None
+            )
+            try:
+                flow = await backend.configure_source_flow(
+                    unit,
+                    SourceFlowDraft(
+                        source,
+                        asset,
+                        contract,
+                        pipeline,
+                        definition.connector.key,
+                        definition.connector.version,
+                    ),
+                    schedule=schedule,
+                    command=command(actor, correlation, idempotency_key, definition_body),
+                )
+            except (ValueError, SourceFlowConflictError, SourceFlowReferenceError) as error:
+                raise ToolError(type(error).__name__) from error
+            return SourceFlowDetail.from_domain(flow, active_unit=unit, correlation_id=correlation)
+
+        return await execution.run(
+            "configure_source_flow",
+            target_type="source_flow",
+            target_id=definition.key,
+            operation=configure,
+        )
+
+    @server.tool(name="set_source_flow_state", structured_output=True)
+    async def set_source_flow_state(
+        flow_key: str,
+        target_state: str,
+        expected_revision: int,
+        idempotency_key: str,
+        confirmation: Confirmation,
+    ) -> SourceFlowDetail:
+        """Activer ou mettre en pause tout un flux avec contrôle de version."""
+        del confirmation
+        if target_state not in {"active", "paused"}:
+            raise ToolError("source_flow_target_state_invalid")
+        if expected_revision < 1:
+            raise ToolError("source_flow_revision_invalid")
+        if not 16 <= len(idempotency_key) <= 200:
+            raise ToolError("idempotency_key_invalid")
+
+        async def transition(unit: str, actor: UUID, correlation: UUID) -> SourceFlowDetail:
+            try:
+                flow = await backend.transition_source_flow(
+                    unit,
+                    flow_key,
+                    DataStatus(target_state),
+                    expected_revision=expected_revision,
+                    command=command(
+                        actor,
+                        correlation,
+                        idempotency_key,
+                        {"flow_key": flow_key, "target_state": target_state},
+                    ),
+                )
+            except (
+                SourceFlowConflictError,
+                SourceFlowReferenceError,
+                SourceFlowStateError,
+            ) as error:
+                raise ToolError(type(error).__name__) from error
+            return SourceFlowDetail.from_domain(flow, active_unit=unit, correlation_id=correlation)
+
+        return await execution.run(
+            "set_source_flow_state",
+            target_type="source_flow",
+            target_id=flow_key,
+            operation=transition,
+        )
+
+    @server.tool(name="schedule_source_flow", structured_output=True)
+    async def schedule_source_flow(
+        flow_key: str,
+        schedule: SourceScheduleInput,
+        expected_revision: int,
+        idempotency_key: str,
+        confirmation: Confirmation,
+    ) -> SourceFlowDetail:
+        """Créer ou remplacer la cadence durable d'un flux avec contrôle de version."""
+        del confirmation
+        if expected_revision < 1:
+            raise ToolError("source_flow_revision_invalid")
+        if not 16 <= len(idempotency_key) <= 200:
+            raise ToolError("idempotency_key_invalid")
+
+        async def put(unit: str, actor: UUID, correlation: UUID) -> SourceFlowDetail:
+            schedule_body = schedule.model_dump(mode="json")
+            try:
+                flow = await backend.schedule_source_flow(
+                    unit,
+                    flow_key,
+                    IngestionSchedule(
+                        uuid7(),
+                        UUID(int=0),
+                        schedule.interval_minutes,
+                        schedule.next_run_at,
+                        schedule.enabled,
+                    ),
+                    expected_revision=expected_revision,
+                    command=command(
+                        actor,
+                        correlation,
+                        idempotency_key,
+                        {"flow_key": flow_key, "schedule": schedule_body},
+                    ),
+                )
+            except (ValueError, SourceFlowConflictError, SourceFlowReferenceError) as error:
+                raise ToolError(type(error).__name__) from error
+            return SourceFlowDetail.from_domain(flow, active_unit=unit, correlation_id=correlation)
+
+        return await execution.run(
+            "schedule_source_flow",
+            target_type="source_flow",
+            target_id=flow_key,
+            operation=put,
+        )
+
+
+__all__ = ["DataMcpAuditSink", "DataMcpBackend", "register_data_tools"]

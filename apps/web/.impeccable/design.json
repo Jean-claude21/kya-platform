@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "1",
+  "name": "KYA-Platform",
+  "description": "A precise, role-aware digital control plane for KYA-Energy Group.",
+  "tokens": {
+    "colors": {
+      "kya-teal": { "role": "primary", "displayName": "KYA teal", "canonical": "#1CA18C" },
+      "deep-teal": { "role": "primary", "displayName": "Deep teal", "canonical": "#063D3A" },
+      "kya-orange": { "role": "secondary", "displayName": "KYA orange", "canonical": "#F99D32" },
+      "kya-yellow": { "role": "tertiary", "displayName": "KYA yellow", "canonical": "#E8E748" },
+      "kya-coffee": { "role": "tertiary", "displayName": "KYA coffee", "canonical": "#875028" },
+      "warm-ground": { "role": "neutral", "displayName": "Warm ground", "canonical": "#F7F6F1" },
+      "control-surface": {
+        "role": "neutral",
+        "displayName": "Control surface",
+        "canonical": "#FFFFFF"
+      },
+      "control-ink": { "role": "neutral", "displayName": "Control ink", "canonical": "#14221F" },
+      "muted-ink": { "role": "neutral", "displayName": "Muted ink", "canonical": "#5F6D69" },
+      "circuit-line": { "role": "neutral", "displayName": "Circuit line", "canonical": "#D9E2DF" }
+    },
+    "breakpoints": [
+      { "name": "collapsed-shell", "value": "1100px" },
+      { "name": "mobile", "value": "760px" }
+    ]
+  },
+  "narrative": {
+    "northStar": "The precision energy workshop",
+    "overview": "KYA-Platform is calm, exact, fluid, role-aware, and truthful about operational state.",
+    "keyCharacteristics": [
+      "Task-first employee experience",
+      "Separate governed creation Studio",
+      "Explicit Core and administration control plane",
+      "Official KYA palette with semantic accents",
+      "Live contracts for operational claims"
+    ],
+    "rules": [
+      {
+        "name": "Context Before Action",
+        "body": "Show organizational context and authorization before consequential action.",
+        "section": "layout"
+      },
+      {
+        "name": "Signal Not Decoration",
+        "body": "Color carries named meaning and never works alone.",
+        "section": "colors"
+      },
+      {
+        "name": "Truthful State",
+        "body": "Use live contracts or label a surface as preview.",
+        "section": "content"
+      }
+    ]
+  }
+}

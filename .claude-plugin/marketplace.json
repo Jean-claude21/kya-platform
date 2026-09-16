@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "kya-platform",
+  "owner": {
+    "name": "KYA-Energy Group",
+    "url": "https://kya-platform.vttlife.com"
+  },
+  "description": "Governed Claude integrations published by KYA-Platform.",
+  "version": "0.1.1",
+  "plugins": [
+    {
+      "name": "kya-platform",
+      "displayName": "KYA-Platform",
+      "source": "./integrations/claude/kya-platform",
+      "description": "KYA-Platform MCP connection and governed KYA skills for Claude.",
+      "version": "0.1.1",
+      "author": {
+        "name": "KYA-Energy Group",
+        "url": "https://kya-platform.vttlife.com"
+      },
+      "homepage": "https://kya-platform.vttlife.com",
+      "repository": "https://github.com/Jean-claude21/kya-platform",
+      "keywords": ["kya-platform", "mcp", "skills", "governance"],
+      "category": "productivity",
+      "tags": ["enterprise", "mcp", "skills"],
+      "strict": true,
+      "defaultEnabled": true
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+name: Release integrity
+
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+
+permissions:
+  contents: read
+
+jobs:
+  verify-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Require annotated SemVer tag on main
+        run: |
+          git cat-file -t "$GITHUB_REF_NAME" | grep -qx tag
+          git fetch origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+          test "$(git rev-parse origin/main)" = "$GITHUB_SHA"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Build the deterministic Claude plugin archive
+        run: python infra/claude/package_plugin.py
+      - name: Attach the Claude plugin archive to release evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: kya-platform-claude-plugin-${{ github.ref_name }}
+          path: dist/kya-platform-claude-plugin-*.zip
+          if-no-files-found: error

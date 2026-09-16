@@ -3,7 +3,16 @@ node_modules/
 .turbo/
 .output/
 dist/
+site/
 coverage/
+.coverage
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+htmlcov/
 
 # Local configuration and secrets
 .env
@@ -24,6 +33,8 @@ Thumbs.db
 # Test and temporary artifacts
 playwright-report/
 test-results/
+*.kyabackup
+restore-isolated/
+apps/web/.impeccable/screenshots/
 tmp/
 temp/
-

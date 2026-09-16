@@ -1,0 +1,4 @@
+interface:
+  display_name: 'KYA Business Method'
+  short_description: 'Apply one governed KYA business method.'
+  default_prompt: 'Use $kya-business-method to produce this deliverable with the approved KYA method.'

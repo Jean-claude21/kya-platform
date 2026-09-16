@@ -1,0 +1,20 @@
+sequenceDiagram
+    actor User as Collaborateur autorisé
+    participant MCP as MCP KYA
+    participant Data as DataService / Neon
+    participant Queue as Outbox à bail
+    participant Worker as Connecteur Web KYA
+    participant Web as kya-energy.com
+    participant Store as Neon Object Storage
+
+    User->>MCP: start_ingestion + confirmation
+    MCP->>Data: créer le run idempotent
+    Data-->>Queue: kya.data.run.started.v1
+    Queue->>Worker: run + contexte gouverné
+    Worker->>Web: robots, sitemap, pages bornées
+    Web-->>Worker: réponses HTTP
+    Worker->>Worker: extraire + paquet canonique + digest
+    Worker->>Store: PUT immuable adressé par digest
+    Store-->>Worker: version objet
+    Worker->>Data: complete_run + qualité + snapshot
+    Data-->>Queue: kya.data.run.completed.v1

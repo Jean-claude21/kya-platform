@@ -1,0 +1,173 @@
+:root {
+  color-scheme: light;
+  --kya-teal: #1ca18c;
+  --kya-orange: #f99d32;
+  --kya-yellow: #e8e748;
+  --kya-coffee: #875028;
+  --kya-deep: #073b36;
+  --kya-green-950: var(--kya-deep);
+  --kya-green-800: #07564a;
+  --kya-green-600: var(--kya-teal);
+  --kya-green-100: #e8f5f2;
+  --kya-orange-600: #de6c00;
+  --kya-orange-700: #a94e00;
+  --kya-orange-100: #fff1e2;
+  --kya-yellow-600: #777600;
+  --kya-yellow-100: #fbfad5;
+  --kya-coffee-700: var(--kya-coffee);
+  --kya-ink: #073b36;
+  --kya-muted: #667378;
+  --kya-line: #dce3df;
+  --kya-ground: #fcfcfa;
+  --kya-surface: #ffffff;
+  --kya-radius-sm: 0px;
+  --kya-radius-md: 0px;
+  --kya-shadow-raised: 0 18px 44px rgba(6, 61, 58, 0.09);
+  --kya-focus: 0 0 0 3px rgba(28, 161, 140, 0.24);
+  font-family: Inter, Arial, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  color: var(--kya-ink);
+  background: var(--kya-ground);
+}
+button,
+input {
+  font: inherit;
+}
+button {
+  color: inherit;
+}
+button:focus-visible,
+input:focus-visible,
+a:focus-visible {
+  outline: none;
+  box-shadow: var(--kya-focus);
+}
+
+.kya-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--kya-green-950);
+  font-size: 17px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+.kya-mark strong {
+  font-weight: 760;
+}
+.kya-mark__logo {
+  width: 62px;
+  height: 62px;
+  object-fit: contain;
+}
+.kya-mark__symbol {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  overflow: hidden;
+  background: var(--kya-deep);
+  clip-path: polygon(0 0, 100% 0, 62% 50%, 100% 100%, 0 100%, 38% 50%);
+}
+.kya-mark__symbol i {
+  position: absolute;
+  inset: 0 auto 0 45%;
+  width: 4px;
+  background: white;
+  transform: skewX(-32deg);
+}
+.kya-mark__symbol i:last-child {
+  inset: 0 auto 0 58%;
+  background: var(--kya-orange);
+}
+.kya-button,
+.kya-icon-button {
+  border: 0;
+  cursor: pointer;
+}
+.kya-button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  border-radius: var(--kya-radius-sm);
+  color: white;
+  background: var(--kya-green-800);
+  font-weight: 700;
+}
+.kya-button:hover {
+  background: var(--kya-green-950);
+}
+.kya-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+.kya-icon-button {
+  display: inline-grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: var(--kya-radius-sm);
+  background: transparent;
+}
+.kya-icon-button:hover {
+  background: var(--kya-green-100);
+}
+.kya-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: max-content;
+  color: var(--kya-muted);
+  font-size: 12px;
+  font-weight: 680;
+}
+.kya-status__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #8d9690;
+}
+.kya-status--healthy {
+  color: var(--kya-green-800);
+}
+.kya-status--healthy .kya-status__dot {
+  background: var(--kya-green-600);
+}
+.kya-status--attention {
+  color: var(--kya-orange-700);
+}
+.kya-status--attention .kya-status__dot {
+  background: var(--kya-orange-600);
+}
+.kya-status--warning {
+  color: var(--kya-yellow-600);
+}
+.kya-status--warning .kya-status__dot {
+  background: #d79b00;
+}
+.kya-status--restricted {
+  color: var(--kya-coffee-700);
+}
+.kya-status--restricted .kya-status__dot {
+  background: var(--kya-coffee-700);
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

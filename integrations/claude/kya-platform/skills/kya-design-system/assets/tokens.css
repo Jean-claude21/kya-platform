@@ -1,0 +1,18 @@
+:root {
+  /* KYA-Platform Signature — official palette and applied tokens */
+  --kya-canvas: #fcfcfa;
+  --kya-surface: #ffffff;
+  --kya-ink: #073b36;
+  --kya-body: #314c48;
+  --kya-muted: #667378;
+  --kya-line: #dce3df;
+  --kya-teal: #1ca18c;
+  --kya-green: #07564a;
+  --kya-orange: #f99d32;
+  --kya-yellow: #e8e748;
+  --kya-coffee: #875028;
+  --kya-focus: #07564a;
+  --kya-radius: 0px;
+  --kya-radius-round: 50%;
+  --kya-font: Inter, Arial, sans-serif;
+}

@@ -1,0 +1,702 @@
+"""Data MCP exposes bounded, role-filtered and auditable capabilities."""
+
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from typing import Any
+from uuid import UUID
+
+import pytest
+from mcp import Client
+from mcp.server.auth.provider import AccessToken
+
+from kya_platform.application.data import CommandMetadata, IngestionRunReport, SnapshotLineage
+from kya_platform.authorization import AuthorizationDecision, CheckRequest, ListObjectsRequest
+from kya_platform.authorization.service import AuthorizationService
+from kya_platform.domain.content import ContentSearchHit
+from kya_platform.domain.data import (
+    DataAsset,
+    DataAssetLayer,
+    DataClassification,
+    DataContract,
+    DataPipeline,
+    DataSnapshot,
+    DataSource,
+    DataSourceKind,
+    DataStatus,
+    IngestionRun,
+    QualityResult,
+    QualityRule,
+    QualityStatus,
+    RunStatus,
+    StorageObject,
+)
+from kya_platform.domain.source_lifecycle import (
+    IngestionSchedule,
+    SourceFlow,
+    SourceFlowDraft,
+    SourceFlowHealth,
+)
+from kya_platform.mcp.data.contracts import DATA_TOOLS
+from kya_platform.mcp.registry.server import create_registry_server
+
+UNIT = UUID("01993480-0000-7000-8000-000000000001")
+ACTOR = UUID("01993480-0000-7000-8000-000000000002")
+ASSET = UUID("01993480-0000-7000-8000-000000000003")
+CONTRACT = UUID("01993480-0000-7000-8000-000000000004")
+PIPELINE = UUID("01993480-0000-7000-8000-000000000005")
+SNAPSHOT = UUID("01993480-0000-7000-8000-000000000006")
+CHUNK = UUID("01993480-0000-7000-8000-000000000007")
+NOW = datetime(2026, 9, 7, 16, tzinfo=UTC)
+
+
+@dataclass
+class Policy:
+    allowed: bool
+    checks: list[CheckRequest] = field(default_factory=list)
+
+    async def check(self, request: CheckRequest) -> AuthorizationDecision:
+        self.checks.append(request)
+        return AuthorizationDecision(self.allowed, "data-mcp-test")
+
+    async def list_objects(self, request: ListObjectsRequest) -> tuple[str, ...]:
+        del request
+        return ()
+
+
+class TokenVerifier:
+    async def verify_token(self, token: str) -> AccessToken | None:
+        del token
+        return None
+
+
+class RegistryBackend:
+    async def __getattr__(self, name: str) -> Any:
+        raise AssertionError(f"unexpected Registry call: {name}")
+
+
+@dataclass
+class Audit:
+    is_available: bool = True
+    events: list[dict[str, object]] = field(default_factory=list)
+
+    async def ensure_available(self) -> None:
+        if not self.is_available:
+            raise RuntimeError("audit unavailable")
+
+    async def record(self, **event: object) -> None:
+        self.events.append(event)
+
+
+class DataBackend:
+    def __init__(self) -> None:
+        self.commands: list[CommandMetadata] = []
+        self.asset = DataAsset(
+            ASSET,
+            "market-prices",
+            "Prix du marché",
+            UNIT,
+            DataAssetLayer.CURATED,
+            DataClassification.INTERNAL,
+            DataStatus.ACTIVE,
+        )
+        self.pipeline = DataPipeline(
+            PIPELINE,
+            "collect-market-prices",
+            "Collecte des prix",
+            UNIT,
+            UUID("01993480-0000-7000-8000-000000000010"),
+            UUID("01993480-0000-7000-8000-000000000011"),
+            ASSET,
+            DataStatus.ACTIVE,
+        )
+        self.flow = SourceFlow(
+            "collect-market-prices",
+            self._source(),
+            self.asset,
+            DataContract(CONTRACT, ASSET, "1.0.0", {"type": "object"}, "b" * 64),
+            self.pipeline,
+            1,
+        )
+
+    def _source(self) -> DataSource:
+        return DataSource(
+            UUID("01993480-0000-7000-8000-000000000010"),
+            "market-source",
+            "Market source",
+            DataSourceKind.API,
+            UNIT,
+            status=DataStatus.ACTIVE,
+        )
+
+    async def resolve_unit_id(self, unit: str) -> UUID | None:
+        return UNIT if unit == "direction-cvsi" else None
+
+    def content_hit(self) -> ContentSearchHit:
+        text = "Lampadaires solaires intelligents"
+        return ContentSearchHit(
+            chunk_id=CHUNK,
+            snapshot_id=SNAPSHOT,
+            asset_key="kya-institutional-web-capture",
+            source_uri="https://kya-energy.com/fr/solutions",
+            title="Solutions KYA",
+            observed_at=NOW,
+            snapshot_digest="c" * 64,
+            page_digest="d" * 64,
+            chunk_ordinal=0,
+            char_start=0,
+            char_end=len(text),
+            text=text,
+            score=0.8,
+            content_trust="untrusted_external_content",
+        )
+
+    async def search_public_content(
+        self,
+        unit: str,
+        query: str,
+        *,
+        asset_keys: tuple[str, ...],
+        limit: int,
+    ) -> tuple[ContentSearchHit, ...]:
+        assert unit == "direction-cvsi"
+        assert query == "lampadaires solaires"
+        assert asset_keys == ("kya-institutional-web-capture",)
+        assert limit == 3
+        return (self.content_hit(),)
+
+    async def get_public_excerpt(self, unit: str, chunk_id: UUID) -> ContentSearchHit | None:
+        assert unit == "direction-cvsi"
+        return self.content_hit() if chunk_id == CHUNK else None
+
+    async def search_assets(self, unit: str, query: str, *, limit: int) -> tuple[DataAsset, ...]:
+        assert unit == "direction-cvsi"
+        assert query == "marché"
+        assert limit == 3
+        return (self.asset,)
+
+    async def get_asset(self, unit: str, key: str) -> DataAsset | None:
+        return self.asset if unit == "direction-cvsi" and key == self.asset.key else None
+
+    async def get_contract(
+        self, unit: str, key: str, *, version: str | None = None
+    ) -> DataContract | None:
+        if unit != "direction-cvsi" or key != self.asset.key:
+            return None
+        return DataContract(
+            CONTRACT,
+            ASSET,
+            version or "1.0.0",
+            {"type": "object", "required": ["price"]},
+            "b" * 64,
+            (QualityRule("price-required", "not-null", "price IS NOT NULL"),),
+            60,
+            30,
+        )
+
+    async def list_snapshots(self, unit: str, key: str, *, limit: int) -> tuple[DataSnapshot, ...]:
+        assert unit == "direction-cvsi"
+        assert key == self.asset.key
+        assert limit == 3
+        return (
+            DataSnapshot(
+                SNAPSHOT,
+                ASSET,
+                UUID("01993480-0000-7000-8000-000000000020"),
+                CONTRACT,
+                StorageObject("s3", "private", "secret/internal/path.json", "v1"),
+                "c" * 64,
+                "application/json",
+                NOW,
+                42,
+                2048,
+            ),
+        )
+
+    async def trace_lineage(self, unit: str, snapshot_id: UUID) -> SnapshotLineage | None:
+        if unit != "direction-cvsi" or snapshot_id != SNAPSHOT:
+            return None
+        return SnapshotLineage(SNAPSHOT, (UUID(int=1),), (UUID(int=2),))
+
+    async def get_pipeline(self, unit: str, key: str) -> DataPipeline | None:
+        return self.pipeline if unit == "direction-cvsi" and key == self.pipeline.key else None
+
+    async def get_run_report(self, unit: str, run_id: UUID) -> IngestionRunReport | None:
+        if unit != "direction-cvsi" or run_id != UUID(int=30):
+            return None
+        run = IngestionRun(
+            run_id,
+            PIPELINE,
+            ACTOR,
+            RunStatus.COMPLETED,
+            NOW,
+            NOW,
+        )
+        snapshot = DataSnapshot(
+            SNAPSHOT,
+            ASSET,
+            run_id,
+            CONTRACT,
+            StorageObject("neon", "private", "secret/capture.json", "v1"),
+            "c" * 64,
+            "application/json",
+            NOW,
+            25,
+            4096,
+        )
+        return IngestionRunReport(
+            run,
+            self.pipeline.key,
+            snapshot,
+            (
+                QualityResult("pages-present", QualityStatus.PASSED, {"count": 25}),
+                QualityResult("fetch-complete", QualityStatus.WARNING, {"issues": 7}),
+            ),
+        )
+
+    async def start_run(
+        self, unit: str, run: IngestionRun, *, command: CommandMetadata
+    ) -> IngestionRun:
+        assert unit == "direction-cvsi"
+        self.commands.append(command)
+        return run
+
+    async def configure_source_flow(
+        self,
+        unit: str,
+        draft: SourceFlowDraft,
+        *,
+        schedule: IngestionSchedule | None,
+        command: CommandMetadata,
+    ) -> SourceFlow:
+        assert unit == "direction-cvsi"
+        self.commands.append(command)
+        pipeline = DataPipeline(
+            draft.pipeline.id,
+            draft.pipeline.key,
+            draft.pipeline.name,
+            draft.pipeline.owner_unit_id,
+            draft.pipeline.source_id,
+            self.pipeline.connector_version_id,
+            draft.pipeline.output_asset_id,
+            draft.pipeline.status,
+        )
+        self.flow = SourceFlow(
+            pipeline.key,
+            draft.source,
+            draft.asset,
+            draft.contract,
+            pipeline,
+            1,
+            schedule,
+        )
+        return self.flow
+
+    async def get_source_flow_health(self, unit: str, flow_key: str) -> SourceFlowHealth | None:
+        return (
+            SourceFlowHealth(self.flow)
+            if unit == "direction-cvsi" and flow_key == self.flow.key
+            else None
+        )
+
+    async def transition_source_flow(
+        self,
+        unit: str,
+        flow_key: str,
+        status: DataStatus,
+        *,
+        expected_revision: int,
+        command: CommandMetadata,
+    ) -> SourceFlow:
+        assert unit == "direction-cvsi" and flow_key == self.flow.key
+        self.commands.append(command)
+        source = self.flow.source.__class__(
+            self.flow.source.id,
+            self.flow.source.key,
+            self.flow.source.name,
+            self.flow.source.kind,
+            self.flow.source.owner_unit_id,
+            self.flow.source.system_artifact_id,
+            self.flow.source.secret_reference,
+            status,
+            self.flow.source.configuration,
+        )
+        asset = self.flow.asset.__class__(
+            self.flow.asset.id,
+            self.flow.asset.key,
+            self.flow.asset.name,
+            self.flow.asset.owner_unit_id,
+            self.flow.asset.layer,
+            self.flow.asset.classification,
+            status,
+        )
+        pipeline = self.flow.pipeline.__class__(
+            self.flow.pipeline.id,
+            self.flow.pipeline.key,
+            self.flow.pipeline.name,
+            self.flow.pipeline.owner_unit_id,
+            self.flow.pipeline.source_id,
+            self.flow.pipeline.connector_version_id,
+            self.flow.pipeline.output_asset_id,
+            status,
+        )
+        self.flow = SourceFlow(
+            flow_key,
+            source,
+            asset,
+            self.flow.contract,
+            pipeline,
+            expected_revision + 1,
+            self.flow.schedule,
+        )
+        return self.flow
+
+    async def schedule_source_flow(
+        self,
+        unit: str,
+        flow_key: str,
+        schedule: IngestionSchedule,
+        *,
+        expected_revision: int,
+        command: CommandMetadata,
+    ) -> SourceFlow:
+        assert unit == "direction-cvsi" and flow_key == self.flow.key
+        self.commands.append(command)
+        self.flow = SourceFlow(
+            flow_key,
+            self.flow.source,
+            self.flow.asset,
+            self.flow.contract,
+            self.flow.pipeline,
+            expected_revision + 1,
+            schedule,
+        )
+        return self.flow
+
+
+def token(*scopes: str) -> AccessToken:
+    return AccessToken(
+        token="opaque",
+        client_id="claude",
+        subject=str(ACTOR),
+        scopes=list(scopes),
+        claims={"active_unit": "direction-cvsi", "iss": "https://auth.example.test"},
+    )
+
+
+def server(*, policy: Policy, backend: DataBackend, audit: Audit, access_token: AccessToken):
+    return create_registry_server(
+        backend=RegistryBackend(),  # type: ignore[arg-type]
+        authorization=AuthorizationService(policy),
+        token_verifier=TokenVerifier(),
+        issuer_url="https://auth.example.test",
+        resource_url="https://mcp.example.test/mcp",
+        access_token_provider=lambda: access_token,
+        data_backend=backend,
+        data_audit=audit,
+    )
+
+
+@pytest.mark.asyncio
+async def test_read_tools_are_advertised_only_when_unit_is_visible() -> None:
+    allowed_server = server(
+        policy=Policy(True),
+        backend=DataBackend(),
+        audit=Audit(),
+        access_token=token("data:read"),
+    )
+    async with Client(allowed_server) as client:
+        listed = await client.list_tools()
+    assert {item.name for item in listed.tools} >= {
+        item.name for item in DATA_TOOLS if item.oauth_scope == "data:read"
+    }
+
+    denied_server = server(
+        policy=Policy(False),
+        backend=DataBackend(),
+        audit=Audit(),
+        access_token=token("data:read"),
+    )
+    async with Client(denied_server) as client:
+        denied = await client.list_tools()
+    assert {item.name for item in denied.tools}.isdisjoint({item.name for item in DATA_TOOLS})
+
+
+@pytest.mark.asyncio
+async def test_discovery_is_scoped_structured_and_audited() -> None:
+    policy = Policy(True)
+    audit = Audit()
+    data_server = server(
+        policy=policy,
+        backend=DataBackend(),
+        audit=audit,
+        access_token=token("data:read"),
+    )
+    async with Client(data_server) as client:
+        result = await client.call_tool("discover_data_assets", {"query": "marché", "limit": 2})
+
+    assert result.is_error is False
+    assert result.structured_content["items"][0]["key"] == "market-prices"
+    assert result.structured_content["active_unit"] == "direction-cvsi"
+    assert policy.checks[-1].object == "org_unit:direction-cvsi"
+    assert audit.events[-1]["decision"] == "allowed"
+    assert audit.events[-1]["outcome"] == "succeeded"
+
+
+@pytest.mark.asyncio
+async def test_snapshot_metadata_never_discloses_storage_reference() -> None:
+    data_server = server(
+        policy=Policy(True),
+        backend=DataBackend(),
+        audit=Audit(),
+        access_token=token("data:read"),
+    )
+    async with Client(data_server) as client:
+        result = await client.call_tool(
+            "list_data_snapshots", {"asset_key": "market-prices", "limit": 2}
+        )
+
+    serialized = str(result.structured_content)
+    assert result.is_error is False
+    assert "secret/internal/path.json" not in serialized
+    assert "storage" not in serialized
+    assert result.structured_content["items"][0]["row_count"] == 42
+
+
+@pytest.mark.asyncio
+async def test_asset_contract_and_lineage_are_structured_and_correlated() -> None:
+    audit = Audit()
+    data_server = server(
+        policy=Policy(True),
+        backend=DataBackend(),
+        audit=audit,
+        access_token=token("data:read"),
+    )
+    async with Client(data_server) as client:
+        asset = await client.call_tool("get_data_asset", {"asset_key": "market-prices"})
+        contract = await client.call_tool(
+            "get_data_contract", {"asset_key": "market-prices", "version": "1.0.0"}
+        )
+        lineage = await client.call_tool("trace_data_lineage", {"snapshot_id": str(SNAPSHOT)})
+
+    assert asset.structured_content["classification"] == "internal"
+    assert contract.structured_content["quality_rules"][0]["key"] == "price-required"
+    assert lineage.structured_content["input_snapshot_ids"] == [str(UUID(int=1))]
+    assert len({event["correlation_id"] for event in audit.events}) == 3
+
+
+@pytest.mark.asyncio
+async def test_ingestion_run_reports_status_quality_and_no_storage_location() -> None:
+    run_id = UUID(int=30)
+    audit = Audit()
+    data_server = server(
+        policy=Policy(True),
+        backend=DataBackend(),
+        audit=audit,
+        access_token=token("data:read"),
+    )
+    async with Client(data_server) as client:
+        result = await client.call_tool("get_ingestion_run", {"run_id": str(run_id)})
+
+    serialized = str(result.structured_content)
+    assert result.is_error is False
+    assert result.structured_content["status"] == "completed"
+    assert result.structured_content["snapshot"]["row_count"] == 25
+    assert result.structured_content["quality_results"][1] == {
+        "rule_key": "fetch-complete",
+        "status": "warning",
+        "observed": {"issues": 7},
+    }
+    assert "secret/capture.json" not in serialized
+    assert audit.events[-1]["target_type"] == "data_run"
+
+
+@pytest.mark.asyncio
+async def test_public_content_search_and_excerpt_are_cited_untrusted_and_audited() -> None:
+    audit = Audit()
+    data_server = server(
+        policy=Policy(True),
+        backend=DataBackend(),
+        audit=audit,
+        access_token=token("data:content:read"),
+    )
+    async with Client(data_server) as client:
+        listed = await client.list_tools()
+        search = await client.call_tool(
+            "search_data_content",
+            {
+                "query": "lampadaires solaires",
+                "asset_keys": ["kya-institutional-web-capture"],
+                "limit": 2,
+            },
+        )
+        excerpt = await client.call_tool("get_data_excerpt", {"chunk_id": str(CHUNK)})
+
+    assert {"search_data_content", "get_data_excerpt"} <= {item.name for item in listed.tools}
+    item = search.structured_content["items"][0]
+    assert item["search_mode"] == "lexical"
+    assert item["content_trust"] == "untrusted_external_content"
+    assert item["citation"]["source_uri"] == "https://kya-energy.com/fr/solutions"
+    assert item["citation"]["snapshot_digest"] == "c" * 64
+    assert "storage" not in str(search.structured_content)
+    assert excerpt.structured_content["item"]["chunk_id"] == str(CHUNK)
+    assert [event["target_type"] for event in audit.events] == [
+        "data_content",
+        "data_content_chunk",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_missing_resource_returns_stable_error_and_failed_audit() -> None:
+    audit = Audit()
+    backend = DataBackend()
+    backend.asset = DataAsset(
+        ASSET,
+        "other-asset",
+        "Autre actif",
+        UNIT,
+        DataAssetLayer.RAW,
+        DataClassification.INTERNAL,
+    )
+    data_server = server(
+        policy=Policy(True),
+        backend=backend,
+        audit=audit,
+        access_token=token("data:read"),
+    )
+    async with Client(data_server) as client:
+        result = await client.call_tool("get_data_asset", {"asset_key": "missing"})
+
+    assert result.is_error is True
+    assert "data_asset_not_found" in result.content[0].text
+    assert audit.events[-1]["decision"] == "allowed"
+    assert audit.events[-1]["outcome"] == "failed"
+
+
+@pytest.mark.asyncio
+async def test_controlled_ingestion_requires_scope_confirmation_and_idempotency() -> None:
+    backend = DataBackend()
+    audit = Audit()
+    data_server = server(
+        policy=Policy(True),
+        backend=backend,
+        audit=audit,
+        access_token=token("data:ingest"),
+    )
+    async with Client(data_server) as client:
+        listed = await client.list_tools()
+        result = await client.call_tool(
+            "start_ingestion",
+            {
+                "pipeline_key": "collect-market-prices",
+                "idempotency_key": "collect-market-20260907",
+                "confirmation": {"confirmed": True},
+            },
+        )
+
+    assert "start_ingestion" in {item.name for item in listed.tools}
+    assert result.is_error is False
+    assert result.structured_content["status"] == "started"
+    assert backend.commands[0].actor_id == ACTOR
+    assert backend.commands[0].idempotency_key == "collect-market-20260907"
+    assert audit.events[-1]["target_type"] == "data_pipeline"
+
+
+@pytest.mark.asyncio
+async def test_source_flow_tools_are_profiled_secret_free_and_controlled() -> None:
+    backend = DataBackend()
+    audit = Audit()
+    data_server = server(
+        policy=Policy(True),
+        backend=backend,
+        audit=audit,
+        access_token=token("data:ingest", "data:read"),
+    )
+    definition = {
+        "key": "public-web",
+        "name": "Site public",
+        "source_kind": "web",
+        "source_configuration": {"seed_url": "https://kya-energy.com"},
+        "secret_reference": "infisical:data/public-web",
+        "connector": {"key": "kya-owned-web-connector", "version": "0.1.0"},
+        "classification": "public",
+        "schema_document": {"type": "object"},
+        "quality_rules": [
+            {
+                "key": "pages-present",
+                "kind": "minimum-count",
+                "expression": "count > 0",
+            }
+        ],
+    }
+    async with Client(data_server) as client:
+        listed = await client.list_tools()
+        created = await client.call_tool(
+            "configure_source_flow",
+            {
+                "definition": definition,
+                "idempotency_key": "configure-public-web-0001",
+                "confirmation": {"confirmed": True},
+            },
+        )
+        health = await client.call_tool("get_source_flow_health", {"flow_key": "public-web"})
+        scheduled = await client.call_tool(
+            "schedule_source_flow",
+            {
+                "flow_key": "public-web",
+                "schedule": {
+                    "interval_minutes": 1440,
+                    "next_run_at": "2026-09-09T06:00:00Z",
+                    "enabled": True,
+                },
+                "expected_revision": 1,
+                "idempotency_key": "schedule-public-web-0001",
+                "confirmation": {"confirmed": True},
+            },
+        )
+        paused = await client.call_tool(
+            "set_source_flow_state",
+            {
+                "flow_key": "public-web",
+                "target_state": "paused",
+                "expected_revision": 2,
+                "idempotency_key": "pause-public-web-000001",
+                "confirmation": {"confirmed": True},
+            },
+        )
+
+    names = {item.name for item in listed.tools}
+    assert {
+        "configure_source_flow",
+        "get_source_flow_health",
+        "schedule_source_flow",
+        "set_source_flow_state",
+    } <= names
+    assert created.structured_content["has_credentials"] is True
+    assert "infisical" not in str(created.structured_content)
+    assert health.structured_content["flow"]["key"] == "public-web"
+    assert scheduled.structured_content["revision"] == 2
+    assert paused.structured_content["status"] == "paused"
+    assert [event["target_type"] for event in audit.events[-4:]] == [
+        "source_flow",
+        "source_flow",
+        "source_flow",
+        "source_flow",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_denied_call_is_recorded_without_calling_data_backend() -> None:
+    audit = Audit()
+    data_server = server(
+        policy=Policy(False),
+        backend=DataBackend(),
+        audit=audit,
+        access_token=token("data:read"),
+    )
+    async with Client(data_server) as client:
+        result = await client.call_tool("get_data_asset", {"asset_key": "market-prices"})
+
+    assert result.is_error is True
+    assert "not_authorized" in result.content[0].text
+    assert audit.events[-1]["decision"] == "denied"
+    assert audit.events[-1]["outcome"] == "rejected"

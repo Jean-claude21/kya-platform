@@ -1,0 +1,21 @@
+# Coolify — contrat d’intégration
+
+Coolify implémente le même contrat de promotion que Dokploy. Il peut être sélectionné pour
+les previews ou comme fournisseur principal sans changer le domaine métier.
+
+Les processus sont déployés séparément :
+
+- `kya-platform-web` expose l'interface utilisateur ;
+- `kya-platform-backend` expose l'API et MCP ;
+- `kya-platform-source-scheduler` réclame les échéances et crée les runs, sans collecter les données ;
+- `kya-platform-web-capture-worker` consomme les événements `kya.data.run.started.v1`,
+  matérialise les snapshots, puis traite `kya.data.run.completed.v1` pour évaluer les veilles
+  actives de l'unité ; il ne possède aucun domaine public.
+
+Les deux processus internes reçoivent leur connexion à la base et leur identité Infisical. Les secrets du stockage objet
+restent dans Infisical et sont résolus au démarrage ; ils ne sont pas recopiés dans Coolify.
+
+Variables attendues côté secret manager : `COOLIFY_API_URL`, `COOLIFY_API_TOKEN`,
+`COOLIFY_PROJECT_UUID`, `COOLIFY_SERVER_UUID`, `COOLIFY_WEB_APPLICATION_NAME` et
+`COOLIFY_BACKEND_APPLICATION_NAME`. Les applications sont découvertes par leur nom dans
+l'environnement cible ; leurs identifiants internes sont retournés et conservés par l'adapter.

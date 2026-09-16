@@ -1,0 +1,35 @@
+sequenceDiagram
+    autonumber
+    actor U as Collaborateur KYA
+    participant AI as Claude ou ChatGPT
+    participant MCP as Passerelle MCP KYA
+    participant AUTH as OAuth et OpenFGA
+    participant DATA as DataService
+    participant DB as Neon Postgres
+    participant W as Worker déterministe
+    participant S as Neon Storage
+
+    U->>AI: Lance la collecte institutionnelle
+    AI->>MCP: start_ingestion avec confirmation
+    MCP->>AUTH: Vérifier data:ingest et unité active
+    AUTH-->>MCP: Autorisé
+    MCP->>DATA: Créer un run idempotent
+    DATA->>DB: Run started et événement outbox
+    DATA-->>MCP: run_id
+    MCP-->>AI: Collecte acceptée
+
+    W->>DB: Réserver le travail
+    W->>W: Capturer et valider les pages
+    W->>S: Écrire le paquet immuable
+    W->>DB: Snapshot, qualité et run completed
+
+    U->>AI: Quel est le résultat ?
+    AI->>MCP: get_ingestion_run avec run_id
+    MCP->>AUTH: Vérifier data:read et unité active
+    AUTH-->>MCP: Autorisé
+    MCP->>DATA: Lire le rapport gouverné
+    DATA->>DB: Run, snapshot et qualité
+    DB-->>DATA: Métadonnées sans secret
+    DATA-->>MCP: Rapport structuré
+    MCP-->>AI: État, preuve et alertes qualité
+    AI-->>U: Résumé compréhensible et actions proposées

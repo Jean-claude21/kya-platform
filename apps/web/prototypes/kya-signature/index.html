@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>KYA-Platform — Mon espace</title>
+  <meta name="description" content="Prototype de validation KYA-Platform — charte claire, navigation et capacités gouvernées.">
+  <link rel="preload" href="assets/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="styles.css"><script src="app.js" defer></script>
+</head>
+<body>
+<!-- THESIS: A governed capability hub in the approved KYA light signature. OWN-WORLD: near-white canvas, forest headings, official teal and amber, sharp controls, photographic depth. STORY: choose context, discover and inspect, connect an external client. FIRST VIEWPORT: 86px global header, 238px navigation, 268px solar band, flat capability list and action rail. FORM: user-approved exec-911ae251-4c72-4fa3-84b6-b6ebb61c202f; explicit BMW-inspired form and KYA palette. FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md -->
+<a class="skip" href="#main">Aller au contenu</a>
+<header class="topbar">
+  <button class="icon-button menu-toggle" data-panel="menu" aria-label="Ouvrir la navigation"><i data-icon="menu"></i></button>
+  <a class="brand" href="index.html"><img src="assets/kya-logo.png" alt="KYA-Energy Group"><span>KYA-Platform</span></a>
+  <div class="context"><label class="entity"><span>Entité</span><select id="entity" aria-label="Entité active"><option>KYA-Energy Group</option><option>Entité de démonstration</option></select></label><label class="unit"><span class="sr-only">Unité active</span><select id="unit"><option>Direction des Systèmes</option><option>Communication</option><option>Espace stagiaires</option></select></label></div>
+  <label class="search"><i data-icon="search"></i><input type="search" id="search" placeholder="Rechercher…" aria-label="Rechercher une capacité"><kbd>Ctrl K</kbd></label>
+  <button class="icon-button bell" data-panel="requests" aria-label="Voir les deux éléments à traiter"><i data-icon="bell"></i></button><button class="avatar" data-panel="profile" aria-label="Profil de Jean-Claude">JC</button>
+</header>
+<div class="shell">
+  <aside class="sidebar" aria-label="Navigation principale">
+    <nav id="navigation"><button class="nav active" data-view="home" aria-current="page"><i data-icon="home"></i>Accueil</button><button class="nav" data-view="catalog"><i data-icon="grid"></i>Catalogue</button><button class="nav" data-panel="connections"><i data-icon="link"></i>Mes connexions</button><button class="nav" data-panel="spaces"><i data-icon="users"></i>Espaces</button><button class="nav" data-panel="studio"><i data-icon="code"></i>Studio</button></nav>
+    <div class="sidebar-bottom"><button class="nav admin" data-panel="admin"><i data-icon="shield"></i>Administration<i class="end" data-icon="right"></i></button><div class="profile"><button data-panel="profile"><i data-icon="user"></i><span>Jean-Claude<small id="role">Profil CVSI</small></span></button><button class="icon-button" data-panel="help" aria-label="Aide et informations sur le prototype"><i data-icon="help"></i></button></div></div>
+  </aside>
+  <main id="main">
+    <section class="hero" aria-labelledby="page-title"><img src="assets/solar-panorama.png" alt="" class="hero-photo"><div class="hero-copy"><h1 id="page-title">Mon espace</h1><p>Vos capacités. Vos équipes. Vos outils.</p><span id="hero-unit">Direction des Systèmes</span><div class="brand-stripe" aria-hidden="true"><b></b><b></b><b></b></div></div></section>
+    <div class="workspace-grid">
+      <section class="capabilities" aria-labelledby="capabilities-title">
+        <div class="section-heading"><h2 id="capabilities-title">Mes capacités</h2><button class="text-action" data-view="catalog">Catalogue<i data-icon="arrow"></i></button></div>
+        <div class="tabs" role="tablist" aria-label="Type de capacité"><button role="tab" id="tab-all" data-filter="all" aria-selected="true" aria-controls="resources">Tout</button><button role="tab" id="tab-app" data-filter="App" aria-selected="false" aria-controls="resources" tabindex="-1">Apps</button><button role="tab" id="tab-mcp" data-filter="MCP" aria-selected="false" aria-controls="resources" tabindex="-1">MCP</button><button role="tab" id="tab-skill" data-filter="Skill" aria-selected="false" aria-controls="resources" tabindex="-1">Skills</button><button role="tab" id="tab-data" data-filter="Données" aria-selected="false" aria-controls="resources" tabindex="-1">Données</button></div>
+        <div id="resources" role="tabpanel" aria-labelledby="tab-all"></div>
+        <div id="empty" class="empty" hidden><h3>Aucune capacité trouvée</h3><p>Modifiez votre recherche ou réinitialisez les filtres.</p><button class="outline" id="reset">Réinitialiser</button></div>
+        <section class="pinned" aria-labelledby="pinned-title"><h3 id="pinned-title">Épinglés</h3><div><button data-item="frappe">Frappe<i data-icon="external"></i></button><button data-item="documents">Documents KYA<i data-icon="arrow"></i></button><button data-item="mcp">KYA-Platform MCP<i data-icon="arrow"></i></button></div></section>
+      </section>
+      <aside class="action-rail" aria-label="Actions et connexions personnelles">
+        <section class="requests" aria-labelledby="requests-title"><h2 id="requests-title">À traiter <span class="count">2</span></h2><article class="request"><div><h3>KYA Design System</h3><p>Mise à jour à examiner</p></div><button class="text-action" data-panel="changes">Voir la version<i data-icon="arrow"></i></button></article><article class="request"><div><h3>Demande d’accès</h3><p>Équipe Applications · Référentiel clients</p></div><button class="text-action" data-panel="access">Examiner<i data-icon="arrow"></i></button></article></section>
+        <section class="connections" aria-labelledby="connections-title"><h2 id="connections-title">Mes connexions</h2><p>Travaillez depuis votre environnement IA.</p><div class="clients"><button class="client" data-panel="claude"><i class="client-symbol claude" data-icon="sun"></i><strong>Claude</strong><span class="client-state"><b class="dot"></b>Connecté</span><i data-icon="right"></i></button><button class="client" data-panel="chatgpt"><i class="client-symbol" data-icon="chat"></i><strong>ChatGPT</strong><span class="client-action">Connecter<i data-icon="external"></i></span><i data-icon="right"></i></button><button class="client" data-panel="codex"><i class="client-symbol" data-icon="code"></i><strong>Codex</strong><span class="client-action">Connecter<i data-icon="external"></i></span><i data-icon="right"></i></button></div><button class="primary" data-panel="connections">Gérer mes connexions</button></section>
+      </aside>
+    </div>
+    <footer>Maquette interactive · Données et connexions simulées · Visuel généré</footer>
+  </main>
+</div>
+<dialog id="drawer" aria-labelledby="detail-title"><button class="icon-button close" id="close" aria-label="Fermer le panneau"><i data-icon="x"></i></button><div id="detail"></div><p class="demo-note">Prototype de validation — aucune action réelle.</p></dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

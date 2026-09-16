@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, dev]
+  push:
+    branches: [dev]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  branch-policy:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enforce branch flow
+        env:
+          BASE: ${{ github.base_ref }}
+          HEAD: ${{ github.head_ref }}
+        run: |
+          if [ "$BASE" = "main" ] && [ "$HEAD" != "dev" ]; then
+            echo "Only dev can target main." >&2
+            exit 1
+          fi
+          if [ "$BASE" = "dev" ] && [[ ! "$HEAD" =~ ^feat-[a-z0-9][a-z0-9-]*$ ]]; then
+            echo "Branches targeting dev must match feat-xxx." >&2
+            exit 1
+          fi
+
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+
+  backend-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
+          python-version: '3.14'
+      - run: uv sync --locked --all-packages
+      - run: uv run ruff check apps/backend
+      - run: uv run ruff format --check apps/backend
+      - run: uv run mypy
+      - run: uv run pytest
+
+  authorization-model:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test the pinned KYA OpenFGA model
+        run: >-
+          docker run --rm
+          --volume "$PWD:/work"
+          --workdir /work
+          openfga/cli:v0.7.15@sha256:889801086b7b5d5239b9a2210e03e75ed8ff141bdfbe0238894bcb06d02d6780
+          model test --tests tests/policy/kya-platform.fga.yaml
+
+  documentation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
+          python-version: '3.14'
+      - run: uv sync --locked --all-packages
+      - run: uv run mkdocs build --strict
+
+  claude-plugin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Validate the KYA-Platform Claude plugin
+        run: python infra/claude/package_plugin.py --check
+      - name: Build the deterministic Claude plugin archive
+        run: python infra/claude/package_plugin.py
+      - name: Upload the Claude plugin archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: kya-platform-claude-plugin
+          path: dist/kya-platform-claude-plugin-*.zip
+          if-no-files-found: error

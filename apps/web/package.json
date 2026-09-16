@@ -1,0 +1,33 @@
+{
+  "name": "@kya/web",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite --host 0.0.0.0 --port 3000",
+    "gen:design-system": "node scripts/generate-design-system-package.mjs",
+    "start": "node .output/server/index.mjs",
+    "test:e2e": "playwright test --config playwright.config.ts",
+    "typecheck": "tsc --noEmit",
+    "test:unit": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@kya/design-system": "workspace:*",
+    "@neondatabase/auth": "0.5.0-beta",
+    "@tanstack/react-query": "catalog:",
+    "@tanstack/react-router": "catalog:",
+    "@tanstack/react-start": "catalog:",
+    "nitro": "3.0.260903-beta",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@kya/test-kit": "workspace:*",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.1",
+    "vite": "8.2.2"
+  }
+}

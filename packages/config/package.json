@@ -1,0 +1,13 @@
+{
+  "name": "@kya/config",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": "./src/env.ts",
+  "dependencies": {
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3"
+  }
+}

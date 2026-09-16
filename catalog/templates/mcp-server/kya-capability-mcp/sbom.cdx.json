@@ -1,0 +1,17 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "version": 1,
+  "components": [
+    {
+      "type": "library",
+      "name": "mcp",
+      "version": "2.x"
+    },
+    {
+      "type": "library",
+      "name": "pydantic",
+      "version": "2.x"
+    }
+  ]
+}

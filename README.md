@@ -1,36 +1,53 @@
 # KYA Platform
 
-KYA Platform est le plan de contrôle du patrimoine numérique de KYA-Energy Group. La plateforme
-référence, gouverne, partage, publie et audite les systèmes, applications, API, produits de données,
-serveurs MCP, outils MCP, Skills, templates, modèles et standards de l'entreprise.
+KYA Platform is KYA-Energy Group's control plane for its digital assets. It registers, governs,
+shares, publishes and audits systems, applications, APIs, data products, MCP servers and tools,
+Skills, templates, models and company standards.
 
-Le projet suit une démarche Spec-Driven Development avec GitHub Spec Kit. La constitution du projet
-est la source normative ; chaque fonctionnalité possède ensuite une spécification, un plan, des
-tâches, des contrôles de cohérence et des preuves de validation avant sa mise en production.
+The project follows Spec-Driven Development with GitHub Spec Kit. The project constitution is the
+normative source. Each feature then has a specification, implementation plan, tasks, consistency
+checks and validation evidence before production.
+
+## Repository map
+
+- `apps/backend`: FastAPI modular monolith, MCP surfaces and workers.
+- `apps/web`: TanStack user interface.
+- `packages/design-system`: executable KYA UI foundations.
+- `catalog/sources`: editable sources of real KYA artifacts.
+- `catalog/templates`: governed master templates used to start new artifacts.
+- `catalog/releases`: immutable, validated artifact releases.
+- `integrations/claude`: versioned Claude plugins that bundle approved Skills and MCP connections.
+- `docs`: maintained product, architecture, governance and operations documentation.
+- `specs`: feature intent, plans, tasks and evidence.
 
 ## Branches
 
-- `main` : versions stables et publiables ;
-- `dev` : intégration des fonctionnalités validées ;
-- `feat-xxx` : développement isolé d'une fonctionnalité, créé depuis `dev` puis fusionné par Pull
-  Request vers `dev` ;
-- la promotion de `dev` vers `main` passe par une Pull Request et les validations de livraison.
+- `main`: stable, releasable versions.
+- `dev`: integration of validated features.
+- `feat-xxx`: isolated feature development, created from `dev` and merged into `dev` by Pull
+  Request.
+- Promotion from `dev` to `main` requires a Pull Request and release validation.
 
-Les commits directs sur `main` et `dev` seront interdits dès que les protections du dépôt seront
-configurées.
+Every commit accepted on `main` receives an immutable annotated SemVer tag. Pre-release tags such
+as `vX.Y.Z-dev.N` on `dev` are reserved for genuinely deployable milestones.
 
 ## Spec Kit
 
-Workflow attendu pour chaque fonctionnalité :
+Expected workflow for each feature:
 
 ```text
 constitution → specify → clarify → plan → tasks → analyze → implement → converge
 ```
 
-Les intégrations Codex et Claude sont installées dans le dépôt afin que les agents partagent les
-mêmes règles et artefacts.
+Codex and Claude integrations live in the repository so agents use the same rules and artifacts.
 
-## État
+## Documentation
 
-Le projet est en phase de spécification de sa fondation. Aucun composant n'est considéré comme
-opérationnel avant qu'un cas réel ait franchi son cycle complet de validation.
+English is the canonical documentation language. Run `pnpm docs:serve` for local preview and
+`pnpm docs:build` for the same strict build enforced in CI.
+
+## Current status
+
+The platform foundations are operational and continue to be expanded through validated vertical
+slices. A capability is complete only when its code, tests, documentation and real-use evidence
+agree.

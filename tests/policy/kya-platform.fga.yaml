@@ -1,0 +1,207 @@
+name: Matrice d'autorisation de référence KYA
+model_file: ./kya-platform.fga
+
+tuples:
+  - user: org_unit:group
+    relation: parent
+    object: org_unit:togo
+  - user: org_unit:togo
+    relation: parent
+    object: org_unit:direction-cvsi
+  - user: user:alice
+    relation: base_administrator
+    object: org_unit:group
+  - user: org_unit:direction-cvsi
+    relation: unit
+    object: workspace:platform
+  - user: user:bob
+    relation: member
+    object: team:developers
+  - user: team:developers#member
+    relation: editor
+    object: workspace:platform
+  - user: team:developers#member
+    relation: invoker
+    object: mcp_tool:registry-search
+  - user: user:sam
+    relation: member
+    object: team:interns
+  - user: team:interns#member
+    relation: viewer
+    object: workspace:platform
+  - user: workspace:platform
+    relation: workspace
+    object: artifact:skill-template
+  - user: workspace:platform
+    relation: workspace
+    object: mcp_tool:registry-search
+  - user: workspace:platform
+    relation: workspace
+    object: mcp_profile:data-reader
+  - user: team:developers#member
+    relation: assignee
+    object: mcp_profile:data-reader
+  - user: mcp_profile:data-reader
+    relation: profile
+    object: mcp_tool:registry-search
+  - user: user:diana
+    relation: assignee
+    object: role:communication-publisher
+  - user: role:communication-publisher#assignee
+    relation: publisher
+    object: artifact:skill-template
+  - user: user:chloe
+    relation: reviewer
+    object: artifact:skill-template
+  - user: user:chloe
+    relation: publisher
+    object: artifact:skill-template
+    condition:
+      name: active_grant
+      context:
+        starts_at: '2026-09-01T00:00:00Z'
+        expires_at: '2026-09-30T23:59:59Z'
+
+tests:
+  - name: Le contexte organisationnel est obligatoire
+    check:
+      - user: user:alice
+        object: workspace:platform
+        assertions:
+          can_view: false
+          can_manage: false
+
+  - name: La DG administre la direction seulement dans le contexte actif
+    tuples:
+      - user: user:alice
+        relation: user_in_context
+        object: org_unit:direction-cvsi
+    check:
+      - user: user:alice
+        object: workspace:platform
+        assertions:
+          can_view: true
+          can_edit: true
+          can_manage: true
+
+  - name: Une équipe reçoit les droits attribués à son groupe
+    check:
+      - user: user:bob
+        object: workspace:platform
+        assertions:
+          can_view: true
+          can_edit: true
+          can_manage: false
+      - user: user:bob
+        object: mcp_tool:registry-search
+        assertions:
+          can_discover: true
+          can_invoke: true
+
+  - name: Un stagiaire voit son espace sans obtenir de droit d'écriture ou MCP
+    check:
+      - user: user:sam
+        object: workspace:platform
+        assertions:
+          can_view: true
+          can_edit: false
+          can_manage: false
+      - user: user:sam
+        object: mcp_tool:registry-search
+        assertions:
+          can_discover: true
+          can_invoke: false
+
+  - name: Une interdiction explicite prime sur les droits hérités
+    tuples:
+      - user: user:bob
+        relation: blocked
+        object: workspace:platform
+      - user: user:bob
+        relation: blocked
+        object: mcp_tool:registry-search
+    check:
+      - user: user:bob
+        object: workspace:platform
+        assertions:
+          can_view: false
+          can_edit: false
+      - user: user:bob
+        object: mcp_tool:registry-search
+        assertions:
+          can_discover: false
+          can_invoke: false
+
+  - name: Un rôle métier personnalisable donne un droit de publication ciblé
+    check:
+      - user: user:diana
+        object: artifact:skill-template
+        assertions:
+          can_view: true
+          can_submit: true
+          can_review: false
+          can_approve: false
+
+  - name: Une délégation temporelle est valide avant son expiration
+    check:
+      - user: user:chloe
+        object: artifact:skill-template
+        context:
+          current_time: '2026-09-15T12:00:00Z'
+        assertions:
+          can_submit: true
+          can_review: true
+          can_approve: false
+
+  - name: Une délégation temporelle expire automatiquement
+    check:
+      - user: user:chloe
+        object: artifact:skill-template
+        context:
+          current_time: '2026-10-01T00:00:00Z'
+        assertions:
+          can_submit: false
+          can_review: true
+          can_approve: false
+
+  - name: Un outil MCP nécessite une attribution d'invocation explicite
+    check:
+      - user: user:diana
+        object: mcp_tool:registry-search
+        assertions:
+          can_discover: false
+          can_invoke: false
+
+  - name: L'ascendance organisationnelle traverse toute la hiérarchie
+    check:
+      - user: org_unit:group
+        object: org_unit:direction-cvsi
+        assertions:
+          ancestor: true
+      - user: org_unit:togo
+        object: org_unit:direction-cvsi
+        assertions:
+          ancestor: true
+      - user: org_unit:direction-cvsi
+        object: org_unit:group
+        assertions:
+          ancestor: false
+
+  - name: Les profils MCP sont administrés comme des ressources gouvernées
+    tuples:
+      - user: user:alice
+        relation: user_in_context
+        object: org_unit:direction-cvsi
+    check:
+      - user: user:alice
+        object: mcp_profile:data-reader
+        assertions:
+          can_view: true
+          can_edit: true
+          can_manage: true
+      - user: user:sam
+        object: mcp_profile:data-reader
+        assertions:
+          can_view: true
+          can_edit: false
+          can_manage: false

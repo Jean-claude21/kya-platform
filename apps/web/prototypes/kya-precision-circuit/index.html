@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Prototype validable du shell KYA Platform — KYA Precision Circuit."
+    />
+    <title>KYA Platform — Precision Circuit</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <!--
+      THESIS: KYA Platform is a governed digital cockpit, not a generic SaaS dashboard.
+      OWN-WORLD: Precision Circuit uses KYA circles, energy lines, junctions and plug endpoints as functional semantics.
+      STORY: See the active scope, open an authorized capability, handle a decision, then inspect the foundation when permitted.
+      FIRST VIEWPORT: Compact shell, entitlement-led access table, decision rail and a dark foundation circuit.
+      FORM: Approved KYA Precision Circuit composition, based on the validated final mockup.
+      FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
+    -->
+    <svg class="icon-library" aria-hidden="true">
+      <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10M9 20v-6h6v6"/></symbol>
+      <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></symbol>
+      <symbol id="i-database" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></symbol>
+      <symbol id="i-tool" viewBox="0 0 24 24"><path d="M14 6a4 4 0 0 0 5 5l-9 9-5-5 9-9Z"/><path d="m5 5 4 4M3 3l3 1 1 3"/></symbol>
+      <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.8 1.8 0 0 0 .4 2l.1.1-2.8 2.8-.1-.1a1.8 1.8 0 0 0-2-.4 1.8 1.8 0 0 0-1 1.7V21h-4v-.1A1.8 1.8 0 0 0 9 19.3a1.8 1.8 0 0 0-2 .4l-.1.1-2.8-2.8.1-.1a1.8 1.8 0 0 0 .4-2A1.8 1.8 0 0 0 3 14H3v-4h.1A1.8 1.8 0 0 0 4.7 9a1.8 1.8 0 0 0-.4-2l-.1-.1 2.8-2.8.1.1a1.8 1.8 0 0 0 2 .4A1.8 1.8 0 0 0 10 3h4a1.8 1.8 0 0 0 1 1.6 1.8 1.8 0 0 0 2-.4l.1-.1 2.8 2.8-.1.1a1.8 1.8 0 0 0-.4 2A1.8 1.8 0 0 0 21 10v4a1.8 1.8 0 0 0-1.6 1Z"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+      <symbol id="i-plug" viewBox="0 0 24 24"><path d="M8 3v5M16 3v5M6 8h12v2a6 6 0 0 1-6 6v5M9 21h6"/></symbol>
+      <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></symbol>
+      <symbol id="i-brain" viewBox="0 0 24 24"><path d="M9 4a3 3 0 0 0-3 3v2a3 3 0 0 0 0 6v2a3 3 0 0 0 5 2V5a3 3 0 0 0-2-1ZM15 4a3 3 0 0 1 3 3v2a3 3 0 0 1 0 6v2a3 3 0 0 1-5 2V5a3 3 0 0 1 2-1Z"/></symbol>
+      <symbol id="i-cube" viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/></symbol>
+      <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6V3Z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></symbol>
+      <symbol id="i-org" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="5" rx="1"/><rect x="3" y="16" width="6" height="5" rx="1"/><rect x="15" y="16" width="6" height="5" rx="1"/><path d="M12 8v4M6 16v-4h12v4"/></symbol>
+      <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0M16 5a3 3 0 0 1 0 6M17 15a5 5 0 0 1 4 5"/></symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 4 6v5c0 5 3.4 8.6 8 10 4.6-1.4 8-5 8-10V6l-8-3Z"/><path d="m9 12 2 2 4-5"/></symbol>
+      <symbol id="i-orbit" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><ellipse cx="12" cy="12" rx="9" ry="5"/><path d="M12 3c3 2 5 5 5 9s-2 7-5 9M12 3c-3 2-5 5-5 9s2 7 5 9"/></symbol>
+      <symbol id="i-code" viewBox="0 0 24 24"><path d="m8 8-4 4 4 4M16 8l4 4-4 4M14 5l-4 14"/></symbol>
+      <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1" fill="currentColor" stroke="none"/></symbol>
+      <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+    </svg>
+
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navigation principale">
+        <a class="brand" href="./index.html" aria-label="Accueil KYA Platform">
+          <img src="./assets/kya-energy-group-logo.png" alt="KYA-Energy Group" />
+        </a>
+
+        <nav class="primary-nav">
+          <a class="nav-item is-active" href="#access" aria-current="page"><svg><use href="#i-home" /></svg><span>Accueil</span></a>
+          <a class="nav-item" href="#access"><svg><use href="#i-grid" /></svg><span>Mes accès</span></a>
+          <a class="nav-item" href="#catalog"><svg><use href="#i-database" /></svg><span>Catalogue</span></a>
+          <a class="nav-item" href="#factory"><svg><use href="#i-tool" /></svg><span>Fabrique</span></a>
+        </nav>
+
+        <nav class="admin-nav" aria-label="Administration">
+          <a class="nav-item nav-item--admin" href="#foundation">
+            <svg><use href="#i-gear" /></svg>
+            <span>Administration<br />du socle</span>
+            <i class="health-dot" aria-label="Socle opérationnel"></i>
+          </a>
+        </nav>
+
+        <div class="sidebar-context">
+          <span>Espace de travail</span>
+          <strong>KYA-Energy Group</strong>
+          <small>Groupe</small>
+          <span>Mon rôle</span>
+          <strong>Administrateur</strong>
+        </div>
+      </aside>
+
+      <div class="workspace">
+        <header class="topbar">
+          <button class="scope-switcher" type="button">
+            <span class="scope-icon"><svg><use href="#i-org" /></svg></span>
+            <strong>KYA-Energy Group</strong><span>/</span><span>Groupe</span>
+            <svg class="chevron"><use href="#i-chevron" /></svg>
+          </button>
+
+          <label class="command-search">
+            <svg><use href="#i-search" /></svg>
+            <span class="sr-only">Rechercher dans KYA Platform</span>
+            <input type="search" placeholder="Rechercher une capacité, une personne ou une donnée…" />
+            <kbd>Ctrl K</kbd>
+          </label>
+
+          <button class="connect-ai" type="button"><svg><use href="#i-plug" /></svg>Connecter mon IA</button>
+          <button class="icon-button" type="button" aria-label="Notifications"><svg><use href="#i-bell" /></svg><i></i></button>
+          <button class="account" type="button"><span>JC</span><strong>Jean-Claude</strong><svg><use href="#i-chevron" /></svg></button>
+        </header>
+
+        <main class="dashboard">
+          <section class="access-panel" id="access" aria-labelledby="access-title">
+            <header class="section-header">
+              <div>
+                <span class="breadcrumb">Accueil</span>
+                <h1 id="access-title">Mes accès</h1>
+                <p>Capacités autorisées pour votre rôle et votre unité.</p>
+              </div>
+              <a href="#catalog">Voir le catalogue complet <span aria-hidden="true">→</span></a>
+            </header>
+
+            <div class="access-tools">
+              <div class="tabs" aria-label="Filtrer par type de capacité">
+                <button class="is-active" aria-pressed="true" data-filter="all">Tous <span>6</span></button>
+                <button aria-pressed="false" data-filter="application">Applications <span>2</span></button>
+                <button aria-pressed="false" data-filter="mcp">MCP <span>2</span></button>
+                <button aria-pressed="false" data-filter="skill">Skills <span>1</span></button>
+                <button aria-pressed="false" data-filter="data">Données <span>1</span></button>
+              </div>
+              <label class="access-filter"><svg><use href="#i-search" /></svg><input type="search" placeholder="Filtrer mes accès…" /></label>
+            </div>
+
+            <div class="access-table" role="table" aria-label="Capacités accessibles">
+              <div class="access-row access-row--header" role="row">
+                <span role="columnheader">Nom</span><span role="columnheader">Propriétaire</span><span role="columnheader">Version</span><span role="columnheader">Statut</span><span role="columnheader">Action</span>
+              </div>
+
+              <article class="access-row" role="row" data-kind="mcp" data-search="kya platform mcp assistants ia">
+                <span class="asset" role="cell"><i><svg><use href="#i-database" /></svg></i><span><strong>KYA Platform MCP</strong><small>Accès unifié aux capacités KYA pour les assistants IA.</small></span></span>
+                <span role="cell">Équipe Plateforme</span><span role="cell">v1.2.0</span><span role="cell"><em class="status status--healthy">Connecté</em></span>
+                <span class="row-actions" role="cell"><button class="button button--primary" type="button">Ouvrir</button><button class="more" aria-label="Plus d’options"><svg><use href="#i-more" /></svg></button></span>
+              </article>
+
+              <article class="access-row" role="row" data-kind="skill" data-search="skill documents kya analyse synthèse documents">
+                <span class="asset" role="cell"><i><svg><use href="#i-brain" /></svg></i><span><strong>Skill Documents KYA</strong><small>Analyse et synthèse sécurisée de documents techniques.</small></span></span>
+                <span role="cell">Équipe Data</span><span role="cell">v2.1.0</span><span role="cell"><em class="status status--healthy">Installé</em></span>
+                <span class="row-actions" role="cell"><button class="button" type="button">Ouvrir</button><button class="more" aria-label="Plus d’options"><svg><use href="#i-more" /></svg></button></span>
+              </article>
+
+              <article class="access-row" role="row" data-kind="mcp" data-search="mcp veille sources énergie climat">
+                <span class="asset" role="cell"><i><svg><use href="#i-database" /></svg></i><span><strong>MCP Veille &amp; Sources</strong><small>Accès aux sources externes énergie et climat.</small></span></span>
+                <span role="cell">Équipe Data</span><span role="cell">v1.0.3</span><span role="cell"><em class="status status--healthy">Connecté</em></span>
+                <span class="row-actions" role="cell"><button class="button" type="button">Ouvrir</button><button class="more" aria-label="Plus d’options"><svg><use href="#i-more" /></svg></button></span>
+              </article>
+
+              <article class="access-row" id="factory" role="row" data-kind="application" data-search="fabrique skills concevoir tester publier">
+                <span class="asset asset--orange" role="cell"><i><svg><use href="#i-tool" /></svg></i><span><strong>Fabrique de Skills</strong><small>Concevoir, tester et publier des skills réutilisables.</small></span></span>
+                <span role="cell">Équipe Plateforme</span><span role="cell">v1.3.0</span><span role="cell"><em class="status status--available">Disponible</em></span>
+                <span class="row-actions" role="cell"><button class="button" type="button">Ouvrir</button><button class="more" aria-label="Plus d’options"><svg><use href="#i-more" /></svg></button></span>
+              </article>
+
+              <article class="access-row" role="row" data-kind="application" data-search="catalogue capacités applications mcp skills données">
+                <span class="asset" role="cell"><i><svg><use href="#i-cube" /></svg></i><span><strong>Catalogue des capacités</strong><small>Explorer les applications, MCP, Skills et jeux de données.</small></span></span>
+                <span role="cell">Équipe Gouvernance</span><span role="cell">v1.1.0</span><span role="cell"><em class="status status--available">Disponible</em></span>
+                <span class="row-actions" role="cell"><button class="button" type="button">Ouvrir</button><button class="more" aria-label="Plus d’options"><svg><use href="#i-more" /></svg></button></span>
+              </article>
+
+              <article class="access-row" role="row" data-kind="data" data-search="espace dst données outils référence">
+                <span class="asset" role="cell"><i><svg><use href="#i-file" /></svg></i><span><strong>Espace DST</strong><small>Données et outils de référence pour la DST.</small></span></span>
+                <span role="cell">Direction DST</span><span role="cell">v2.0.1</span><span role="cell"><em class="status status--healthy">Installé</em></span>
+                <span class="row-actions" role="cell"><button class="button" type="button">Ouvrir</button><button class="more" aria-label="Plus d’options"><svg><use href="#i-more" /></svg></button></span>
+              </article>
+
+              <p class="empty-state" role="status" hidden>Aucune capacité ne correspond à ce filtre.</p>
+            </div>
+          </section>
+
+          <aside class="action-rail" aria-label="Éléments à traiter et connexions">
+            <section class="decisions">
+              <header><div><h2>À traiter</h2><strong>3</strong></div><button class="text-action" type="button" disabled>Voir tout · bientôt</button></header>
+              <article class="decision"><i><svg><use href="#i-brain" /></svg></i><div><strong>Skill soumis pour publication</strong><span>Analyse réglementaire Afrique de l’Ouest</span><small>Marine Dupont · Unité DST</small><em>Skill</em></div><button type="button">Examiner</button></article>
+              <article class="decision"><i><svg><use href="#i-database" /></svg></i><div><strong>Demande d’accès à un MCP</strong><span>MCP Données Météo Globales</span><small>Lucas Bernard · Unité Analyse</small><em>Accès</em></div><button type="button">Examiner</button></article>
+              <article class="decision"><i><svg><use href="#i-cube" /></svg></i><div><strong>Nouvelle version d’application</strong><span>KYA-SolDesign v1.2.0</span><small>Équipe Produits · KYA-Energy</small><em>Application</em></div><button type="button">Examiner</button></article>
+            </section>
+
+            <section class="connections">
+              <header><h2>Connexions</h2><button class="text-action" type="button" disabled>Profils · bientôt</button></header>
+              <article><i class="connection-mark connection-mark--claude"><svg><use href="#i-brain" /></svg></i><div><strong>Claude</strong><span><b></b>Connecté</span><small>Profil : KYA</small></div><button aria-label="Options Claude"><svg><use href="#i-more" /></svg></button></article>
+              <article><i class="connection-mark"><svg><use href="#i-orbit" /></svg></i><div><strong>ChatGPT</strong><span><b></b>Connecté</span><small>Profil : KYA</small></div><button aria-label="Options ChatGPT"><svg><use href="#i-more" /></svg></button></article>
+              <article><i class="connection-mark connection-mark--code"><svg><use href="#i-code" /></svg></i><div><strong>VS Code</strong><span><b></b>8 outils actifs</span><small>Profil : Développement</small></div><button aria-label="Options VS Code"><svg><use href="#i-more" /></svg></button></article>
+            </section>
+          </aside>
+
+          <section class="foundation" id="foundation" aria-labelledby="foundation-title">
+            <header>
+              <div><h2 id="foundation-title">Administration du socle</h2><span class="foundation-health"><b></b>Socle opérationnel</span><p>Piloter les fondations communes de la plateforme.</p></div>
+              <button class="text-action text-action--inverse" type="button" disabled>Administration · bientôt</button>
+            </header>
+            <span class="mobile-scroll-hint">Faire glisser pour parcourir le socle →</span>
+            <div class="circuit" role="list" aria-label="Domaines du socle">
+              <span class="circuit-line" aria-hidden="true"></span>
+              <article role="listitem"><i><svg><use href="#i-org" /></svg></i><strong>Organisation</strong><span>Unités · postes · affectations</span><small><b></b>Configuré</small></article>
+              <article role="listitem" class="is-attention"><i><svg><use href="#i-users" /></svg></i><strong>Identités &amp; accès</strong><span>Utilisateurs · rôles · autorisations</span><small><b></b>À vérifier</small></article>
+              <article role="listitem"><i><svg><use href="#i-cube" /></svg></i><strong>Registre &amp; versions</strong><span>Composants · versions · cycles de vie</span><small><b></b>Opérationnel</small></article>
+              <article role="listitem"><i><svg><use href="#i-database" /></svg></i><strong>Données &amp; contrats</strong><span>Jeux de données · contrats d’usage</span><small><b></b>Opérationnel</small></article>
+              <article role="listitem" class="is-attention"><i><svg><use href="#i-plug" /></svg></i><strong>Intégrations &amp; secrets</strong><span>Connecteurs · API · coffres sécurisés</span><small><b></b>À vérifier</small></article>
+              <article role="listitem"><i><svg><use href="#i-shield" /></svg></i><strong>Déploiements &amp; audit</strong><span>Environnements · journaux · conformité</span><small><b></b>Opérationnel</small></article>
+              <svg class="circuit-plug" viewBox="0 0 46 32" aria-hidden="true"><path d="M1 16h18M19 8v16h11c7 0 12-5 12-12v-2M35 2v8M43 2v8" /></svg>
+            </div>
+          </section>
+
+          <section class="discover" id="catalog" aria-labelledby="discover-title">
+            <header><h2 id="discover-title">Découvrir dans le catalogue</h2><p>Capacités proposées selon votre rôle et votre unité.</p><a href="#catalog">Voir le catalogue →</a></header>
+            <div>
+              <article><i><svg><use href="#i-cube" /></svg></i><span><strong>KYA-Analyse IA</strong><small>Environnement d’analyse avancée pour données énergie-climat.</small></span><button type="button">Voir le détail</button></article>
+              <article><i><svg><use href="#i-database" /></svg></i><span><strong>Données Référentielles Énergie</strong><small>Jeux de données certifiés et documentés.</small></span><button type="button">Voir le détail</button></article>
+            </div>
+          </section>
+        </main>
+
+        <footer class="statusbar"><span><b></b>Plateforme opérationnelle</span><span>Prototype de design — données illustratives</span><span>Assistance</span><span>Documentation</span><span>Confidentialité</span></footer>
+      </div>
+    </div>
+
+    <div class="toast" role="status" aria-live="polite"></div>
+
+    <script>
+      const rows = [...document.querySelectorAll('.access-row[data-kind]')];
+      const tabs = [...document.querySelectorAll('[data-filter]')];
+      const filter = document.querySelector('.access-filter input');
+      const empty = document.querySelector('.empty-state');
+      const toast = document.querySelector('.toast');
+
+      function applyFilters() {
+        const activeKind = document.querySelector('[data-filter].is-active')?.dataset.filter ?? 'all';
+        const query = filter.value.trim().toLocaleLowerCase('fr');
+        let visible = 0;
+        rows.forEach((row) => {
+          const matchesKind = activeKind === 'all' || row.dataset.kind === activeKind;
+          const matchesQuery = !query || row.dataset.search.includes(query);
+          row.hidden = !(matchesKind && matchesQuery);
+          if (!row.hidden) visible += 1;
+        });
+        empty.hidden = visible !== 0;
+      }
+
+      tabs.forEach((tab) => tab.addEventListener('click', () => {
+        tabs.forEach((item) => {
+          item.classList.toggle('is-active', item === tab);
+          item.setAttribute('aria-pressed', String(item === tab));
+        });
+        applyFilters();
+      }));
+      filter.addEventListener('input', applyFilters);
+
+      document.addEventListener('keydown', (event) => {
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+          event.preventDefault();
+          document.querySelector('.command-search input').focus();
+        }
+      });
+
+      document.querySelectorAll('.button, .decision button, .connect-ai, .scope-switcher, .icon-button, .account, .connections article button').forEach((button) => {
+        button.addEventListener('click', () => {
+          toast.textContent = `${button.textContent.trim()} — prototype sans action externe.`;
+          toast.classList.add('is-visible');
+          window.setTimeout(() => toast.classList.remove('is-visible'), 2600);
+        });
+      });
+    </script>
+  </body>
+</html>
