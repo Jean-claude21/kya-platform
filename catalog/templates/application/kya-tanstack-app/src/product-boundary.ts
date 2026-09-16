@@ -1,4 +1,4 @@
-import { KyaPlatformClient, type KyaActiveContext } from '@kya/platform-sdk';
+import { KyaPlatformClient, type KyaActiveContext } from '@jean-claude21/kya-platform-sdk';
 
 export type KyaAppRuntime = Readonly<{
   apiUrl: string;

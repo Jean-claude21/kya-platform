@@ -1,4 +1,4 @@
-import { KyaPlatformClient, createIdempotencyKey } from '@kya/platform-sdk';
+import { KyaPlatformClient, createIdempotencyKey } from '@jean-claude21/kya-platform-sdk';
 
 import { getAccessToken } from '../auth/client';
 
