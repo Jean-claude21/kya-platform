@@ -17,6 +17,7 @@ applications and standards.
 - **Artifacts are products:** Skills, MCP servers, connectors and applications have owners, versions,
   integrity evidence and controlled release lifecycles.
 
-Start with the [architecture overview](architecture/overview.md) or inspect the
+Start with the [architecture overview](architecture/overview.md), review the
+[enterprise IT platform strategy](architecture/enterprise-it-platform-strategy.md), or inspect the
 [master artifact templates](artifacts/master-templates.md). Artifact clients should follow the
 [installation integrity contract](artifacts/installation-integrity.md).
