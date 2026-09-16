@@ -10,7 +10,7 @@ boundaries:
 3. **Effective authorization** — FastAPI validates the token and OpenFGA decides access in the
    active context. The interface may hide unavailable actions, but it is never the trust boundary.
 
-The shared `@kya/platform-sdk` package implements the request boundary. It injects the Bearer token,
+The shared `@jean-claude21/kya-platform-sdk` package implements the request boundary. It injects the Bearer token,
 `X-KYA-Unit-ID`, optional `X-KYA-Workspace-ID`, and idempotency keys. It preserves structured API
 errors so applications can distinguish authentication, permission, conflict, and availability
 failures.
@@ -20,6 +20,7 @@ organization, identities, clients, projects, permissions, catalogue metadata, au
 capabilities. An application references those records by identifier instead of copying them into a
 new source of truth.
 
-The current package is private to the monorepo while its API stabilizes. Publishing it to an
-internal package registry is a separate governed release step; external repositories must not copy
-an unpublished implementation by hand.
+The current package is published privately through GitHub Packages under the repository owner's
+scope. External repositories install immutable semantic versions rather than copying its source.
+When the repository moves to the future KYA GitHub organization, the package is republished under
+that organization's permanent scope.

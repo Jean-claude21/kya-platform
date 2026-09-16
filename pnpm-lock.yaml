@@ -65,12 +65,12 @@ importers:
 
   apps/web:
     dependencies:
+      '@jean-claude21/kya-platform-sdk':
+        specifier: workspace:*
+        version: link:../../packages/platform-sdk
       '@kya/design-system':
         specifier: workspace:*
         version: link:../../packages/design-system
-      '@kya/platform-sdk':
-        specifier: workspace:*
-        version: link:../../packages/platform-sdk
       '@neondatabase/auth':
         specifier: 0.5.0-beta
         version: 0.5.0-beta(77aca4fbe6dfcfcab73a0b4af0192698)
