@@ -43,12 +43,23 @@ jobs:
           env_value() {
             jq -er --arg key "$1" '[.[] | select(.key == $key and (.is_preview | not))] | if length == 1 then (.[0].real_value // .[0].value) elif length == 0 then error("required production variable is absent") else error("production variable is ambiguous") end' <<<"$envs"
           }
-          export FGA_API_URL="$(env_value KYA_OPENFGA_API_URL)"
-          export FGA_API_TOKEN="$(env_value KYA_OPENFGA_API_TOKEN)"
-          export FGA_STORE_ID="$(env_value KYA_OPENFGA_STORE_ID)"
+          normalize_env_value() {
+            local value="$1"
+            value="$(sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' <<<"$value")"
+            if [[ "$value" == \"*\" && "$value" == *\" ]] || [[ "$value" == \'*\' && "$value" == *\' ]]; then
+              value="${value:1:${#value}-2}"
+            fi
+            printf '%s' "$value"
+          }
+          export FGA_API_URL="$(normalize_env_value "$(env_value KYA_OPENFGA_API_URL)")"
+          export FGA_API_TOKEN="$(normalize_env_value "$(env_value KYA_OPENFGA_API_TOKEN)")"
+          export FGA_STORE_ID="$(normalize_env_value "$(env_value KYA_OPENFGA_STORE_ID)")"
           echo "::add-mask::$FGA_API_URL"
           echo "::add-mask::$FGA_API_TOKEN"
           echo "::add-mask::$FGA_STORE_ID"
+          [[ "$FGA_API_URL" =~ ^https?://[^[:space:]]+$ ]] || { echo "KYA_OPENFGA_API_URL is not a valid absolute HTTP(S) URL." >&2; exit 1; }
+          [[ -n "$FGA_API_TOKEN" ]] || { echo "KYA_OPENFGA_API_TOKEN is empty." >&2; exit 1; }
+          [[ -n "$FGA_STORE_ID" ]] || { echo "KYA_OPENFGA_STORE_ID is empty." >&2; exit 1; }
           result="$(docker run --rm --env FGA_API_URL --env FGA_API_TOKEN --volume "$PWD:/work" --workdir /work openfga/cli:v0.7.15@sha256:889801086b7b5d5239b9a2210e03e75ed8ff141bdfbe0238894bcb06d02d6780 model write --store-id="$FGA_STORE_ID" --file=tests/policy/kya-platform.fga)"
           model_id="$(jq -er '.authorization_model_id' <<<"$result")"
           curl --fail --silent --show-error --request PATCH --header "Authorization: Bearer $COOLIFY_API_TOKEN" --header "Content-Type: application/json" --data "$(jq -nc --arg value "$model_id" '{key: "KYA_OPENFGA_MODEL_ID", value: $value, is_preview: false, is_literal: true}')" "$api_root/applications/$application_uuid/envs" >/dev/null
