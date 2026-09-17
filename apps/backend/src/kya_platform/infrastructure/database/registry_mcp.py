@@ -333,6 +333,10 @@ class SqlAlchemyRegistryMcpBackend:
             name=detail.name,
             summary=detail.summary,
             latest_version=detail.latest_version,
+            owner_workspace_id=detail.owner_workspace_id,
+            visibility=detail.visibility,
+            visibility_scope_unit_id=detail.visibility_scope_unit_id,
+            lifecycle=detail.lifecycle,
             versions=detail.versions,
             installable=installable_release_id is not None,
         )
@@ -421,6 +425,12 @@ class SqlAlchemyRegistryMcpBackend:
             versions=versions,
             lifecycle=artifact.lifecycle,
             owner_workspace_id=str(artifact.owner_workspace_id),
+            visibility=artifact.visibility,
+            visibility_scope_unit_id=(
+                str(artifact.visibility_scope_unit_id)
+                if artifact.visibility_scope_unit_id is not None
+                else None
+            ),
             installable=any(row[1].status == "published" for row in rows),
             risk=latest.risk,
             source_repository=latest.source_repository,

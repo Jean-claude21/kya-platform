@@ -70,6 +70,8 @@ class CatalogDetail:
     versions: tuple[str, ...]
     lifecycle: str
     owner_workspace_id: str
+    visibility: str | None
+    visibility_scope_unit_id: str | None
     installable: bool
     risk: str
     source_repository: str

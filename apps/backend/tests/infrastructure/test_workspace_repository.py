@@ -119,6 +119,28 @@ async def test_get_resolves_linked_units_alongside_the_workspace() -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_by_id_returns_none_for_an_unknown_identifier() -> None:
+    session = Session(scalar_values=[None])
+    repository = SqlAlchemyWorkspaceRepository(Sessions(session))
+
+    result = await repository.get_by_id(PLATFORM)
+
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_get_by_id_resolves_linked_units_alongside_the_workspace() -> None:
+    session = Session(scalar_values=[platform_row()], scalars_values=[[CVSI]])
+    repository = SqlAlchemyWorkspaceRepository(Sessions(session))
+
+    result = await repository.get_by_id(PLATFORM)
+
+    assert result is not None
+    assert result.id == PLATFORM
+    assert result.linked_unit_ids == frozenset({CVSI})
+
+
+@pytest.mark.asyncio
 async def test_list_by_keys_returns_empty_without_querying_for_an_empty_request() -> None:
     session = Session()
     repository = SqlAlchemyWorkspaceRepository(Sessions(session))
