@@ -393,6 +393,8 @@ person, machine or cloud account.
 
 - [x] Complete typed HTTP and MCP proposal submission for Skills, MCP servers and applications.
 - [x] Make the GitHub App open controlled pull requests on behalf of users.
+- [x] Provide a permission-filtered Studio review queue with file inspection, deterministic evidence,
+      human approval or rejection, and server-governed GitHub pull-request creation.
 - [ ] Validate master templates, code, media, tests and security policy in CI.
 - [ ] Publish canonical manifests, release UUIDs, content digests and verification instructions.
 - [ ] Let AI clients install by human-friendly artifact ID and desired scope.

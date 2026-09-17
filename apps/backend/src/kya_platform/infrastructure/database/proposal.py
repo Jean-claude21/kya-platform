@@ -1,5 +1,6 @@
 """Transactional Neon adapter for non-developer capability proposals."""
 
+from collections.abc import Sequence
 from types import TracebackType
 from uuid import UUID
 
@@ -33,6 +34,8 @@ def _domain(row: CatalogProposal) -> Proposal:
         reviewer_id=row.reviewer_id,
         review_reason=row.review_reason,
         reviewed_at=row.reviewed_at,
+        business_owner_id=row.business_owner_id,
+        technical_owner_id=row.technical_owner_id,
         pull_request_url=row.pull_request_url,
         merged_commit_sha=row.merged_commit_sha,
         resulting_artifact_version_id=row.resulting_artifact_version_id,
@@ -64,6 +67,30 @@ class SqlAlchemyProposalRepository:
         )
         return int(count or 0)
 
+    async def list_for_workspace(
+        self,
+        workspace_id: UUID,
+        *,
+        status: ProposalStatus | None,
+        limit: int,
+    ) -> Sequence[ProposalRecord]:
+        statement = (
+            select(CatalogProposal)
+            .where(CatalogProposal.target_workspace_id == workspace_id)
+            .order_by(CatalogProposal.requested_at.desc(), CatalogProposal.id.desc())
+            .limit(limit)
+        )
+        if status is not None:
+            statement = statement.where(CatalogProposal.status == status.value)
+        rows = (await self._session.scalars(statement)).all()
+        return tuple(
+            ProposalRecord(
+                proposal=_domain(row),
+                package=ProposalPackage.model_validate(row.package),
+            )
+            for row in rows
+        )
+
     async def save(self, proposal: Proposal, *, package: ProposalPackage) -> None:
         row = await self._session.scalar(
             select(CatalogProposal).where(CatalogProposal.id == proposal.id).with_for_update()
@@ -92,6 +119,8 @@ class SqlAlchemyProposalRepository:
             row.review_decision = "rejected"
         row.review_reason = proposal.review_reason
         row.reviewed_at = proposal.reviewed_at
+        row.business_owner_id = proposal.business_owner_id
+        row.technical_owner_id = proposal.technical_owner_id
         row.pull_request_url = proposal.pull_request_url
         row.merged_commit_sha = proposal.merged_commit_sha
         row.resulting_artifact_version_id = proposal.resulting_artifact_version_id
