@@ -28,7 +28,11 @@ from kya_platform.mcp.registry import (
     ToolAuthorizer,
 )
 from kya_platform.mcp.registry.contracts import REGISTRY_TOOLS
-from kya_platform.mcp.registry.server import RegistryGuard, create_registry_server
+from kya_platform.mcp.registry.server import (
+    RegistryGuard,
+    ResolvedWorkspace,
+    create_registry_server,
+)
 
 
 @dataclass
@@ -254,6 +258,7 @@ class DetailBackend(SearchBackend):
             artifact_type="skill",
             name="Méthode métier KYA",
             latest_version="0.1.0",
+            lifecycle="published",
             versions=("0.1.0",),
             installable=True,
         )
@@ -451,9 +456,12 @@ class InstallBackend(SearchBackend):
 class ProposalBackend:
     last_request: Any = None
 
-    async def resolve_workspace_id(self, workspace_key: str) -> UUID | None:
+    async def resolve_workspace(self, workspace_key: str) -> ResolvedWorkspace | None:
         assert workspace_key == "dss"
-        return UUID("01991e00-0000-7000-8000-000000000071")
+        return ResolvedWorkspace(
+            id=UUID("01991e00-0000-7000-8000-000000000071"),
+            key="dss",
+        )
 
     async def submit_artifact_proposal(self, request: Any, **context: Any) -> Any:
         self.last_request = request, context

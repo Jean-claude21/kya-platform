@@ -212,6 +212,9 @@ async def test_get_returns_versions_and_installability_without_package_content()
 
     assert detail.versions == ("1.0.0", "0.9.0")
     assert detail.installable is True
+    assert detail.lifecycle == "draft"
+    assert detail.owner_workspace_id == str(WORKSPACE)
+    assert detail.visibility == "private"
     assert "installable_releases" not in detail.model_dump()
 
 

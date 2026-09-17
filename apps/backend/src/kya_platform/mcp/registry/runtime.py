@@ -36,7 +36,7 @@ from kya_platform.mcp.registry.contracts import (
     ArtifactProposalAccepted,
     SubmitArtifactProposalInput,
 )
-from kya_platform.mcp.registry.server import RegistryBackend
+from kya_platform.mcp.registry.server import RegistryBackend, ResolvedWorkspace
 
 
 class StateToolSetProvider:
@@ -180,9 +180,28 @@ class StateProposalMcpBackend:
             raise ToolError("workspace_service_unavailable")
         return workspaces
 
-    async def resolve_workspace_id(self, workspace_key: str) -> UUID | None:
-        workspace = await self._workspaces().get(workspace_key)
-        return workspace.id if workspace is not None else None
+    async def resolve_workspace(self, workspace_reference: str) -> ResolvedWorkspace | None:
+        reference = workspace_reference.removeprefix("workspace:").strip()
+        try:
+            workspace_id = UUID(reference)
+        except ValueError:
+            workspace_id = None
+        if workspace_id is not None:
+            workspace = await self._workspaces().get_by_id(workspace_id)
+            return (
+                ResolvedWorkspace(id=workspace.id, key=workspace.key)
+                if workspace is not None
+                else None
+            )
+
+        workspace = await self._workspaces().get(reference)
+        if workspace is None and reference == "kya-platform":
+            workspace = await self._workspaces().get("platform")
+        return (
+            ResolvedWorkspace(id=workspace.id, key=workspace.key)
+            if workspace is not None
+            else None
+        )
 
     async def submit_artifact_proposal(
         self,

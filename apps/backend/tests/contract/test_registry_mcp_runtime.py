@@ -168,12 +168,13 @@ async def test_state_proposal_backend_resolves_workspace_and_submits_mixed_packa
     state.workspace_queries = None
     adapter = StateProposalMcpBackend(state)
     with pytest.raises(ToolError, match="workspace_service_unavailable"):
-        await adapter.resolve_workspace_id("dss")
+        await adapter.resolve_workspace("dss")
 
     workspace_id = UUID("01991e00-0000-7000-8000-000000000071")
     proposal_id = UUID("01991e00-0000-7000-8000-000000000081")
     workspaces = AsyncMock()
-    workspaces.get.return_value = SimpleNamespace(id=workspace_id)
+    workspaces.get.return_value = SimpleNamespace(id=workspace_id, key="dss")
+    workspaces.get_by_id.return_value = SimpleNamespace(id=workspace_id, key="dss")
     service = AsyncMock()
     service.submit.return_value = SimpleNamespace(id=proposal_id)
     state.workspace_queries = workspaces
@@ -205,7 +206,11 @@ async def test_state_proposal_backend_resolves_workspace_and_submits_mixed_packa
     actor_id = UUID("01991e00-0000-7000-8000-000000000003")
     correlation_id = UUID("01991e00-0000-7000-8000-000000000004")
 
-    assert await adapter.resolve_workspace_id("dss") == workspace_id
+    assert (await adapter.resolve_workspace("dss")).id == workspace_id  # type: ignore[union-attr]
+    assert (await adapter.resolve_workspace(str(workspace_id))).id == workspace_id  # type: ignore[union-attr]
+    assert (
+        await adapter.resolve_workspace(f"workspace:{workspace_id}")
+    ).id == workspace_id  # type: ignore[union-attr]
     result = await adapter.submit_artifact_proposal(
         request,
         target_workspace_id=workspace_id,
@@ -220,6 +225,26 @@ async def test_state_proposal_backend_resolves_workspace_and_submits_mixed_packa
     assert submitted["artifact_type"].value == "app"
     assert submitted["package"].files[1].decoded() == b"{}"
     assert submitted["package"].files[2].decoded() == b"\x89PNG\r\n\x1a\n"
+
+
+@pytest.mark.asyncio
+async def test_state_proposal_backend_resolves_platform_alias() -> None:
+    state = State()
+    workspace_id = UUID("01991e00-0000-7000-8000-000000000071")
+    workspaces = AsyncMock()
+    workspaces.get.side_effect = [None, SimpleNamespace(id=workspace_id, key="platform")]
+    state.workspace_queries = workspaces
+
+    adapter = StateProposalMcpBackend(state)
+
+    resolved = await adapter.resolve_workspace("kya-platform")
+    assert resolved is not None
+    assert resolved.id == workspace_id
+    assert resolved.key == "platform"
+    assert [call.args[0] for call in workspaces.get.await_args_list] == [
+        "kya-platform",
+        "platform",
+    ]
 
 
 @pytest.mark.asyncio
