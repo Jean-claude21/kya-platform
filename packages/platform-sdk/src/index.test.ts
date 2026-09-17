@@ -3,6 +3,33 @@ import { describe, expect, it, vi } from 'vitest';
 import { KyaPlatformClient, createIdempotencyKey } from './index';
 
 describe('KyaPlatformClient', () => {
+  it('preserves the browser receiver when using the global fetch implementation', async () => {
+    const browserFetch = vi.fn(function (this: unknown) {
+      if (this !== globalThis) throw new TypeError('Illegal invocation');
+      return Promise.resolve(
+        new Response(JSON.stringify({ items: [] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+    }) as unknown as typeof globalThis.fetch;
+    vi.stubGlobal('fetch', browserFetch);
+
+    try {
+      const client = new KyaPlatformClient({
+        apiUrl: 'https://api.kya.example',
+        getAccessToken: () => Promise.resolve('access-token'),
+        getActiveContext: () => ({ unitId: 'group' }),
+      });
+
+      await client.listWorkspaces();
+
+      expect(browserFetch).toHaveBeenCalledOnce();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('adds identity and organizational context to every request', async () => {
     const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(
       new Response(JSON.stringify({ items: [] }), {

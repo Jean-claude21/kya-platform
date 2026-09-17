@@ -76,7 +76,11 @@ export class KyaPlatformClient {
     this.#apiUrl = normalizeApiUrl(options.apiUrl);
     this.#getAccessToken = options.getAccessToken;
     this.#getActiveContext = options.getActiveContext;
-    this.#fetch = options.fetch ?? globalThis.fetch;
+    // Browser implementations require `fetch` to be called with the global
+    // object as its receiver. Keeping the bare function in a class field and
+    // invoking it through `this.#fetch(...)` otherwise changes the receiver to
+    // the SDK instance and fails before the request reaches KYA-Platform.
+    this.#fetch = options.fetch ?? globalThis.fetch.bind(globalThis);
   }
 
   async request<T>(
