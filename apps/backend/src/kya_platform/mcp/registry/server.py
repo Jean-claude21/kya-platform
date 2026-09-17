@@ -3,6 +3,7 @@
 import hashlib
 import json
 from collections.abc import Awaitable, Callable, Mapping
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Protocol
 from uuid import UUID, uuid7
@@ -104,8 +105,14 @@ class RegistryBackend(Protocol):
     async def publish_candidate(self, request: PublishCandidateInput) -> PublicationAccepted: ...
 
 
+@dataclass(frozen=True, slots=True)
+class ResolvedWorkspace:
+    id: UUID
+    key: str
+
+
 class ProposalMcpBackend(Protocol):
-    async def resolve_workspace_id(self, workspace_key: str) -> UUID | None: ...
+    async def resolve_workspace(self, workspace_reference: str) -> ResolvedWorkspace | None: ...
 
     async def submit_artifact_proposal(
         self,
@@ -556,10 +563,10 @@ def create_registry_server(
         """
         if proposal_backend is None:
             raise ToolError("proposal_service_unavailable")
-        target_workspace_id = await proposal_backend.resolve_workspace_id(target_workspace)
-        if target_workspace_id is None:
+        resolved_workspace = await proposal_backend.resolve_workspace(target_workspace)
+        if resolved_workspace is None:
             raise ToolError("workspace_not_found")
-        await guard.require("submit_artifact_proposal", target_workspace)
+        await guard.require("submit_artifact_proposal", resolved_workspace.key)
         internal_artifact_id = None
         if artifact_id is not None:
             internal_artifact_id = await backend.resolve_artifact_id(artifact_id)
@@ -589,7 +596,7 @@ def create_registry_server(
                 idempotency_key=idempotency_key,
                 confirmation=confirmation or Confirmation(confirmed=True),
             ),
-            target_workspace_id=target_workspace_id,
+            target_workspace_id=resolved_workspace.id,
             artifact_id=internal_artifact_id,
             actor_id=guard.principal_id("submit_artifact_proposal"),
             correlation_id=uuid7(),

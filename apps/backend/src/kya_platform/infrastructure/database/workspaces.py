@@ -53,6 +53,18 @@ class SqlAlchemyWorkspaceRepository:
             )
             return _workspace(row, frozenset(linked))
 
+    async def get_by_id(self, workspace_id: UUID) -> Workspace | None:
+        async with self._sessions() as session:
+            row = await session.scalar(select(WorkspaceRow).where(WorkspaceRow.id == workspace_id))
+            if row is None:
+                return None
+            linked = await session.scalars(
+                select(WorkspaceLinkedUnitRow.unit_id).where(
+                    WorkspaceLinkedUnitRow.workspace_id == row.id
+                )
+            )
+            return _workspace(row, frozenset(linked))
+
     async def list_by_keys(self, workspace_keys: Sequence[str]) -> Sequence[Workspace]:
         if not workspace_keys:
             return ()

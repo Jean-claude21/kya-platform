@@ -139,6 +139,8 @@ class Catalog:
             versions=("1.0.0", "0.9.0"),
             lifecycle="published",
             owner_workspace_id=WORKSPACE_ID,
+            visibility="private",
+            visibility_scope_unit_id=None,
             installable=True,
             risk="read",
             source_repository="https://github.com/kya-energy/kya-platform",

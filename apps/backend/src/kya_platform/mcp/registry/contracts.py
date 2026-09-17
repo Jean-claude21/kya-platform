@@ -161,6 +161,7 @@ class SearchCatalogOutput(StrictMcpContract):
 
 
 class ArtifactDetail(ArtifactSummary):
+    lifecycle: str
     versions: tuple[str, ...]
     installable: bool
 

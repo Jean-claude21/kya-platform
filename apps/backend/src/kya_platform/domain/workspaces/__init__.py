@@ -86,6 +86,9 @@ class WorkspaceQueryPort(Protocol):
     async def get(self, workspace_key: str) -> Workspace | None:
         """Load one workspace after an access decision."""
 
+    async def get_by_id(self, workspace_id: UUID) -> Workspace | None:
+        """Load one workspace by its stable identifier after an access decision."""
+
     async def list_by_keys(self, workspace_keys: Sequence[str]) -> Sequence[Workspace]:
         """Load only keys already filtered by the authorization provider."""
 
