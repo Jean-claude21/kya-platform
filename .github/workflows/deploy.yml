@@ -81,13 +81,15 @@ jobs:
     environment: ${{ inputs.environment }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-      - name: Deploy KYA-Platform backend through Coolify
+      - name: Deploy KYA-Platform applications through Coolify
         if: inputs.provider == 'coolify'
         env:
           COOLIFY_API_URL: ${{ secrets.COOLIFY_API_URL }}
           COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
-          APPLICATION_NAME: kya-platform-backend
-          APPLICATION_HOST: api.kya-platform.vttlife.com
+          BACKEND_APPLICATION_NAME: kya-platform-backend
+          BACKEND_APPLICATION_HOST: api.kya-platform.vttlife.com
+          WEB_APPLICATION_NAME: kya-platform-web
+          WEB_APPLICATION_HOST: kya-platform.vttlife.com
         run: |
           set -euo pipefail
           api_root="${COOLIFY_API_URL%/}"
@@ -99,52 +101,52 @@ jobs:
             --retry 3 \
             --header "Authorization: Bearer $COOLIFY_API_TOKEN" \
             "$api_root/applications")"
-          application_uuid="$(jq -er \
-            --arg name "$APPLICATION_NAME" \
-            --arg host "$APPLICATION_HOST" \
-            '[.[] | select(
-               .name == $name and
-               ((.fqdn // "") | contains($host))
-             )] |
-             if length == 1 then .[0].uuid
-             elif length == 0 then error("Coolify application not found for name, branch, and host")
-             else error("Coolify application selection is ambiguous") end' \
-            <<<"$applications")"
 
-          curl --fail --silent --show-error \
-            --request PATCH \
-            --header "Authorization: Bearer $COOLIFY_API_TOKEN" \
-            --header "Content-Type: application/json" \
-            --data "$(jq -nc \
-              --arg branch "$GITHUB_REF_NAME" \
-              --arg commit "${{ inputs.source_commit }}" \
-              '{git_branch: $branch, git_commit_sha: $commit}')" \
-            "$api_root/applications/$application_uuid" >/dev/null
-
-          deployment="$(curl --fail --silent --show-error \
-            --request POST \
-            --header "Authorization: Bearer $COOLIFY_API_TOKEN" \
-            "$api_root/deploy?uuid=$application_uuid&force=true")"
-          deployment_uuid="$(jq -er '.deployments[0].deployment_uuid' <<<"$deployment")"
-
-          for attempt in $(seq 1 60); do
-            status="$(curl --fail --silent --show-error \
+          deploy_application() {
+            local application_name="$1"
+            local application_host="$2"
+            local application_uuid deployment deployment_uuid status
+            application_uuid="$(jq -er \
+              --arg name "$application_name" \
+              --arg host "$application_host" \
+              '[.[] | select(.name == $name and ((.fqdn // "") | contains($host)))] |
+               if length == 1 then .[0].uuid
+               elif length == 0 then error("Coolify application not found")
+               else error("Coolify application selection is ambiguous") end' \
+              <<<"$applications")"
+            curl --fail --silent --show-error \
+              --request PATCH \
               --header "Authorization: Bearer $COOLIFY_API_TOKEN" \
-              "$api_root/deployments/$deployment_uuid" | jq -er '.status')"
-            case "$status" in
-              finished)
-                echo "Coolify deployment $deployment_uuid finished."
-                exit 0
-                ;;
-              failed|cancelled)
-                echo "Coolify deployment $deployment_uuid ended with status $status." >&2
-                exit 1
-                ;;
-            esac
-            sleep 10
-          done
-          echo "Coolify deployment $deployment_uuid did not finish within 10 minutes." >&2
-          exit 1
+              --header "Content-Type: application/json" \
+              --data "$(jq -nc \
+                --arg branch "$GITHUB_REF_NAME" \
+                --arg commit "${{ inputs.source_commit }}" \
+                '{git_branch: $branch, git_commit_sha: $commit}')" \
+              "$api_root/applications/$application_uuid" >/dev/null
+            deployment="$(curl --fail --silent --show-error \
+              --request POST \
+              --header "Authorization: Bearer $COOLIFY_API_TOKEN" \
+              "$api_root/deploy?uuid=$application_uuid&force=true")"
+            deployment_uuid="$(jq -er '.deployments[0].deployment_uuid' <<<"$deployment")"
+            for attempt in $(seq 1 60); do
+              status="$(curl --fail --silent --show-error \
+                --header "Authorization: Bearer $COOLIFY_API_TOKEN" \
+                "$api_root/deployments/$deployment_uuid" | jq -er '.status')"
+              case "$status" in
+                finished) echo "$application_name deployment finished."; return 0 ;;
+                failed|cancelled)
+                  echo "$application_name deployment ended with status $status." >&2
+                  return 1
+                  ;;
+              esac
+              sleep 10
+            done
+            echo "$application_name deployment did not finish within 10 minutes." >&2
+            return 1
+          }
+
+          deploy_application "$BACKEND_APPLICATION_NAME" "$BACKEND_APPLICATION_HOST"
+          deploy_application "$WEB_APPLICATION_NAME" "$WEB_APPLICATION_HOST"
 
       - name: Reject unimplemented deployment providers
         if: inputs.provider != 'coolify'
