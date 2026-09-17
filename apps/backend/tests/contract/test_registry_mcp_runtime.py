@@ -208,9 +208,7 @@ async def test_state_proposal_backend_resolves_workspace_and_submits_mixed_packa
 
     assert (await adapter.resolve_workspace("dss")).id == workspace_id  # type: ignore[union-attr]
     assert (await adapter.resolve_workspace(str(workspace_id))).id == workspace_id  # type: ignore[union-attr]
-    assert (
-        await adapter.resolve_workspace(f"workspace:{workspace_id}")
-    ).id == workspace_id  # type: ignore[union-attr]
+    assert (await adapter.resolve_workspace(f"workspace:{workspace_id}")).id == workspace_id  # type: ignore[union-attr]
     result = await adapter.submit_artifact_proposal(
         request,
         target_workspace_id=workspace_id,

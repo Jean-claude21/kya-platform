@@ -198,9 +198,7 @@ class StateProposalMcpBackend:
         if workspace is None and reference == "kya-platform":
             workspace = await self._workspaces().get("platform")
         return (
-            ResolvedWorkspace(id=workspace.id, key=workspace.key)
-            if workspace is not None
-            else None
+            ResolvedWorkspace(id=workspace.id, key=workspace.key) if workspace is not None else None
         )
 
     async def submit_artifact_proposal(
