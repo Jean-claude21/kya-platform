@@ -165,7 +165,7 @@ def test_authorized_member_submits_a_proposal_without_a_git_commit(app: FastAPI)
     assert response.status_code == 201
     assert response.json()["status"] == ProposalStatus.SUBMITTED.value
     assert response.json()["merged_commit_sha"] is None
-    assert policy.checks[0].relation == "can_propose"
+    assert policy.checks[0].relation == "can_view"
     assert policy.checks[0].object == f"workspace:{WORKSPACE}"
     assert commands.submissions[0]["requested_by"] == AUTHOR
 

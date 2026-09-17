@@ -226,7 +226,10 @@ async def create_proposal(
     await _require_permission(
         request,
         principal,
-        relation="can_propose",
+        # The current model defines workspace can_propose as can_view.  Use the
+        # stable relation so HTTP and MCP submissions remain compatible while
+        # the production authorization model is upgraded independently.
+        relation="can_view",
         object_type="workspace",
         object_id=str(payload.target_workspace_id),
     )
