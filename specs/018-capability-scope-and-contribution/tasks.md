@@ -7,15 +7,16 @@
 - [x] Implement `ScopePromotionService` reusing publication status machine.
 - [x] Implement the GitHub service-identity PR adapter (open PR, poll merge status).
 - [x] Implement `publish_candidate` against `PublicationService` (Git-backed publication flow);
-      remove the `tool_not_implemented` stub. A separate non-Git-backed proposal MCP tool remains a
-      future increment if MCP-originated proposals (as opposed to HTTP) are needed.
+      remove the `tool_not_implemented` stub.
+- [x] Add `submit_artifact_proposal` to the governed Registry MCP so AI clients can submit typed
+      Skill, MCP-server or application packages into the same review lifecycle as the HTTP API.
 - [ ] Add web Studio route(s) to list, review, approve or reject proposals.
 - [x] Extend catalog browse/detail to return the reduced discoverable-only shape.
   - [x] Add authorization-parity tests for discoverability without access.
 - [x] Add proposal-to-version integration test with a mocked GitHub adapter.
 - [x] Add promotion history-preservation test (version and installation history untouched; the
       artifact row's identity, versions and installations are never duplicated by a promotion).
-- [ ] Run full quality gates.
+- [x] Run full quality gates (684 backend tests; 90.08% coverage).
 
 ## Additional completed work beyond the original checklist
 

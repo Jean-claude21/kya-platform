@@ -14,6 +14,7 @@ import jwt
 from pydantic import SecretStr
 
 from kya_platform.contracts.proposal_package import ProposalPackage
+from kya_platform.domain.catalog import ArtifactType
 
 JsonObject = dict[str, object]
 
@@ -65,6 +66,7 @@ class GitHubAppPullRequestAdapter:
         *,
         repository: str,
         slug: str,
+        artifact_type: ArtifactType,
         package: ProposalPackage,
         required_approver_id: UUID,
         proposal_id: UUID,
@@ -79,7 +81,7 @@ class GitHubAppPullRequestAdapter:
             f"/repos/{repository}/git/ref/heads/{self._base_branch}", headers
         )
         base_sha = _string_field(_nested_object(base_ref, "object"), "sha")
-        branch_name = f"proposals/{slug}-{proposal_id.hex[:12]}"
+        branch_name = f"feat-proposal-{slug}-{proposal_id.hex[:12]}"
         await self._post(
             f"/repos/{repository}/git/refs",
             headers,
@@ -87,7 +89,18 @@ class GitHubAppPullRequestAdapter:
         )
         base_commit = await self._get(f"/repos/{repository}/git/commits/{base_sha}", headers)
         base_tree_sha = _string_field(_nested_object(base_commit, "tree"), "sha")
-        prefix = f"catalog/templates/proposals/{slug}"
+        source_directories = {
+            ArtifactType.SKILL: "skill",
+            ArtifactType.MCP_SERVER: "mcp-server",
+            ArtifactType.APPLICATION: "application",
+        }
+        try:
+            source_directory = source_directories[artifact_type]
+        except KeyError as error:
+            raise ValueError(
+                f"unsupported proposal artifact type: {artifact_type.value}"
+            ) from error
+        prefix = f"catalog/sources/{source_directory}/{slug}"
         tree_entries: list[JsonObject] = []
         for file in package.files:
             blob = await self._post(

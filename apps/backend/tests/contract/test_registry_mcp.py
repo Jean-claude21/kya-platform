@@ -16,6 +16,7 @@ from kya_platform.contracts.artifact_manifest import ArtifactType
 from kya_platform.contracts.installation_plan import InstallationPlan, build_installation_plan
 from kya_platform.mcp.registry import (
     ArtifactDetail,
+    ArtifactProposalAccepted,
     ArtifactSummary,
     Confirmation,
     InstallationRecorded,
@@ -445,6 +446,73 @@ class InstallBackend(SearchBackend):
             file_count=3,
             package_size=1024,
         )
+
+
+class ProposalBackend:
+    last_request: Any = None
+
+    async def resolve_workspace_id(self, workspace_key: str) -> UUID | None:
+        assert workspace_key == "dss"
+        return UUID("01991e00-0000-7000-8000-000000000071")
+
+    async def submit_artifact_proposal(self, request: Any, **context: Any) -> Any:
+        self.last_request = request, context
+        return ArtifactProposalAccepted(proposal_id=UUID("01991e00-0000-7000-8000-000000000081"))
+
+
+@pytest.mark.asyncio
+async def test_registry_server_submits_an_application_proposal_with_safe_defaults() -> None:
+    principal = "01991e00-0000-7000-8000-000000000003"
+    token = AccessToken(
+        token="opaque-publish-token",
+        client_id="claude-ai",
+        subject=principal,
+        scopes=["catalog:publish"],
+        claims={"active_unit": "dss", "iss": "https://auth.example.test"},
+    )
+    proposals = ProposalBackend()
+    policy = RecordingPolicy(allowed=True, checks=[])
+    server = create_registry_server(
+        backend=SearchBackend(),
+        authorization=AuthorizationService(policy),
+        token_verifier=NoopTokenVerifier(),
+        issuer_url="https://auth.example.test",
+        resource_url="https://registry.example.test/mcp",
+        access_token_provider=lambda: token,
+        proposal_backend=proposals,
+    )
+
+    async with Client(server) as client:
+        result = await client.call_tool(
+            "submit_artifact_proposal",
+            {
+                "target_workspace": "dss",
+                "slug": "solar-operations",
+                "artifact_type": "app",
+                "files": [
+                    {
+                        "path": "artifact.manifest.json",
+                        "kind": "manifest",
+                        "content": "{}",
+                    },
+                    {"path": "package.json", "kind": "metadata", "content": "{}"},
+                ],
+            },
+        )
+
+    assert result.is_error is False
+    assert result.structured_content == {
+        "proposal_id": "01991e00-0000-7000-8000-000000000081",
+        "status": "submitted",
+        "review_required": True,
+    }
+    assert policy.checks[0].relation == "can_propose"
+    assert policy.checks[0].object == "workspace:dss"
+    assert proposals.last_request is not None
+    request, context = proposals.last_request
+    assert request.confirmation.confirmed is True
+    assert request.idempotency_key.startswith("proposal:")
+    assert context["actor_id"] == UUID(principal)
 
 
 @pytest.mark.asyncio

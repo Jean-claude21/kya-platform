@@ -36,10 +36,32 @@ def package() -> ProposalPackage:
     return ProposalPackage(
         files=[
             ProposalFile(
+                path="artifact.manifest.json",
+                kind=PackageFileKind.MANIFEST,
+                content_base64="e30=",
+            ),
+            ProposalFile(
                 path="SKILL.md",
                 kind=PackageFileKind.INSTRUCTION,
                 content_base64="LS0tCm5hbWU6IHNvbGFyLWJyaWVmCi0tLQo=",
-            )
+            ),
+        ]
+    )
+
+
+def app_package() -> ProposalPackage:
+    return ProposalPackage(
+        files=[
+            ProposalFile(
+                path="artifact.manifest.json",
+                kind=PackageFileKind.MANIFEST,
+                content_base64="e30=",
+            ),
+            ProposalFile(
+                path="package.json",
+                kind=PackageFileKind.METADATA,
+                content_base64="e30=",
+            ),
         ]
     )
 
@@ -98,6 +120,7 @@ class FakePullRequests:
         *,
         repository: str,
         slug: str,
+        artifact_type: ArtifactType,
         package: ProposalPackage,
         required_approver_id: UUID,
         proposal_id: UUID,
@@ -143,16 +166,69 @@ async def test_submission_requires_no_git_commit_and_emits_one_event() -> None:
 
 @pytest.mark.asyncio
 @pytest.mark.unit
+async def test_application_submission_uses_the_same_governed_proposal_path() -> None:
+    proposals = FakeProposals()
+    service, unit_of_work = build_service(proposals, FakePullRequests())
+
+    proposal = await service.submit(
+        proposal_id=PROPOSAL,
+        target_workspace_id=WORKSPACE,
+        slug="solar-operations",
+        artifact_type=ArtifactType.APPLICATION,
+        artifact_id=None,
+        package=app_package(),
+        requested_by=AUTHOR,
+        at=NOW,
+        correlation_id=CORRELATION,
+    )
+
+    assert proposal.artifact_type is ArtifactType.APPLICATION
+    assert proposal.status is ProposalStatus.SUBMITTED
+    assert unit_of_work.commits == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.unit
+async def test_submission_is_idempotent_for_the_same_proposal_identifier() -> None:
+    proposals = FakeProposals()
+    service, unit_of_work = build_service(proposals, FakePullRequests())
+    values = {
+        "proposal_id": PROPOSAL,
+        "target_workspace_id": WORKSPACE,
+        "slug": "solar-brief",
+        "artifact_type": ArtifactType.SKILL,
+        "artifact_id": None,
+        "package": package(),
+        "requested_by": AUTHOR,
+        "at": NOW,
+        "correlation_id": CORRELATION,
+    }
+
+    first = await service.submit(**values)
+    second = await service.submit(**values)
+
+    assert second == first
+    assert unit_of_work.commits == 1
+    assert [message.topic for message in unit_of_work.outbox.messages] == ["proposal.submitted"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.unit
 async def test_submission_rejects_a_secret_before_any_reviewer_sees_it() -> None:
     proposals = FakeProposals()
     service, unit_of_work = build_service(proposals, FakePullRequests())
     unsafe = ProposalPackage(
         files=[
             ProposalFile(
+                path="artifact.manifest.json",
+                kind=PackageFileKind.MANIFEST,
+                content_base64="e30=",
+            ),
+            ProposalFile(
                 path="SKILL.md",
                 kind=PackageFileKind.INSTRUCTION,
                 content_base64="c2stMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2",
-            )
+            ),
         ]
     )
 

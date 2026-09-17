@@ -76,6 +76,7 @@ class PullRequestPort(Protocol):
         *,
         repository: str,
         slug: str,
+        artifact_type: ArtifactType,
         package: ProposalPackage,
         required_approver_id: UUID,
         proposal_id: UUID,
@@ -114,7 +115,7 @@ class ProposalService:
         correlation_id: UUID,
     ) -> Proposal:
         try:
-            validate_proposal_package(package)
+            validate_proposal_package(package, artifact_type)
         except ProposalValidationError:
             raise
         proposal = Proposal.open(
@@ -127,6 +128,19 @@ class ProposalService:
             requested_at=at,
         )
         async with self._unit_of_work_factory() as unit_of_work:
+            existing = await unit_of_work.proposals.get(proposal_id)
+            if existing is not None:
+                same_request = (
+                    existing.proposal.target_workspace_id == target_workspace_id
+                    and existing.proposal.slug == slug
+                    and existing.proposal.artifact_type is artifact_type
+                    and existing.proposal.artifact_id == artifact_id
+                    and existing.proposal.requested_by == requested_by
+                    and existing.package == package
+                )
+                if not same_request:
+                    raise ValueError("idempotency key already identifies another proposal")
+                return existing.proposal
             open_count = await unit_of_work.proposals.count_open_for_author(requested_by)
             if open_count >= MAX_OPEN_PROPOSALS_PER_AUTHOR:
                 raise ProposalQuotaExceededError(
@@ -191,6 +205,7 @@ class ProposalService:
             pull_request_url = await self._pull_requests.open_pull_request(
                 repository=repository,
                 slug=record.proposal.slug,
+                artifact_type=record.proposal.artifact_type,
                 package=record.package,
                 required_approver_id=record.proposal.reviewer_id or record.proposal.requested_by,
                 proposal_id=proposal_id,

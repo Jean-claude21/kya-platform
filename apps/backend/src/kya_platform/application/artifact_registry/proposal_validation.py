@@ -11,6 +11,7 @@ from pathlib import PurePosixPath
 
 from kya_platform.contracts.artifact_package import MAX_PACKAGE_BYTES
 from kya_platform.contracts.proposal_package import ProposalPackage
+from kya_platform.domain.catalog import ArtifactType
 
 _TEXT_SCAN_LIMIT = 2 * 1024 * 1024
 _NATIVE_SUFFIXES = frozenset({".exe", ".dll", ".so", ".dylib", ".com", ".msi"})
@@ -29,8 +30,29 @@ class ProposalValidationError(ValueError):
     """The submitted proposal package cannot safely enter the review queue."""
 
 
-def validate_proposal_package(package: ProposalPackage) -> None:
+_REQUIRED_FILES: dict[ArtifactType, frozenset[str]] = {
+    ArtifactType.SKILL: frozenset({"artifact.manifest.json", "SKILL.md"}),
+    ArtifactType.APPLICATION: frozenset({"artifact.manifest.json", "package.json"}),
+    ArtifactType.MCP_SERVER: frozenset(
+        {"artifact.manifest.json", "capability.manifest.json", "pyproject.toml"}
+    ),
+}
+
+
+def validate_proposal_package(package: ProposalPackage, artifact_type: ArtifactType) -> None:
     """Raise ProposalValidationError for anything unsafe; never extracts or executes content."""
+
+    required = _REQUIRED_FILES.get(artifact_type)
+    if required is None:
+        raise ProposalValidationError(
+            "proposals currently support only skill, app, and mcp-server artifacts"
+        )
+    paths = {file.path for file in package.files}
+    missing = sorted(required - paths)
+    if missing:
+        raise ProposalValidationError(
+            f"{artifact_type.value} proposal is missing required files: {', '.join(missing)}"
+        )
 
     total_size = 0
     for file in package.files:

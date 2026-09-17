@@ -56,8 +56,6 @@ class ProposalPackage(StrictProposalContract):
         total_size = sum(len(item.decoded()) for item in self.files)
         if total_size > MAX_PACKAGE_BYTES:
             raise ValueError("proposal package exceeds maximum uncompressed size")
-        if not any(item.path == "SKILL.md" for item in self.files):
-            raise ValueError("a proposal requires SKILL.md")
         return self
 
 
