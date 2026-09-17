@@ -280,7 +280,10 @@ REGISTRY_TOOLS: tuple[RegistryTool, ...] = (
     RegistryTool(
         "submit_artifact_proposal",
         "catalog:publish",
-        "can_propose",
+        # Proposing is intentionally available to every workspace viewer.  The
+        # dedicated can_propose relation is equivalent in the current model,
+        # but older production models do not expose it yet.
+        "can_view",
         "workspace",
         RegistryRisk.SENSITIVE_WRITE,
         True,
