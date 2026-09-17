@@ -5,6 +5,7 @@ opens a pull request through a dedicated service identity; only a verified merge
 `ArtifactVersion` eligible for the existing publication cycle (see `application.publication`).
 """
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from types import TracebackType
@@ -43,6 +44,15 @@ class ProposalRepository(Protocol):
 
     async def count_open_for_author(self, author_id: UUID) -> int:
         """Count proposals not yet in a terminal status for one author."""
+
+    async def list_for_workspace(
+        self,
+        workspace_id: UUID,
+        *,
+        status: ProposalStatus | None,
+        limit: int,
+    ) -> Sequence[ProposalRecord]:
+        """List proposals disclosed to one workspace review queue."""
 
     async def save(self, proposal: Proposal, *, package: ProposalPackage) -> None:
         """Insert or update one proposal with its submitted package payload."""
@@ -100,6 +110,27 @@ class ProposalService:
         async with self._unit_of_work_factory() as unit_of_work:
             record = await self._required(unit_of_work.proposals, proposal_id)
         return record.proposal
+
+    async def get_record(self, proposal_id: UUID) -> ProposalRecord:
+        """Load the immutable review payload after the caller has been authorized."""
+
+        async with self._unit_of_work_factory() as unit_of_work:
+            return await self._required(unit_of_work.proposals, proposal_id)
+
+    async def list_for_workspace(
+        self,
+        workspace_id: UUID,
+        *,
+        status: ProposalStatus | None = None,
+        limit: int = 50,
+    ) -> tuple[ProposalRecord, ...]:
+        async with self._unit_of_work_factory() as unit_of_work:
+            records = await unit_of_work.proposals.list_for_workspace(
+                workspace_id,
+                status=status,
+                limit=limit,
+            )
+        return tuple(records)
 
     async def submit(
         self,

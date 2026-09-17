@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>KYA-Platform — Prototype blanc institutionnel</title>
+  <meta name="description" content="Prototype HTML, CSS et JavaScript de KYA-Platform dans la structure Microsoft 365 et la charte KYA.">
+  <link rel="stylesheet" href="styles.css?v=3">
+  <script src="app.js?v=3" defer></script>
+</head>
+<body>
+  <!-- THESIS: KYA-Platform adopts the familiar Microsoft 365 application-hub topology while keeping KYA identity restrained to semantic accents. OWN-WORLD: institutional white, warm canvas, deep-teal type, fine neutral rules, soft teal selection, orange consequential action. STORY: create, find, resume, launch, and govern permitted enterprise capabilities from one stable shell. FIRST VIEWPORT: 304px persistent rail, spacious content field, one featured capability and compact launcher grid. FORM: user-approved Blanc institutionnel composition, based on exec-392bcbcf-0155-4236-be0c-2da49e87ce0b. FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md -->
+  <a class="skip-link" href="#workspace">Aller au contenu</a>
+
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar" aria-label="Navigation KYA-Platform">
+      <header class="sidebar-head">
+        <button class="brand" type="button" data-view="applications" aria-label="Ouvrir les applications KYA-Platform">
+          <img src="assets/kya-energy-group-logo.png" alt="KYA-Energy Group">
+          <span>KYA-Platform</span>
+        </button>
+      </header>
+
+      <nav class="primary-nav" aria-label="Actions principales">
+        <button type="button" class="nav-item" data-view="create" data-icon="plus-circle"><span>Créer</span></button>
+        <button type="button" class="nav-item" data-view="catalog" data-focus-search data-icon="search"><span>Rechercher</span></button>
+        <button type="button" class="nav-item" data-view="catalog" data-icon="library"><span>Bibliothèque</span></button>
+        <button type="button" class="nav-item" data-view="work" data-icon="clipboard"><span>Mon travail</span></button>
+      </nav>
+
+      <section class="nav-section" aria-labelledby="ai-heading">
+        <h2 id="ai-heading">Environnements IA</h2>
+        <button type="button" class="nav-item" data-panel="claude"><i class="vendor-mark claude-mark" data-icon="sunburst"></i><span>Claude</span></button>
+        <button type="button" class="nav-item" data-panel="chatgpt" data-icon="spark"><span>ChatGPT</span></button>
+        <button type="button" class="nav-item" data-panel="codex" data-icon="code"><span>Codex</span></button>
+      </section>
+
+      <section class="nav-section spaces-section" aria-labelledby="spaces-heading">
+        <h2 id="spaces-heading">Espaces récents</h2>
+        <button type="button" class="nav-item" data-panel="systems" data-icon="users"><span>Direction des Systèmes</span></button>
+        <button type="button" class="nav-item" data-panel="data" data-icon="users"><span>Équipe Data</span></button>
+        <button type="button" class="nav-item" data-panel="solar" data-icon="folder"><span>Projet solaire</span></button>
+      </section>
+
+      <footer class="sidebar-foot">
+        <button type="button" class="nav-item" data-view="admin" data-icon="settings"><span>Administration</span></button>
+        <button type="button" class="account" data-panel="account" aria-label="Ouvrir le profil Jean-Claude">
+          <span class="avatar">JC</span>
+          <span><strong>Jean-Claude</strong><small>Profil CVSI</small></span>
+          <i data-icon="chevron"></i>
+        </button>
+      </footer>
+    </aside>
+
+    <header class="mobile-bar">
+      <button type="button" class="icon-button mobile-menu" data-icon="menu" aria-label="Ouvrir la navigation"></button>
+      <img src="assets/kya-energy-group-logo.png" alt="">
+      <strong>KYA-Platform</strong>
+      <button type="button" class="icon-button" data-view="catalog" data-focus-search data-icon="search" aria-label="Rechercher"></button>
+    </header>
+
+    <main id="workspace" tabindex="-1" aria-live="polite"></main>
+  </div>
+
+  <dialog id="detail-drawer" class="detail-drawer" aria-labelledby="drawer-title">
+    <button type="button" class="icon-button drawer-close" data-close-dialog data-icon="x" aria-label="Fermer"></button>
+    <div id="drawer-content"></div>
+    <p class="prototype-note">Prototype de validation — aucune opération réelle n’est exécutée.</p>
+  </dialog>
+
+  <div class="popover" id="install-menu" hidden>
+    <button type="button" data-toast="Installation d’une capacité simulée" data-icon="download">Installer depuis le catalogue</button>
+    <button type="button" data-view="create" data-icon="plus-circle">Créer une capacité</button>
+    <button type="button" data-panel="request" data-icon="send">Demander une capacité</button>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
