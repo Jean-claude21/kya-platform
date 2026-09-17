@@ -515,7 +515,7 @@ async def test_registry_server_submits_an_application_proposal_with_safe_default
         "review_required": True,
     }
     assert policy.checks[0].relation == "can_propose"
-    assert policy.checks[0].object == "workspace:dss"
+    assert policy.checks[0].object == "workspace:01991e00-0000-7000-8000-000000000071"
     assert proposals.last_request is not None
     request, context = proposals.last_request
     assert request.confirmation.confirmed is True
