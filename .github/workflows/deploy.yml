@@ -11,8 +11,8 @@ on:
         required: true
         type: choice
         options: [dokploy, coolify]
-      image_digest:
-        description: Immutable OCI image digest (sha256:...)
+      source_commit:
+        description: Exact commit SHA to deploy from the selected branch
         required: true
         type: string
       environment:
@@ -57,15 +57,19 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
-      - name: Guard production promotion
-        if: inputs.environment == 'production'
+      - name: Validate source commit
         env:
           REF: ${{ github.ref_name }}
-        run: test "$REF" = "main"
-      - name: Validate digest
-        env:
-          DIGEST: ${{ inputs.image_digest }}
-        run: echo "$DIGEST" | grep -Eq '^sha256:[0-9a-f]{64}$'
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+          ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          set -euo pipefail
+          echo "$SOURCE_COMMIT" | grep -Eq '^[0-9a-f]{40}$'
+          git fetch --no-tags origin "$REF"
+          test "$SOURCE_COMMIT" = "$(git rev-parse "origin/$REF")"
+          if [ "$ENVIRONMENT" = "production" ]; then
+            test "$REF" = "main"
+          fi
 
   promote:
     if: github.event_name == 'workflow_dispatch'
