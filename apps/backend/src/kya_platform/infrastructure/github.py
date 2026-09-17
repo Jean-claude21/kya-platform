@@ -90,9 +90,9 @@ class GitHubAppPullRequestAdapter:
         base_commit = await self._get(f"/repos/{repository}/git/commits/{base_sha}", headers)
         base_tree_sha = _string_field(_nested_object(base_commit, "tree"), "sha")
         source_directories = {
-            ArtifactType.SKILL: "skill",
-            ArtifactType.MCP_SERVER: "mcp-server",
-            ArtifactType.APPLICATION: "application",
+            ArtifactType.SKILL: "skills",
+            ArtifactType.MCP_SERVER: "mcp-servers",
+            ArtifactType.APPLICATION: "applications",
         }
         try:
             source_directory = source_directories[artifact_type]
