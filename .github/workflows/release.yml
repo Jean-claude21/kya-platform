@@ -22,7 +22,7 @@ jobs:
           test "$(git cat-file -t "refs/tags/$GITHUB_REF_NAME")" = "tag"
           TAG_COMMIT="$(git rev-list -n 1 "refs/tags/$GITHUB_REF_NAME")"
           test "$(git rev-parse origin/main)" = "$TAG_COMMIT"
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.14'
       - name: Build the deterministic Claude plugin archive
