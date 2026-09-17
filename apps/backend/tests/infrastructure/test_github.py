@@ -75,7 +75,17 @@ def adapter(
 
 
 @pytest.mark.anyio
-async def test_open_pull_request_never_holds_standing_merge_rights() -> None:
+@pytest.mark.parametrize(
+    ("artifact_type", "source_directory"),
+    (
+        (ArtifactType.SKILL, "skills"),
+        (ArtifactType.MCP_SERVER, "mcp-servers"),
+        (ArtifactType.APPLICATION, "applications"),
+    ),
+)
+async def test_open_pull_request_never_holds_standing_merge_rights(
+    artifact_type: ArtifactType, source_directory: str
+) -> None:
     calls: list[str] = []
 
     async def handle(request: httpx.Request) -> httpx.Response:
@@ -94,7 +104,9 @@ async def test_open_pull_request_never_holds_standing_merge_rights() -> None:
         if request.url.path.endswith("/git/trees"):
             body = json.loads(request.content)
             assert body["base_tree"] == "base-tree-sha"
-            assert body["tree"][0]["path"] == "catalog/sources/skill/solar-brief/SKILL.md"
+            assert body["tree"][0]["path"] == (
+                f"catalog/sources/{source_directory}/solar-brief/SKILL.md"
+            )
             return httpx.Response(201, json={"sha": "tree-sha"})
         if request.url.path.endswith("/git/commits"):
             body = json.loads(request.content)
@@ -124,7 +136,7 @@ async def test_open_pull_request_never_holds_standing_merge_rights() -> None:
         url = await service.open_pull_request(
             repository="kya-energy/kya-platform",
             slug="solar-brief",
-            artifact_type=ArtifactType.SKILL,
+            artifact_type=artifact_type,
             package=package(),
             required_approver_id=APPROVER_ID,
             proposal_id=PROPOSAL_ID,
