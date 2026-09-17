@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import logging
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -61,6 +62,7 @@ type ToolVisibility = Callable[[str], Awaitable[bool]]
 type ToolSetProvider = Callable[[], Awaitable[frozenset[str]]]
 ALL_TOOLS = REGISTRY_TOOLS + DATA_TOOLS + INTELLIGENCE_TOOLS
 SUPPORTED_SCOPES = sorted({item.oauth_scope for item in ALL_TOOLS})
+logger = logging.getLogger(__name__)
 
 
 class RegistryBackend(Protocol):
@@ -561,46 +563,69 @@ def create_registry_server(
         The server validates and stores the proposal but never executes its content. Technical
         identifiers and retry safety are resolved automatically for normal conversational use.
         """
-        if proposal_backend is None:
-            raise ToolError("proposal_service_unavailable")
-        resolved_workspace = await proposal_backend.resolve_workspace(target_workspace)
-        if resolved_workspace is None:
-            raise ToolError("workspace_not_found")
-        await guard.require("submit_artifact_proposal", resolved_workspace.key)
-        internal_artifact_id = None
-        if artifact_id is not None:
-            internal_artifact_id = await backend.resolve_artifact_id(artifact_id)
-            if internal_artifact_id is None:
-                raise ToolError("artifact_not_found")
-        if idempotency_key is None:
-            canonical = json.dumps(
-                {
-                    "workspace": target_workspace,
-                    "slug": slug,
-                    "artifact_type": artifact_type.value,
-                    "artifact_id": artifact_id,
-                    "files": [file.model_dump(mode="json") for file in files],
-                },
-                ensure_ascii=False,
-                sort_keys=True,
-                separators=(",", ":"),
+        correlation_id = uuid7()
+        try:
+            if proposal_backend is None:
+                raise ToolError("proposal_service_unavailable")
+            resolved_workspace = await proposal_backend.resolve_workspace(target_workspace)
+            if resolved_workspace is None:
+                raise ToolError("workspace_not_found")
+            # OpenFGA workspace objects use immutable workspace UUIDs. Friendly keys are only
+            # accepted at the MCP boundary and must be resolved before authorization.
+            await guard.require("submit_artifact_proposal", str(resolved_workspace.id))
+            internal_artifact_id = None
+            if artifact_id is not None:
+                internal_artifact_id = await backend.resolve_artifact_id(artifact_id)
+                if internal_artifact_id is None:
+                    raise ToolError("artifact_not_found")
+            if idempotency_key is None:
+                canonical = json.dumps(
+                    {
+                        "workspace": str(resolved_workspace.id),
+                        "slug": slug,
+                        "artifact_type": artifact_type.value,
+                        "artifact_id": artifact_id,
+                        "files": [file.model_dump(mode="json") for file in files],
+                    },
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                )
+                idempotency_key = f"proposal:{hashlib.sha256(canonical.encode()).hexdigest()}"
+            return await proposal_backend.submit_artifact_proposal(
+                SubmitArtifactProposalInput(
+                    target_workspace=target_workspace,
+                    slug=slug,
+                    artifact_type=artifact_type,
+                    files=tuple(files),
+                    artifact_id=artifact_id,
+                    idempotency_key=idempotency_key,
+                    confirmation=confirmation or Confirmation(confirmed=True),
+                ),
+                target_workspace_id=resolved_workspace.id,
+                artifact_id=internal_artifact_id,
+                actor_id=guard.principal_id("submit_artifact_proposal"),
+                correlation_id=correlation_id,
             )
-            idempotency_key = f"proposal:{hashlib.sha256(canonical.encode()).hexdigest()}"
-        return await proposal_backend.submit_artifact_proposal(
-            SubmitArtifactProposalInput(
-                target_workspace=target_workspace,
-                slug=slug,
-                artifact_type=artifact_type,
-                files=tuple(files),
-                artifact_id=artifact_id,
-                idempotency_key=idempotency_key,
-                confirmation=confirmation or Confirmation(confirmed=True),
-            ),
-            target_workspace_id=resolved_workspace.id,
-            artifact_id=internal_artifact_id,
-            actor_id=guard.principal_id("submit_artifact_proposal"),
-            correlation_id=uuid7(),
-        )
+        except ToolError as error:
+            raise ToolError(f"{error}; correlation_id={correlation_id}") from error
+        except ValueError as error:
+            logger.info(
+                "Registry proposal validation failed",
+                extra={"correlation_id": str(correlation_id)},
+                exc_info=error,
+            )
+            raise ToolError(
+                f"proposal_validation_failed; correlation_id={correlation_id}"
+            ) from error
+        except Exception as error:
+            logger.exception(
+                "Registry proposal submission failed",
+                extra={"correlation_id": str(correlation_id)},
+            )
+            raise ToolError(
+                f"proposal_submission_failed; correlation_id={correlation_id}"
+            ) from error
 
     if (data_backend is None) != (data_audit is None):
         raise ValueError("Data MCP backend and audit sink must be configured together")
