@@ -74,9 +74,9 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - name: Enable reusable BuildKit cache
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - name: Build backend image
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: infra/containers/Dockerfile.backend
@@ -85,7 +85,7 @@ jobs:
           cache-from: type=gha,scope=kya-backend
           cache-to: type=gha,mode=min,scope=kya-backend
       - name: Build web image
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: infra/containers/Dockerfile.web
@@ -94,7 +94,7 @@ jobs:
           cache-from: type=gha,scope=kya-web
           cache-to: type=gha,mode=min,scope=kya-web
       - name: Build source scheduler image
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: infra/containers/Dockerfile.source-scheduler
@@ -151,7 +151,7 @@ jobs:
           output: sbom-source-scheduler.cdx.json
           exit-code: '0'
       - name: Upload SBOM artifacts
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: kya-platform-sbom-${{ github.sha }}
           path: |

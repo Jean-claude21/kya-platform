@@ -2,6 +2,8 @@
 
 from kya_platform.mcp.registry.contracts import (
     ArtifactDetail,
+    ArtifactProposalAccepted,
+    ArtifactProposalFile,
     ArtifactSummary,
     Confirmation,
     ConfirmInstallationInput,
@@ -23,6 +25,7 @@ from kya_platform.mcp.registry.contracts import (
     RequestUpdateInput,
     SearchCatalogInput,
     SearchCatalogOutput,
+    SubmitArtifactProposalInput,
     ToolAccessContext,
     ToolAuthorizer,
     UpdateSummary,
@@ -30,6 +33,8 @@ from kya_platform.mcp.registry.contracts import (
 
 __all__ = [
     "ArtifactDetail",
+    "ArtifactProposalAccepted",
+    "ArtifactProposalFile",
     "ArtifactSummary",
     "ConfirmInstallationInput",
     "ConfirmUpdateInput",
@@ -51,6 +56,7 @@ __all__ = [
     "RequestUpdateInput",
     "SearchCatalogInput",
     "SearchCatalogOutput",
+    "SubmitArtifactProposalInput",
     "ToolAccessContext",
     "ToolAuthorizer",
     "UpdateSummary",

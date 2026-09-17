@@ -6,7 +6,7 @@ from enum import StrEnum
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from kya_platform.application.reliability import JsonValue
 from kya_platform.authorization import (
@@ -16,6 +16,7 @@ from kya_platform.authorization import (
     ListObjectsRequest,
 )
 from kya_platform.contracts.artifact_manifest import ArtifactType
+from kya_platform.contracts.artifact_package import PackageFileKind
 from kya_platform.contracts.installation_plan import (
     InstallationPlan,
     InstallationProfile,
@@ -119,6 +120,29 @@ class PublishCandidateInput(StrictMcpContract):
     confirmation: Confirmation
 
 
+class ArtifactProposalFile(StrictMcpContract):
+    path: str = Field(min_length=1, max_length=512)
+    kind: PackageFileKind
+    content: str | None = Field(default=None, max_length=2_000_000)
+    content_base64: str | None = Field(default=None, max_length=2_700_000)
+
+    @model_validator(mode="after")
+    def require_one_content_representation(self) -> ArtifactProposalFile:
+        if (self.content is None) == (self.content_base64 is None):
+            raise ValueError("provide exactly one of content or content_base64")
+        return self
+
+
+class SubmitArtifactProposalInput(StrictMcpContract):
+    target_workspace: NonEmpty
+    slug: str = Field(pattern=r"^[a-z0-9][a-z0-9-]{0,119}$")
+    artifact_type: ArtifactType
+    files: tuple[ArtifactProposalFile, ...] = Field(min_length=1, max_length=256)
+    artifact_id: str | None = None
+    idempotency_key: IdempotencyKey
+    confirmation: Confirmation
+
+
 class ArtifactSummary(StrictMcpContract):
     artifact_id: str
     artifact_type: ArtifactType
@@ -172,6 +196,12 @@ class OperationStatus(StrictMcpContract):
 class PublicationAccepted(StrictMcpContract):
     request_id: UUID
     status: Literal["submitted"] = "submitted"
+
+
+class ArtifactProposalAccepted(StrictMcpContract):
+    proposal_id: UUID
+    status: Literal["submitted"] = "submitted"
+    review_required: Literal[True] = True
 
 
 class RegistryRisk(StrEnum):
@@ -246,6 +276,16 @@ REGISTRY_TOOLS: tuple[RegistryTool, ...] = (
         True,
     ),
     RegistryTool("get_operation", "catalog:read", "can_view", "workspace", RegistryRisk.READ),
+    RegistryTool(
+        "submit_artifact_proposal",
+        "catalog:publish",
+        "can_propose",
+        "workspace",
+        RegistryRisk.SENSITIVE_WRITE,
+        True,
+        True,
+        True,
+    ),
     RegistryTool(
         "publish_candidate",
         "catalog:publish",
@@ -322,6 +362,8 @@ assert_skills_are_resources()
 __all__ = [
     "REGISTRY_TOOLS",
     "ArtifactDetail",
+    "ArtifactProposalAccepted",
+    "ArtifactProposalFile",
     "ArtifactSummary",
     "ConfirmInstallationInput",
     "ConfirmUpdateInput",
@@ -346,6 +388,7 @@ __all__ = [
     "RequestUpdateInput",
     "SearchCatalogInput",
     "SearchCatalogOutput",
+    "SubmitArtifactProposalInput",
     "ToolAccessContext",
     "ToolAuthorizer",
     "UpdateSummary",

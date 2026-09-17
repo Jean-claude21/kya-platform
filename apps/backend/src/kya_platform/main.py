@@ -91,6 +91,7 @@ from kya_platform.mcp.registry.runtime import (
     StateDataMcpAuditSink,
     StateDataMcpBackend,
     StateIntelligenceMcpBackend,
+    StateProposalMcpBackend,
     StateRegistryBackend,
     StateToolSetProvider,
 )
@@ -435,6 +436,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             data_backend=StateDataMcpBackend(application.state),
             data_audit=StateDataMcpAuditSink(application.state),
             intelligence_backend=StateIntelligenceMcpBackend(application.state),
+            proposal_backend=StateProposalMcpBackend(application.state),
             tool_set_provider=(
                 StateToolSetProvider(application.state)
                 if resolved_settings.mcp_tool_profile_mode != "off"

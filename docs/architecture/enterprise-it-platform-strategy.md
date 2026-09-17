@@ -184,8 +184,11 @@ ChatGPT, Codex or KYA-Platform without receiving direct write access to protecte
 The governed flow is:
 
 1. The user drafts a new capability in a personal or team workspace.
-2. KYA-Platform records ownership, scope and intended visibility.
-3. The GitHub App creates a proposal branch and pull request.
+2. The AI client submits a typed, non-executable package through
+   `submit_artifact_proposal`; KYA-Platform validates the master files and records ownership,
+   scope and intended visibility with an idempotency key.
+3. After human approval, the GitHub App creates a `feat-proposal-*` branch in the type-specific
+   catalogue source directory and opens a pull request against `dev`.
 4. Automated checks validate the master template, code, media, dependencies, tests and permissions.
 5. Required business, product and CVSI reviews are requested based on capability risk.
 6. Publication creates an immutable release, manifest, canonical content digest, SBOM and
@@ -388,8 +391,8 @@ person, machine or cloud account.
 
 ### Phase 3 — Governed capability factory
 
-- [ ] Complete typed proposal APIs for Skills, MCP servers and applications.
-- [ ] Make the GitHub App open controlled pull requests on behalf of users.
+- [x] Complete typed HTTP and MCP proposal submission for Skills, MCP servers and applications.
+- [x] Make the GitHub App open controlled pull requests on behalf of users.
 - [ ] Validate master templates, code, media, tests and security policy in CI.
 - [ ] Publish canonical manifests, release UUIDs, content digests and verification instructions.
 - [ ] Let AI clients install by human-friendly artifact ID and desired scope.
