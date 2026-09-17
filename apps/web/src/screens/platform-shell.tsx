@@ -114,7 +114,7 @@ export function PlatformShell() {
     dialog.current?.close();
     setPanel(null);
     window.scrollTo({ top: 0, behavior: 'instant' });
-    requestAnimationFrame(() => content.current?.focus());
+    requestAnimationFrame(() => content.current?.focus({ preventScroll: true }));
   }
   let screen;
   if (activeModule === 'Accueil')

@@ -160,6 +160,8 @@ async def test_save_updates_an_existing_row_on_approval() -> None:
     assert row.status == "approved"
     assert row.review_decision == "approved"
     assert row.reviewer_id == REVIEWER
+    assert row.business_owner_id == BUSINESS_OWNER
+    assert row.technical_owner_id == TECHNICAL_OWNER
     assert session.added == []
 
 

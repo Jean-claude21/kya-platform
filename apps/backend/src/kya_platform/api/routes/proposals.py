@@ -7,7 +7,7 @@ for a brand-new Skill proposal that has no artifact yet.
 """
 
 from datetime import UTC, datetime
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID, uuid7
 
 from fastapi import APIRouter, Depends, Request, status
@@ -17,13 +17,14 @@ from kya_platform.api.security import AuthorizedPrincipal, active_principal
 from kya_platform.application.proposal import (
     ProposalNotFoundError,
     ProposalQuotaExceededError,
+    ProposalRecord,
     ProposalService,
 )
 from kya_platform.authorization import AuthorizationPort, CheckRequest, active_unit_context
 from kya_platform.contracts.artifact_manifest import ArtifactType as ManifestArtifactType
 from kya_platform.contracts.proposal_package import ProposalPackage
 from kya_platform.domain.catalog import ArtifactType as DomainArtifactType
-from kya_platform.domain.catalog import Proposal
+from kya_platform.domain.catalog import Proposal, ProposalStatus
 from kya_platform.observability import ApiError
 
 router = APIRouter(prefix="/proposals", tags=["proposals"])
@@ -55,7 +56,7 @@ class RejectProposalRequest(BaseModel):
 class OpenPullRequestRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    repository: str = Field(min_length=1, max_length=200)
+    repository: str | None = Field(default=None, min_length=1, max_length=200)
 
 
 class ProposalResponse(BaseModel):
@@ -64,11 +65,47 @@ class ProposalResponse(BaseModel):
     slug: str
     artifact_type: str
     artifact_id: UUID | None
+    requested_by: UUID
+    requested_at: datetime
     status: str
     reviewer_id: UUID | None
     review_reason: str | None
+    reviewed_at: datetime | None
+    business_owner_id: UUID | None
+    technical_owner_id: UUID | None
     pull_request_url: str | None
     merged_commit_sha: str | None
+
+
+class ProposalSummaryResponse(ProposalResponse):
+    file_count: int
+    package_size: int
+
+
+class ProposalListResponse(BaseModel):
+    items: list[ProposalSummaryResponse]
+    next_cursor: str | None = None
+
+
+class ProposalFileResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    path: str
+    kind: str
+    size: int
+    content_base64: str = Field(alias="contentBase64")
+
+
+class ProposalEvidenceResponse(BaseModel):
+    code: str
+    status: Literal["passed", "pending", "failed"]
+    summary: str
+
+
+class ProposalReviewResponse(BaseModel):
+    proposal: ProposalResponse
+    files: list[ProposalFileResponse]
+    evidence: list[ProposalEvidenceResponse]
 
 
 def _response(proposal: Proposal) -> ProposalResponse:
@@ -78,11 +115,25 @@ def _response(proposal: Proposal) -> ProposalResponse:
         slug=proposal.slug,
         artifact_type=proposal.artifact_type.value,
         artifact_id=proposal.artifact_id,
+        requested_by=proposal.requested_by,
+        requested_at=proposal.requested_at,
         status=proposal.status.value,
         reviewer_id=proposal.reviewer_id,
         review_reason=proposal.review_reason,
+        reviewed_at=proposal.reviewed_at,
+        business_owner_id=proposal.business_owner_id,
+        technical_owner_id=proposal.technical_owner_id,
         pull_request_url=proposal.pull_request_url,
         merged_commit_sha=proposal.merged_commit_sha,
+    )
+
+
+def _summary(record: ProposalRecord) -> ProposalSummaryResponse:
+    package_size = sum(len(item.decoded()) for item in record.package.files)
+    return ProposalSummaryResponse(
+        **_response(record.proposal).model_dump(),
+        file_count=len(record.package.files),
+        package_size=package_size,
     )
 
 
@@ -196,6 +247,36 @@ async def create_proposal(
     return _response(proposal)
 
 
+@router.get("", response_model=ProposalListResponse)
+async def list_proposals(
+    target_workspace_id: UUID,
+    request: Request,
+    principal: Annotated[AuthorizedPrincipal, Depends(active_principal)],
+    proposal_status: ProposalStatus | None = None,
+    limit: int = 50,
+) -> ProposalListResponse:
+    if limit < 1 or limit > 100:
+        raise ApiError(
+            400,
+            "invalid_limit",
+            "Limite invalide",
+            "La limite doit être comprise entre 1 et 100.",
+        )
+    await _require_permission(
+        request,
+        principal,
+        relation="can_manage",
+        object_type="workspace",
+        object_id=str(target_workspace_id),
+    )
+    records = await _service(request).list_for_workspace(
+        target_workspace_id,
+        status=proposal_status,
+        limit=limit,
+    )
+    return ProposalListResponse(items=[_summary(record) for record in records])
+
+
 async def _require_review_permission(
     request: Request, principal: AuthorizedPrincipal, proposal_id: UUID
 ) -> Proposal:
@@ -273,15 +354,77 @@ async def open_proposal_pull_request(
     principal: Annotated[AuthorizedPrincipal, Depends(active_principal)],
 ) -> ProposalResponse:
     await _require_review_permission(request, principal, proposal_id)
+    configured_repository: str | None = getattr(request.app.state, "proposal_repository", None)
+    if configured_repository is None:
+        raise ApiError(
+            503,
+            "proposal_repository_unavailable",
+            "Dépôt de propositions indisponible",
+            "Le dépôt GitHub gouverné n'est pas configuré.",
+        )
+    if payload.repository is not None and payload.repository != configured_repository:
+        raise ApiError(
+            400,
+            "proposal_repository_mismatch",
+            "Dépôt non autorisé",
+            "La proposition doit être envoyée vers le dépôt configuré par KYA-Platform.",
+        )
     try:
         proposal = await _service(request).open_pull_request(
             proposal_id,
-            repository=payload.repository,
+            repository=configured_repository,
             correlation_id=_correlation_id(request),
         )
     except (ValueError, ProposalNotFoundError) as error:
         raise _domain_error(error) from error
     return _response(proposal)
+
+
+@router.get("/{proposal_id}/review", response_model=ProposalReviewResponse)
+async def get_proposal_review(
+    proposal_id: UUID,
+    request: Request,
+    principal: Annotated[AuthorizedPrincipal, Depends(active_principal)],
+) -> ProposalReviewResponse:
+    await _require_review_permission(request, principal, proposal_id)
+    record = await _service(request).get_record(proposal_id)
+    files = [
+        ProposalFileResponse(
+            path=item.path,
+            kind=item.kind.value,
+            size=len(item.decoded()),
+            content_base64=item.content_base64,
+        )
+        for item in record.package.files
+    ]
+    return ProposalReviewResponse(
+        proposal=_response(record.proposal),
+        files=files,
+        evidence=[
+            ProposalEvidenceResponse(
+                code="admission_validation",
+                status="passed",
+                summary="Le paquet satisfait les contrôles d'admission déterministes.",
+            ),
+            ProposalEvidenceResponse(
+                code="file_inventory",
+                status="passed",
+                summary=(
+                    f"{len(files)} fichier(s), "
+                    f"{sum(item.size for item in files)} octet(s) vérifiés."
+                ),
+            ),
+            ProposalEvidenceResponse(
+                code="human_review",
+                status="passed" if record.proposal.reviewed_at is not None else "pending",
+                summary=(
+                    "La décision humaine est enregistrée."
+                    if record.proposal.reviewed_at is not None
+                    else "La décision d'un réviseur habilité est requise."
+                ),
+            ),
+        ],
+    )
 
 
 @router.get("/{proposal_id}", response_model=ProposalResponse)
