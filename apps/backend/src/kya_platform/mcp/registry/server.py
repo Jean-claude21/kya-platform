@@ -303,7 +303,7 @@ def create_registry_server(
         "kya-platform",
         title="KYA Platform MCP",
         description="Capacités et données gouvernées de KYA-Energy Group",
-        version="0.2.5",
+        version="0.3.0",
         token_verifier=token_verifier,
         access_token_provider=access_token_provider,
         tool_visibility=guard.is_visible,
