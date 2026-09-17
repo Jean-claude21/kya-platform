@@ -4,7 +4,7 @@ import { Icon, StatusBadge } from '@kya/design-system';
 import type { IconName, StatusTone } from '@kya/design-system';
 
 import { idempotencyKey, platformRequest } from '../../platform/api';
-import type { WorkspaceSummary } from '../workspaces/workspace-control';
+import type { WorkspaceMembership, WorkspaceSummary } from '../workspaces/workspace-control';
 import {
   buildArtifactTree,
   collectFolderPaths,
@@ -55,6 +55,7 @@ type ProposalReview = {
 };
 type LoadState = 'loading' | 'ready' | 'empty' | 'error';
 type ActionState = 'idle' | 'working' | 'success' | 'error';
+type AccountView = { principal_id: string; email: string | null };
 
 const isPreview = import.meta.env.DEV && import.meta.env.VITE_KYA_PREVIEW_MODE === 'app';
 const PREVIEW_WORKSPACE = '019914b2-1a40-7000-8000-000000000071';
@@ -304,6 +305,9 @@ export function ArtifactStudio() {
   const [businessOwner, setBusinessOwner] = useState('');
   const [technicalOwner, setTechnicalOwner] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
+  const [account, setAccount] = useState<AccountView | null>(null);
+  const [memberships, setMemberships] = useState<WorkspaceMembership[]>([]);
+  const [membersState, setMembersState] = useState<LoadState>('empty');
   const [wrapLines, setWrapLines] = useState(true);
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
 
@@ -311,9 +315,13 @@ export function ArtifactStudio() {
     if (isPreview) return;
     let active = true;
     setListState('loading');
-    void platformRequest<{ items: WorkspaceSummary[] }>('/workspaces')
-      .then((response) => {
+    void Promise.all([
+      platformRequest<{ items: WorkspaceSummary[] }>('/workspaces'),
+      platformRequest<AccountView>('/account/me'),
+    ])
+      .then(([response, currentAccount]) => {
         if (!active) return;
+        setAccount(currentAccount);
         setWorkspaces(response.items);
         setWorkspaceId(response.items[0]?.id ?? '');
         if (response.items.length === 0) setListState('empty');
@@ -327,6 +335,36 @@ export function ArtifactStudio() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (isPreview || !workspaceId) return;
+    const workspace = workspaces.find((item) => item.id === workspaceId);
+    if (!workspace) return;
+    let active = true;
+    setMembersState('loading');
+    void platformRequest<{ items: WorkspaceMembership[] }>(
+      `/workspaces/${encodeURIComponent(workspace.key)}/memberships`,
+    )
+      .then((response) => {
+        if (!active) return;
+        const now = Date.now();
+        const eligible = response.items.filter(
+          (membership) =>
+            new Date(membership.valid_from).getTime() <= now &&
+            (!membership.valid_until || new Date(membership.valid_until).getTime() > now),
+        );
+        setMemberships(eligible);
+        setMembersState(eligible.length > 0 ? 'ready' : 'empty');
+      })
+      .catch(() => {
+        if (!active) return;
+        setMemberships([]);
+        setMembersState('error');
+      });
+    return () => {
+      active = false;
+    };
+  }, [workspaceId, workspaces]);
 
   useEffect(() => {
     if (isPreview || !workspaceId) return;
@@ -388,6 +426,19 @@ export function ArtifactStudio() {
   const canDecide =
     review?.proposal.status === 'submitted' || review?.proposal.status === 'in_review';
   const canOpenPullRequest = review?.proposal.status === 'approved';
+  const isOwnProposal = Boolean(
+    account && review && account.principal_id === review.proposal.requested_by,
+  );
+
+  useEffect(() => {
+    if (!account || isOwnProposal || memberships.length === 0) return;
+    const currentIsMember = memberships.some(
+      (membership) => membership.principal_id === account.principal_id,
+    );
+    if (!currentIsMember) return;
+    setBusinessOwner((current) => current || account.principal_id);
+    setTechnicalOwner((current) => current || account.principal_id);
+  }, [account, isOwnProposal, memberships]);
 
   useEffect(() => {
     setCopyState('idle');
@@ -709,31 +760,67 @@ export function ArtifactStudio() {
           {review && canDecide && (
             <section className="review-decision-form">
               <h2>Décision</h2>
+              {isOwnProposal && (
+                <p className="review-duty-warning" role="note">
+                  Cette proposition a été soumise avec votre identité. Une autre personne habilitée
+                  doit l’approuver ou la rejeter.
+                </p>
+              )}
               <label>
                 <span>Responsable métier</span>
-                <input
+                <select
                   value={businessOwner}
-                  placeholder="UUID du responsable"
+                  disabled={membersState !== 'ready' || isOwnProposal}
                   onChange={(event) => {
                     setBusinessOwner(event.target.value);
                   }}
-                />
+                >
+                  <option value="">Choisir un membre actif</option>
+                  {memberships.map((membership) => (
+                    <option
+                      key={`business-${membership.principal_id}`}
+                      value={membership.principal_id}
+                    >
+                      {membership.principal_id === account?.principal_id
+                        ? `${account.email ?? 'Mon compte'} · ${membership.level}`
+                        : `${membership.principal_id.slice(0, 8)}… · ${membership.level}`}
+                    </option>
+                  ))}
+                </select>
               </label>
               <label>
                 <span>Responsable technique</span>
-                <input
+                <select
                   value={technicalOwner}
-                  placeholder="UUID du responsable"
+                  disabled={membersState !== 'ready' || isOwnProposal}
                   onChange={(event) => {
                     setTechnicalOwner(event.target.value);
                   }}
-                />
+                >
+                  <option value="">Choisir un membre actif</option>
+                  {memberships.map((membership) => (
+                    <option
+                      key={`technical-${membership.principal_id}`}
+                      value={membership.principal_id}
+                    >
+                      {membership.principal_id === account?.principal_id
+                        ? `${account.email ?? 'Mon compte'} · ${membership.level}`
+                        : `${membership.principal_id.slice(0, 8)}… · ${membership.level}`}
+                    </option>
+                  ))}
+                </select>
               </label>
+              {membersState === 'error' && (
+                <p className="review-field-error" role="alert">
+                  Les membres de cet espace sont indisponibles. Réessayez après actualisation.
+                </p>
+              )}
               <button
                 className="signature-primary"
                 type="button"
                 disabled={
                   actionState === 'working' ||
+                  isOwnProposal ||
                   (!isPreview && (!businessOwner.trim() || !technicalOwner.trim()))
                 }
                 onClick={() => void runAction('approve')}
@@ -754,7 +841,9 @@ export function ArtifactStudio() {
               <button
                 className="review-reject"
                 type="button"
-                disabled={actionState === 'working' || rejectionReason.trim().length < 3}
+                disabled={
+                  actionState === 'working' || isOwnProposal || rejectionReason.trim().length < 3
+                }
                 onClick={() => void runAction('reject')}
               >
                 Rejeter avec motif

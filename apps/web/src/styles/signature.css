@@ -1417,6 +1417,7 @@ button:disabled {
 }
 .review-workspace-select select,
 .review-decision-form input,
+.review-decision-form select,
 .review-decision-form textarea {
   width: 100%;
   border: 1px solid #cbd6d2;
@@ -1425,7 +1426,8 @@ button:disabled {
   color: var(--kya-ink);
 }
 .review-workspace-select select,
-.review-decision-form input {
+.review-decision-form input,
+.review-decision-form select {
   min-height: 42px;
   padding: 8px 12px;
 }
@@ -1875,6 +1877,24 @@ button:disabled {
 .review-decision-form label {
   display: grid;
   gap: 5px;
+}
+.review-duty-warning,
+.review-field-error {
+  margin: 0;
+  padding: 11px 12px;
+  border-radius: 9px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.review-duty-warning {
+  border: 1px solid #ead9ca;
+  background: #f8f2ed;
+  color: #754521;
+}
+.review-field-error {
+  border: 1px solid #e4c6c2;
+  background: #fff3f1;
+  color: #8c3029;
 }
 .review-decision-form .signature-primary,
 .review-pr-action .signature-primary,

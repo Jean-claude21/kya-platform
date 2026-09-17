@@ -66,6 +66,28 @@ def app_package() -> ProposalPackage:
     )
 
 
+def mcp_package() -> ProposalPackage:
+    return ProposalPackage(
+        files=[
+            ProposalFile(
+                path="artifact.manifest.json",
+                kind=PackageFileKind.MANIFEST,
+                content_base64="e30=",
+            ),
+            ProposalFile(
+                path="capability.manifest.json",
+                kind=PackageFileKind.MANIFEST,
+                content_base64="e30=",
+            ),
+            ProposalFile(
+                path="pyproject.toml",
+                kind=PackageFileKind.METADATA,
+                content_base64="W3Byb2plY3RdCm5hbWUgPSAia3lhLW1jcC10ZXN0Igo=",
+            ),
+        ]
+    )
+
+
 class FakeProposals:
     def __init__(self) -> None:
         self.records: dict[UUID, ProposalRecord] = {}
@@ -183,6 +205,29 @@ async def test_application_submission_uses_the_same_governed_proposal_path() -> 
     )
 
     assert proposal.artifact_type is ArtifactType.APPLICATION
+    assert proposal.status is ProposalStatus.SUBMITTED
+    assert unit_of_work.commits == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.unit
+async def test_mcp_submission_uses_the_same_governed_proposal_path() -> None:
+    proposals = FakeProposals()
+    service, unit_of_work = build_service(proposals, FakePullRequests())
+
+    proposal = await service.submit(
+        proposal_id=PROPOSAL,
+        target_workspace_id=WORKSPACE,
+        slug="solar-operations-mcp",
+        artifact_type=ArtifactType.MCP_SERVER,
+        artifact_id=None,
+        package=mcp_package(),
+        requested_by=AUTHOR,
+        at=NOW,
+        correlation_id=CORRELATION,
+    )
+
+    assert proposal.artifact_type is ArtifactType.MCP_SERVER
     assert proposal.status is ProposalStatus.SUBMITTED
     assert unit_of_work.commits == 1
 
