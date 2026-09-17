@@ -101,17 +101,25 @@ jobs:
             "$api_root/applications")"
           application_uuid="$(jq -er \
             --arg name "$APPLICATION_NAME" \
-            --arg branch "$GITHUB_REF_NAME" \
             --arg host "$APPLICATION_HOST" \
             '[.[] | select(
                .name == $name and
-               .git_branch == $branch and
                ((.fqdn // "") | contains($host))
              )] |
              if length == 1 then .[0].uuid
              elif length == 0 then error("Coolify application not found for name, branch, and host")
              else error("Coolify application selection is ambiguous") end' \
             <<<"$applications")"
+
+          curl --fail --silent --show-error \
+            --request PATCH \
+            --header "Authorization: Bearer $COOLIFY_API_TOKEN" \
+            --header "Content-Type: application/json" \
+            --data "$(jq -nc \
+              --arg branch "$GITHUB_REF_NAME" \
+              --arg commit "${{ inputs.source_commit }}" \
+              '{git_branch: $branch, git_commit_sha: $commit}')" \
+            "$api_root/applications/$application_uuid" >/dev/null
 
           deployment="$(curl --fail --silent --show-error \
             --request POST \
