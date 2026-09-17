@@ -1,9 +1,11 @@
 """OAuth-protected Registry MCP server over Streamable HTTP."""
 
+import hashlib
+import json
 from collections.abc import Awaitable, Callable, Mapping
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Protocol
-from uuid import UUID
+from uuid import UUID, uuid7
 
 from mcp.server.auth.middleware.auth_context import get_access_token
 from mcp.server.auth.provider import AccessToken, TokenVerifier
@@ -21,6 +23,8 @@ from kya_platform.mcp.intelligence.contracts import INTELLIGENCE_TOOLS
 from kya_platform.mcp.registry.contracts import (
     REGISTRY_TOOLS,
     ArtifactDetail,
+    ArtifactProposalAccepted,
+    ArtifactProposalFile,
     Confirmation,
     ConfirmInstallationInput,
     ConfirmUpdateInput,
@@ -42,6 +46,7 @@ from kya_platform.mcp.registry.contracts import (
     RequestUpdateInput,
     SearchCatalogInput,
     SearchCatalogOutput,
+    SubmitArtifactProposalInput,
     ToolAccessContext,
     ToolAuthorizer,
 )
@@ -97,6 +102,20 @@ class RegistryBackend(Protocol):
     async def get_operation(self, request: GetOperationInput) -> OperationStatus: ...
 
     async def publish_candidate(self, request: PublishCandidateInput) -> PublicationAccepted: ...
+
+
+class ProposalMcpBackend(Protocol):
+    async def resolve_workspace_id(self, workspace_key: str) -> UUID | None: ...
+
+    async def submit_artifact_proposal(
+        self,
+        request: SubmitArtifactProposalInput,
+        *,
+        target_workspace_id: UUID,
+        artifact_id: UUID | None,
+        actor_id: UUID,
+        correlation_id: UUID,
+    ) -> ArtifactProposalAccepted: ...
 
 
 class ScopedRegistryServer(MCPServer[None]):
@@ -274,6 +293,7 @@ def create_registry_server(
     data_backend: DataMcpBackend | None = None,
     data_audit: DataMcpAuditSink | None = None,
     intelligence_backend: IntelligenceMcpBackend | None = None,
+    proposal_backend: ProposalMcpBackend | None = None,
     tool_set_provider: ToolSetProvider | None = None,
 ) -> MCPServer[None]:
     """Build the remote server; OAuth authenticates and KYA policy authorizes."""
@@ -283,7 +303,7 @@ def create_registry_server(
         "kya-platform",
         title="KYA Platform MCP",
         description="Capacités et données gouvernées de KYA-Energy Group",
-        version="0.2.5",
+        version="0.3.0",
         token_verifier=token_verifier,
         access_token_provider=access_token_provider,
         tool_visibility=guard.is_visible,
@@ -519,6 +539,62 @@ def create_registry_server(
             )
         )
 
+    @server.tool(name="submit_artifact_proposal", structured_output=True)
+    async def submit_artifact_proposal(
+        target_workspace: str,
+        slug: str,
+        artifact_type: ArtifactType,
+        files: list[ArtifactProposalFile],
+        artifact_id: str | None = None,
+        idempotency_key: str | None = None,
+        confirmation: Confirmation | None = None,
+    ) -> ArtifactProposalAccepted:
+        """Submit Skill, MCP server, or App source files for governed human review.
+
+        The server validates and stores the proposal but never executes its content. Technical
+        identifiers and retry safety are resolved automatically for normal conversational use.
+        """
+        if proposal_backend is None:
+            raise ToolError("proposal_service_unavailable")
+        target_workspace_id = await proposal_backend.resolve_workspace_id(target_workspace)
+        if target_workspace_id is None:
+            raise ToolError("workspace_not_found")
+        await guard.require("submit_artifact_proposal", target_workspace)
+        internal_artifact_id = None
+        if artifact_id is not None:
+            internal_artifact_id = await backend.resolve_artifact_id(artifact_id)
+            if internal_artifact_id is None:
+                raise ToolError("artifact_not_found")
+        if idempotency_key is None:
+            canonical = json.dumps(
+                {
+                    "workspace": target_workspace,
+                    "slug": slug,
+                    "artifact_type": artifact_type.value,
+                    "artifact_id": artifact_id,
+                    "files": [file.model_dump(mode="json") for file in files],
+                },
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+            idempotency_key = f"proposal:{hashlib.sha256(canonical.encode()).hexdigest()}"
+        return await proposal_backend.submit_artifact_proposal(
+            SubmitArtifactProposalInput(
+                target_workspace=target_workspace,
+                slug=slug,
+                artifact_type=artifact_type,
+                files=tuple(files),
+                artifact_id=artifact_id,
+                idempotency_key=idempotency_key,
+                confirmation=confirmation or Confirmation(confirmed=True),
+            ),
+            target_workspace_id=target_workspace_id,
+            artifact_id=internal_artifact_id,
+            actor_id=guard.principal_id("submit_artifact_proposal"),
+            correlation_id=uuid7(),
+        )
+
     if (data_backend is None) != (data_audit is None):
         raise ValueError("Data MCP backend and audit sink must be configured together")
     if data_backend is not None and data_audit is not None:
@@ -537,4 +613,4 @@ def create_registry_server(
     return server
 
 
-__all__ = ["RegistryBackend", "RegistryGuard", "create_registry_server"]
+__all__ = ["ProposalMcpBackend", "RegistryBackend", "RegistryGuard", "create_registry_server"]

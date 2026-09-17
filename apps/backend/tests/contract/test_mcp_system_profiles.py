@@ -6,7 +6,7 @@ from kya_platform.mcp.registry.profiles import SYSTEM_PROFILES, TOOL_REGISTRATIO
 def test_tool_registration_matches_active_handlers_once() -> None:
     keys = [item.key for item in TOOL_REGISTRATIONS]
     assert len(keys) == len(set(keys))
-    assert len(keys) == 28
+    assert len(keys) == 29
     assert all(item.description and item.oauth_scope for item in TOOL_REGISTRATIONS)
 
 

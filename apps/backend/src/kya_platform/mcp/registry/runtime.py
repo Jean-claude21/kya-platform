@@ -1,9 +1,10 @@
 """Late-bound adapters shared by the FastAPI and Registry MCP lifecycles."""
 
+import base64
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Any
-from uuid import UUID, uuid7
+from uuid import NAMESPACE_URL, UUID, uuid5, uuid7
 
 from mcp.server.auth.middleware.auth_context import get_access_token
 from mcp.server.auth.provider import AccessToken
@@ -19,6 +20,7 @@ from kya_platform.application.mcp_profiles.runtime import (
     McpToolProfileRuntime,
     ToolProfileRequest,
 )
+from kya_platform.application.proposal import ProposalService
 from kya_platform.application.source_lifecycle import SourceLifecycleService
 from kya_platform.auth import AuthenticatedIdentity, IdentityMappingPort
 from kya_platform.authorization import (
@@ -26,6 +28,13 @@ from kya_platform.authorization import (
     AuthorizationPort,
     CheckRequest,
     ListObjectsRequest,
+)
+from kya_platform.contracts.proposal_package import ProposalFile, ProposalPackage
+from kya_platform.domain.catalog import ArtifactType as DomainArtifactType
+from kya_platform.domain.workspaces import WorkspaceQueryPort
+from kya_platform.mcp.registry.contracts import (
+    ArtifactProposalAccepted,
+    SubmitArtifactProposalInput,
 )
 from kya_platform.mcp.registry.server import RegistryBackend
 
@@ -151,6 +160,69 @@ class StateRegistryBackend:
 
     async def publish_candidate(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
         return await self._backend().publish_candidate(*args, **kwargs)
+
+
+class StateProposalMcpBackend:
+    """Bridge conversational proposals to the same governed service as the Web API."""
+
+    def __init__(self, state: State) -> None:
+        self._state = state
+
+    def _service(self) -> ProposalService:
+        service: ProposalService | None = self._state.proposal_service
+        if service is None:
+            raise ToolError("proposal_service_unavailable")
+        return service
+
+    def _workspaces(self) -> WorkspaceQueryPort:
+        workspaces: WorkspaceQueryPort | None = self._state.workspace_queries
+        if workspaces is None:
+            raise ToolError("workspace_service_unavailable")
+        return workspaces
+
+    async def resolve_workspace_id(self, workspace_key: str) -> UUID | None:
+        workspace = await self._workspaces().get(workspace_key)
+        return workspace.id if workspace is not None else None
+
+    async def submit_artifact_proposal(
+        self,
+        request: SubmitArtifactProposalInput,
+        *,
+        target_workspace_id: UUID,
+        artifact_id: UUID | None,
+        actor_id: UUID,
+        correlation_id: UUID,
+    ) -> ArtifactProposalAccepted:
+        package = ProposalPackage(
+            files=[
+                ProposalFile(
+                    path=file.path,
+                    kind=file.kind,
+                    content_base64=(
+                        file.content_base64
+                        if file.content_base64 is not None
+                        else base64.b64encode((file.content or "").encode("utf-8")).decode("ascii")
+                    ),
+                )
+                for file in request.files
+            ]
+        )
+        proposal_id = uuid5(
+            NAMESPACE_URL,
+            f"kya-platform:proposal:{actor_id}:{request.idempotency_key}",
+        )
+        proposal = await self._service().submit(
+            proposal_id=proposal_id,
+            target_workspace_id=target_workspace_id,
+            slug=request.slug,
+            artifact_type=DomainArtifactType(request.artifact_type.value),
+            artifact_id=artifact_id,
+            package=package,
+            requested_by=actor_id,
+            at=datetime.now(UTC),
+            correlation_id=correlation_id,
+        )
+        return ArtifactProposalAccepted(proposal_id=proposal.id)
 
 
 class StateDataMcpBackend:
@@ -321,6 +393,7 @@ __all__ = [
     "StateDataMcpBackend",
     "StateIdentityMapping",
     "StateIntelligenceMcpBackend",
+    "StateProposalMcpBackend",
     "StateRegistryBackend",
     "StateToolSetProvider",
 ]

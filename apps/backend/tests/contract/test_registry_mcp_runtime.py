@@ -11,11 +11,19 @@ from starlette.datastructures import State
 
 from kya_platform.auth import AuthenticatedIdentity
 from kya_platform.authorization import CheckRequest, ListObjectsRequest
+from kya_platform.contracts.artifact_manifest import ArtifactType
+from kya_platform.contracts.artifact_package import PackageFileKind
+from kya_platform.mcp.registry.contracts import (
+    ArtifactProposalFile,
+    Confirmation,
+    SubmitArtifactProposalInput,
+)
 from kya_platform.mcp.registry.runtime import (
     StateAuthorizationPort,
     StateDataMcpAuditSink,
     StateDataMcpBackend,
     StateIdentityMapping,
+    StateProposalMcpBackend,
     StateRegistryBackend,
     StateToolSetProvider,
 )
@@ -151,6 +159,67 @@ async def test_state_registry_backend_fails_closed_then_delegates_every_operatio
     assert await adapter.manage_installation("request") == "manage"
     assert await adapter.get_operation("request") == "operation"
     assert await adapter.publish_candidate("request") == "publish"
+
+
+@pytest.mark.asyncio
+async def test_state_proposal_backend_resolves_workspace_and_submits_mixed_package() -> None:
+    state = State()
+    state.proposal_service = None
+    state.workspace_queries = None
+    adapter = StateProposalMcpBackend(state)
+    with pytest.raises(ToolError, match="workspace_service_unavailable"):
+        await adapter.resolve_workspace_id("dss")
+
+    workspace_id = UUID("01991e00-0000-7000-8000-000000000071")
+    proposal_id = UUID("01991e00-0000-7000-8000-000000000081")
+    workspaces = AsyncMock()
+    workspaces.get.return_value = SimpleNamespace(id=workspace_id)
+    service = AsyncMock()
+    service.submit.return_value = SimpleNamespace(id=proposal_id)
+    state.workspace_queries = workspaces
+    state.proposal_service = service
+    request = SubmitArtifactProposalInput(
+        target_workspace="dss",
+        slug="solar-operations",
+        artifact_type=ArtifactType.APP,
+        files=(
+            ArtifactProposalFile(
+                path="artifact.manifest.json",
+                kind=PackageFileKind.MANIFEST,
+                content="{}",
+            ),
+            ArtifactProposalFile(
+                path="package.json",
+                kind=PackageFileKind.METADATA,
+                content="{}",
+            ),
+            ArtifactProposalFile(
+                path="assets/logo.png",
+                kind=PackageFileKind.ASSET,
+                content_base64="iVBORw0KGgo=",
+            ),
+        ),
+        idempotency_key="proposal-solar-operations-0001",
+        confirmation=Confirmation(confirmed=True),
+    )
+    actor_id = UUID("01991e00-0000-7000-8000-000000000003")
+    correlation_id = UUID("01991e00-0000-7000-8000-000000000004")
+
+    assert await adapter.resolve_workspace_id("dss") == workspace_id
+    result = await adapter.submit_artifact_proposal(
+        request,
+        target_workspace_id=workspace_id,
+        artifact_id=None,
+        actor_id=actor_id,
+        correlation_id=correlation_id,
+    )
+
+    assert result.proposal_id == proposal_id
+    submitted = service.submit.await_args.kwargs
+    assert submitted["requested_by"] == actor_id
+    assert submitted["artifact_type"].value == "app"
+    assert submitted["package"].files[1].decoded() == b"{}"
+    assert submitted["package"].files[2].decoded() == b"\x89PNG\r\n\x1a\n"
 
 
 @pytest.mark.asyncio

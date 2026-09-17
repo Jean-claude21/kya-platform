@@ -9,6 +9,7 @@ from pydantic import SecretStr
 
 from kya_platform.contracts.artifact_package import PackageFileKind
 from kya_platform.contracts.proposal_package import ProposalFile, ProposalPackage
+from kya_platform.domain.catalog import ArtifactType
 from kya_platform.infrastructure.github import GitHubAppPullRequestAdapter, GitHubUnavailableError
 
 TEST_PRIVATE_KEY_PEM = """-----BEGIN PRIVATE KEY-----
@@ -93,21 +94,21 @@ async def test_open_pull_request_never_holds_standing_merge_rights() -> None:
         if request.url.path.endswith("/git/trees"):
             body = json.loads(request.content)
             assert body["base_tree"] == "base-tree-sha"
-            assert body["tree"][0]["path"] == "catalog/templates/proposals/solar-brief/SKILL.md"
+            assert body["tree"][0]["path"] == "catalog/sources/skill/solar-brief/SKILL.md"
             return httpx.Response(201, json={"sha": "tree-sha"})
         if request.url.path.endswith("/git/commits"):
             body = json.loads(request.content)
             assert body["parents"] == ["a" * 40]
             return httpx.Response(201, json={"sha": "new-commit-sha"})
         if request.url.path.endswith(
-            "/git/refs/heads/proposals/solar-brief-" + PROPOSAL_ID.hex[:12]
+            "/git/refs/heads/feat-proposal-solar-brief-" + PROPOSAL_ID.hex[:12]
         ):
             body = json.loads(request.content)
             assert body["sha"] == "new-commit-sha"
             return httpx.Response(200, json={})
         if request.url.path.endswith("/git/refs"):
             body = json.loads(request.content)
-            assert body["ref"] == f"refs/heads/proposals/solar-brief-{PROPOSAL_ID.hex[:12]}"
+            assert body["ref"] == (f"refs/heads/feat-proposal-solar-brief-{PROPOSAL_ID.hex[:12]}")
             return httpx.Response(201, json={})
         if request.url.path.endswith("/pulls"):
             body = json.loads(request.content)
@@ -123,6 +124,7 @@ async def test_open_pull_request_never_holds_standing_merge_rights() -> None:
         url = await service.open_pull_request(
             repository="kya-energy/kya-platform",
             slug="solar-brief",
+            artifact_type=ArtifactType.SKILL,
             package=package(),
             required_approver_id=APPROVER_ID,
             proposal_id=PROPOSAL_ID,
