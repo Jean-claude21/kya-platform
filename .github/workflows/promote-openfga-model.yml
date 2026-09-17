@@ -1,0 +1,70 @@
+name: Promote OpenFGA model
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type PROMOTE to publish and activate the tested model
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: promote-openfga-production
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    if: inputs.confirmation == 'PROMOTE'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Test the model before publication
+        run: >-
+          docker run --rm --volume "$PWD:/work" --workdir /work
+          openfga/cli:v0.7.15@sha256:889801086b7b5d5239b9a2210e03e75ed8ff141bdfbe0238894bcb06d02d6780
+          model test --tests tests/policy/kya-platform.fga.yaml
+      - name: Publish, activate and verify the model
+        env:
+          COOLIFY_API_URL: ${{ secrets.COOLIFY_API_URL }}
+          COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+          APPLICATION_NAME: kya-platform-backend
+          APPLICATION_HOST: api.kya-platform.vttlife.com
+        run: |
+          set -euo pipefail
+          api_root="${COOLIFY_API_URL%/}"
+          [[ "$api_root" == */api/v1 ]] || api_root="$api_root/api/v1"
+          applications="$(curl --fail --silent --show-error --retry 3 --header "Authorization: Bearer $COOLIFY_API_TOKEN" "$api_root/applications")"
+          application_uuid="$(jq -er --arg name "$APPLICATION_NAME" --arg host "$APPLICATION_HOST" '[.[] | select(.name == $name and ((.fqdn // "") | contains($host)))] | if length == 1 then .[0].uuid elif length == 0 then error("backend application not found") else error("backend application selection is ambiguous") end' <<<"$applications")"
+          envs="$(curl --fail --silent --show-error --retry 3 --header "Authorization: Bearer $COOLIFY_API_TOKEN" "$api_root/applications/$application_uuid/envs")"
+          env_value() {
+            jq -er --arg key "$1" '[.[] | select(.key == $key and (.is_preview | not))] | if length == 1 then (.[0].real_value // .[0].value) elif length == 0 then error("required production variable is absent") else error("production variable is ambiguous") end' <<<"$envs"
+          }
+          export FGA_API_URL="$(env_value KYA_OPENFGA_API_URL)"
+          export FGA_API_TOKEN="$(env_value KYA_OPENFGA_API_TOKEN)"
+          export FGA_STORE_ID="$(env_value KYA_OPENFGA_STORE_ID)"
+          echo "::add-mask::$FGA_API_URL"
+          echo "::add-mask::$FGA_API_TOKEN"
+          echo "::add-mask::$FGA_STORE_ID"
+          result="$(docker run --rm --env FGA_API_URL --env FGA_API_TOKEN --volume "$PWD:/work" --workdir /work openfga/cli:v0.7.15@sha256:889801086b7b5d5239b9a2210e03e75ed8ff141bdfbe0238894bcb06d02d6780 model write --store-id="$FGA_STORE_ID" --file=tests/policy/kya-platform.fga)"
+          model_id="$(jq -er '.authorization_model_id' <<<"$result")"
+          curl --fail --silent --show-error --request PATCH --header "Authorization: Bearer $COOLIFY_API_TOKEN" --header "Content-Type: application/json" --data "$(jq -nc --arg value "$model_id" '{key: "KYA_OPENFGA_MODEL_ID", value: $value, is_preview: false, is_literal: true}')" "$api_root/applications/$application_uuid/envs" >/dev/null
+          deployment="$(curl --fail --silent --show-error --request POST --header "Authorization: Bearer $COOLIFY_API_TOKEN" "$api_root/deploy?uuid=$application_uuid&force=true")"
+          deployment_uuid="$(jq -er '.deployments[0].deployment_uuid' <<<"$deployment")"
+          status=queued
+          for attempt in $(seq 1 60); do
+            status="$(curl --fail --silent --show-error --header "Authorization: Bearer $COOLIFY_API_TOKEN" "$api_root/deployments/$deployment_uuid" | jq -er '.status')"
+            case "$status" in
+              finished) break ;;
+              failed|cancelled) echo "Deployment ended with $status" >&2; exit 1 ;;
+            esac
+            sleep 10
+          done
+          test "$status" = finished
+          model="$(docker run --rm --env FGA_API_URL --env FGA_API_TOKEN openfga/cli:v0.7.15@sha256:889801086b7b5d5239b9a2210e03e75ed8ff141bdfbe0238894bcb06d02d6780 model get --store-id="$FGA_STORE_ID" --model-id="$model_id")"
+          grep -Fq 'define can_propose: can_view' <<<"$model"
+          curl --fail --silent --show-error https://api.kya-platform.vttlife.com/api/v1/health/ready | jq -e '.status == "ok"' >/dev/null
+          echo "OpenFGA model published, activated and verified."
