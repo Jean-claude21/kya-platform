@@ -1,0 +1,69 @@
+name: Production diagnostics
+
+on:
+  workflow_dispatch:
+    inputs:
+      correlation_id:
+        description: KYA correlation UUID to locate in backend logs
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-diagnostics
+  cancel-in-progress: false
+
+jobs:
+  find-correlation:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Validate correlation id
+        env:
+          CORRELATION_ID: ${{ inputs.correlation_id }}
+        run: echo "$CORRELATION_ID" | grep -Eq '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+
+      - name: Read the correlated backend log
+        env:
+          COOLIFY_API_URL: ${{ secrets.COOLIFY_API_URL }}
+          COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+          CORRELATION_ID: ${{ inputs.correlation_id }}
+          APPLICATION_NAME: kya-platform-backend
+          APPLICATION_HOST: api.kya-platform.vttlife.com
+        run: |
+          set -euo pipefail
+          api_root="${COOLIFY_API_URL%/}"
+          if [[ "$api_root" != */api/v1 ]]; then
+            api_root="$api_root/api/v1"
+          fi
+
+          applications="$(curl --fail --silent --show-error \
+            --retry 3 \
+            --header "Authorization: Bearer $COOLIFY_API_TOKEN" \
+            "$api_root/applications")"
+          application_uuid="$(jq -er \
+            --arg name "$APPLICATION_NAME" \
+            --arg host "$APPLICATION_HOST" \
+            '[.[] | select(.name == $name and ((.fqdn // "") | contains($host)))] |
+             if length == 1 then .[0].uuid
+             elif length == 0 then error("backend application not found")
+             else error("backend application selection is ambiguous") end' \
+            <<<"$applications")"
+
+          response="$(curl --fail --silent --show-error \
+            --retry 3 \
+            --get \
+            --data-urlencode 'lines=2000' \
+            --data-urlencode 'show_timestamps=true' \
+            --header "Authorization: Bearer $COOLIFY_API_TOKEN" \
+            "$api_root/applications/$application_uuid/logs")"
+          logs="$(jq -r 'if type == "string" then . else (.logs // .data // .message // .) end' \
+            <<<"$response")"
+          match="$(grep -F "$CORRELATION_ID" <<<"$logs" || true)"
+          if [[ -z "$match" ]]; then
+            echo "No log entry found for correlation_id=$CORRELATION_ID" >&2
+            exit 1
+          fi
+          printf '%s\n' "$match"
