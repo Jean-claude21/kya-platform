@@ -166,6 +166,24 @@ async def test_save_updates_an_existing_row_on_approval() -> None:
 
 
 @pytest.mark.asyncio
+async def test_save_persists_an_administrative_override_actor() -> None:
+    row = proposal_row()
+    session = Session([row])
+    repository = SqlAlchemyProposalRepository(session)  # type: ignore[arg-type]
+    approved = opened_proposal().approve(
+        AUTHOR,
+        business_owner_id=BUSINESS_OWNER,
+        technical_owner_id=TECHNICAL_OWNER,
+        administrative_override=True,
+        at=NOW,
+    )
+
+    await repository.save(approved, package=package())
+
+    assert row.administrative_override_by == AUTHOR
+
+
+@pytest.mark.asyncio
 async def test_outbox_and_unit_of_work_share_the_same_transaction() -> None:
     session = Session()
     outbox = SqlAlchemyProposalOutbox(session)  # type: ignore[arg-type]

@@ -53,6 +53,23 @@ def test_author_cannot_approve_or_reject_own_proposal() -> None:
 
 
 @pytest.mark.unit
+def test_principal_administrator_override_is_explicitly_recorded() -> None:
+    proposal = opened()
+
+    approved = proposal.approve(
+        AUTHOR,
+        business_owner_id=BUSINESS_OWNER,
+        technical_owner_id=TECHNICAL_OWNER,
+        administrative_override=True,
+        at=NOW,
+    )
+
+    assert approved.status is ProposalStatus.APPROVED
+    assert approved.reviewer_id == AUTHOR
+    assert approved.administrative_override_by == AUTHOR
+
+
+@pytest.mark.unit
 def test_approval_assigns_ownership_the_author_never_receives_automatically() -> None:
     proposal = opened()
 

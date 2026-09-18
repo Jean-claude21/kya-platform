@@ -37,6 +37,7 @@ type Proposal = {
   reviewed_at: string | null;
   business_owner_id: string | null;
   technical_owner_id: string | null;
+  administrative_override_by: string | null;
   pull_request_url: string | null;
   merged_commit_sha: string | null;
 };
@@ -52,6 +53,7 @@ type ProposalReview = {
   proposal: Proposal;
   files: ProposalFile[];
   evidence: ProposalEvidence[];
+  administrative_override_allowed: boolean;
 };
 type LoadState = 'loading' | 'ready' | 'empty' | 'error';
 type ActionState = 'idle' | 'working' | 'success' | 'error';
@@ -240,6 +242,7 @@ function previewReview(status: ProposalStatus = 'submitted'): ProposalReview {
       reviewed_at: status === 'submitted' ? null : now,
       business_owner_id: null,
       technical_owner_id: null,
+      administrative_override_by: null,
       pull_request_url: null,
       merged_commit_sha: null,
     },
@@ -264,6 +267,7 @@ function previewReview(status: ProposalStatus = 'submitted'): ProposalReview {
             : 'La décision humaine est enregistrée.',
       },
     ],
+    administrative_override_allowed: false,
   };
 }
 
@@ -429,16 +433,27 @@ export function ArtifactStudio() {
   const isOwnProposal = Boolean(
     account && review && account.principal_id === review.proposal.requested_by,
   );
+  const canUseAdministrativeOverride = Boolean(
+    isOwnProposal && review?.administrative_override_allowed,
+  );
+  const canActOnOwnProposal = !isOwnProposal || canUseAdministrativeOverride;
+  const accountIsWorkspaceMember = Boolean(
+    account && memberships.some((membership) => membership.principal_id === account.principal_id),
+  );
+  const ownerSelectionReady = membersState === 'ready' || canUseAdministrativeOverride;
 
   useEffect(() => {
-    if (!account || isOwnProposal || memberships.length === 0) return;
-    const currentIsMember = memberships.some(
-      (membership) => membership.principal_id === account.principal_id,
-    );
-    if (!currentIsMember) return;
+    if (!account || !canActOnOwnProposal || memberships.length === 0) return;
+    if (!accountIsWorkspaceMember && !canUseAdministrativeOverride) return;
     setBusinessOwner((current) => current || account.principal_id);
     setTechnicalOwner((current) => current || account.principal_id);
-  }, [account, isOwnProposal, memberships]);
+  }, [account, accountIsWorkspaceMember, canActOnOwnProposal, canUseAdministrativeOverride]);
+
+  useEffect(() => {
+    if (!account || !canUseAdministrativeOverride) return;
+    setBusinessOwner((current) => current || account.principal_id);
+    setTechnicalOwner((current) => current || account.principal_id);
+  }, [account, canUseAdministrativeOverride]);
 
   useEffect(() => {
     setCopyState('idle');
@@ -761,21 +776,31 @@ export function ArtifactStudio() {
             <section className="review-decision-form">
               <h2>Décision</h2>
               {isOwnProposal && (
-                <p className="review-duty-warning" role="note">
-                  Cette proposition a été soumise avec votre identité. Une autre personne habilitée
-                  doit l’approuver ou la rejeter.
+                <p
+                  className="review-duty-warning"
+                  data-override={canUseAdministrativeOverride ? 'true' : 'false'}
+                  role="note"
+                >
+                  {canUseAdministrativeOverride
+                    ? 'Dérogation administrateur principal : votre décision sera identifiée comme une auto-revue administrative dans la piste d’audit.'
+                    : 'Cette proposition a été soumise avec votre identité. Une autre personne habilitée doit l’approuver ou la rejeter.'}
                 </p>
               )}
               <label>
                 <span>Responsable métier</span>
                 <select
                   value={businessOwner}
-                  disabled={membersState !== 'ready' || isOwnProposal}
+                  disabled={!ownerSelectionReady || !canActOnOwnProposal}
                   onChange={(event) => {
                     setBusinessOwner(event.target.value);
                   }}
                 >
                   <option value="">Choisir un membre actif</option>
+                  {canUseAdministrativeOverride && account && !accountIsWorkspaceMember && (
+                    <option value={account.principal_id}>
+                      {account.email ?? 'Mon compte'} · administrateur principal
+                    </option>
+                  )}
                   {memberships.map((membership) => (
                     <option
                       key={`business-${membership.principal_id}`}
@@ -792,12 +817,17 @@ export function ArtifactStudio() {
                 <span>Responsable technique</span>
                 <select
                   value={technicalOwner}
-                  disabled={membersState !== 'ready' || isOwnProposal}
+                  disabled={!ownerSelectionReady || !canActOnOwnProposal}
                   onChange={(event) => {
                     setTechnicalOwner(event.target.value);
                   }}
                 >
                   <option value="">Choisir un membre actif</option>
+                  {canUseAdministrativeOverride && account && !accountIsWorkspaceMember && (
+                    <option value={account.principal_id}>
+                      {account.email ?? 'Mon compte'} · administrateur principal
+                    </option>
+                  )}
                   {memberships.map((membership) => (
                     <option
                       key={`technical-${membership.principal_id}`}
@@ -810,7 +840,7 @@ export function ArtifactStudio() {
                   ))}
                 </select>
               </label>
-              {membersState === 'error' && (
+              {membersState === 'error' && !canUseAdministrativeOverride && (
                 <p className="review-field-error" role="alert">
                   Les membres de cet espace sont indisponibles. Réessayez après actualisation.
                 </p>
@@ -820,7 +850,7 @@ export function ArtifactStudio() {
                 type="button"
                 disabled={
                   actionState === 'working' ||
-                  isOwnProposal ||
+                  !canActOnOwnProposal ||
                   (!isPreview && (!businessOwner.trim() || !technicalOwner.trim()))
                 }
                 onClick={() => void runAction('approve')}
@@ -842,7 +872,9 @@ export function ArtifactStudio() {
                 className="review-reject"
                 type="button"
                 disabled={
-                  actionState === 'working' || isOwnProposal || rejectionReason.trim().length < 3
+                  actionState === 'working' ||
+                  !canActOnOwnProposal ||
+                  rejectionReason.trim().length < 3
                 }
                 onClick={() => void runAction('reject')}
               >

@@ -36,6 +36,7 @@ def _domain(row: CatalogProposal) -> Proposal:
         reviewed_at=row.reviewed_at,
         business_owner_id=row.business_owner_id,
         technical_owner_id=row.technical_owner_id,
+        administrative_override_by=row.administrative_override_by,
         pull_request_url=row.pull_request_url,
         merged_commit_sha=row.merged_commit_sha,
         resulting_artifact_version_id=row.resulting_artifact_version_id,
@@ -121,6 +122,7 @@ class SqlAlchemyProposalRepository:
         row.reviewed_at = proposal.reviewed_at
         row.business_owner_id = proposal.business_owner_id
         row.technical_owner_id = proposal.technical_owner_id
+        row.administrative_override_by = proposal.administrative_override_by
         row.pull_request_url = proposal.pull_request_url
         row.merged_commit_sha = proposal.merged_commit_sha
         row.resulting_artifact_version_id = proposal.resulting_artifact_version_id

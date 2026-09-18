@@ -351,6 +351,40 @@ async def test_approval_assigns_ownership_never_inherited_from_the_author() -> N
 
 @pytest.mark.asyncio
 @pytest.mark.unit
+async def test_administrator_override_is_propagated_to_the_audit_event() -> None:
+    proposals = FakeProposals()
+    proposals.records[PROPOSAL] = ProposalRecord(
+        proposal=Proposal.open(
+            id=PROPOSAL,
+            target_workspace_id=WORKSPACE,
+            slug="solar-brief",
+            artifact_type=ArtifactType.SKILL,
+            artifact_id=None,
+            requested_by=AUTHOR,
+            requested_at=NOW,
+        ),
+        package=package(),
+    )
+    service, unit_of_work = build_service(proposals, FakePullRequests())
+
+    approved = await service.approve(
+        PROPOSAL,
+        reviewer_id=AUTHOR,
+        business_owner_id=BUSINESS_OWNER,
+        technical_owner_id=TECHNICAL_OWNER,
+        administrative_override=True,
+        at=NOW,
+        correlation_id=CORRELATION,
+    )
+
+    assert approved.administrative_override_by == AUTHOR
+    event = unit_of_work.outbox.messages[-1]
+    assert event.payload["administrative_override"] is True
+    assert event.payload["administrative_override_by"] == str(AUTHOR)
+
+
+@pytest.mark.asyncio
+@pytest.mark.unit
 async def test_unknown_proposal_fails_closed() -> None:
     service, _ = build_service(FakeProposals(), FakePullRequests())
 
