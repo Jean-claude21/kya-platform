@@ -17,9 +17,11 @@ RUN uv sync \
     --locked \
     --no-dev \
     --package kya-platform-backend \
-    --no-install-package kya-platform-backend
+    --no-install-package kya-platform-backend \
+    --no-install-package kya-zoom-mcp
 
 COPY apps/backend apps/backend
+COPY capabilities/mcp/zoom capabilities/mcp/zoom
 RUN uv sync --locked --no-dev --package kya-platform-backend
 
 FROM python:3.14-slim AS runtime
