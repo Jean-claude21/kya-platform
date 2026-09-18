@@ -27,4 +27,3 @@
   "scopes": ["zoom.meeting.read", "zoom.meeting.create"],
   "risk": "controlled-write"
 }
-

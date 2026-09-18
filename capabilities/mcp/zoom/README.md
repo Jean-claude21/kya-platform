@@ -31,4 +31,3 @@ uv run --package kya-zoom-mcp ruff format --check capabilities/mcp/zoom
 uv run --package kya-zoom-mcp mypy capabilities/mcp/zoom/src
 uv run --package kya-zoom-mcp pytest capabilities/mcp/zoom/tests
 ```
-
