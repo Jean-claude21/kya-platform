@@ -191,6 +191,7 @@ class ProposalService:
         reviewer_id: UUID,
         business_owner_id: UUID,
         technical_owner_id: UUID,
+        administrative_override: bool = False,
         at: datetime,
         correlation_id: UUID,
     ) -> Proposal:
@@ -200,6 +201,7 @@ class ProposalService:
                 reviewer_id,
                 business_owner_id=business_owner_id,
                 technical_owner_id=technical_owner_id,
+                administrative_override=administrative_override,
                 at=at,
             )
             await unit_of_work.proposals.save(approved, package=record.package)
@@ -215,12 +217,18 @@ class ProposalService:
         *,
         reviewer_id: UUID,
         reason: str,
+        administrative_override: bool = False,
         at: datetime,
         correlation_id: UUID,
     ) -> Proposal:
         async with self._unit_of_work_factory() as unit_of_work:
             record = await self._required(unit_of_work.proposals, proposal_id)
-            rejected = record.proposal.reject(reviewer_id, reason=reason, at=at)
+            rejected = record.proposal.reject(
+                reviewer_id,
+                reason=reason,
+                administrative_override=administrative_override,
+                at=at,
+            )
             await unit_of_work.proposals.save(rejected, package=record.package)
             await unit_of_work.outbox.add(
                 self._event("proposal.rejected", rejected, correlation_id)
@@ -289,6 +297,12 @@ class ProposalService:
                 "artifact_type": proposal.artifact_type.value,
                 "target_workspace_id": str(proposal.target_workspace_id),
                 "status": proposal.status.value,
+                "administrative_override": proposal.administrative_override_by is not None,
+                "administrative_override_by": (
+                    str(proposal.administrative_override_by)
+                    if proposal.administrative_override_by is not None
+                    else None
+                ),
             },
             correlation_id=correlation_id,
         )

@@ -1891,6 +1891,11 @@ button:disabled {
   background: #f8f2ed;
   color: #754521;
 }
+.review-duty-warning[data-override='true'] {
+  border-color: #b9ddd6;
+  background: #e8f5f2;
+  color: #064c43;
+}
 .review-field-error {
   border: 1px solid #e4c6c2;
   background: #fff3f1;
