@@ -22,7 +22,8 @@ RUN uv sync \
 
 COPY apps/backend apps/backend
 COPY capabilities/mcp/zoom capabilities/mcp/zoom
-RUN uv sync --locked --no-dev --package kya-platform-backend
+RUN uv sync --locked --no-dev --no-editable --package kya-platform-backend
+RUN /app/.venv/bin/python -c "import kya_zoom_mcp; import kya_platform.mcp.zoom.runtime"
 
 FROM python:3.14-slim AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 \
