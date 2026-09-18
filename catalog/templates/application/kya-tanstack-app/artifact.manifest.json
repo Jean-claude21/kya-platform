@@ -21,9 +21,39 @@
   },
   "compatibility": {
     "node": ">=24",
-    "tanstack-start": ">=1"
+    "tanstack-router": ">=1"
   },
   "dependencies": [],
   "scopes": ["app.access"],
-  "risk": "read"
+  "risk": "read",
+  "governance": {
+    "visibility": "restricted",
+    "defaultScope": "workspace",
+    "allowedScopes": ["personal", "workspace", "unit", "subsidiary", "group"],
+    "permissions": ["view", "use", "create", "edit", "administer", "publish", "share"]
+  },
+  "features": [
+    {
+      "key": "workspace.home",
+      "name": "Application workspace",
+      "description": "Open the governed application in the active KYA context.",
+      "permissions": ["view", "use"]
+    }
+  ],
+  "application": {
+    "launch": {
+      "url": "https://replace-me.kya.energy",
+      "mode": "same-tab",
+      "iconUrl": "https://replace-me.kya.energy/icon.svg",
+      "healthUrl": "https://replace-me.kya.energy/health"
+    },
+    "requiredSdk": ">=0.2.0"
+  },
+  "integrations": {
+    "apiBaseUrl": "https://replace-me.kya.energy/api",
+    "emits": [],
+    "consumes": [],
+    "webhooks": [],
+    "mcpTools": []
+  }
 }

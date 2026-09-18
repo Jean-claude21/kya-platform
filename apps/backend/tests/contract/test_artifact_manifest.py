@@ -88,10 +88,83 @@ def test_rejects_duplicate_scopes() -> None:
 
 
 @pytest.mark.contract
+def test_accepts_governed_application_launch_metadata() -> None:
+    payload = valid_manifest()
+    payload.update(
+        {
+            "id": "kya:app:kya-forms",
+            "type": "app",
+            "governance": {
+                "visibility": "restricted",
+                "defaultScope": "workspace",
+                "allowedScopes": ["workspace", "unit", "group"],
+                "permissions": ["view", "use", "create", "edit", "administer"],
+            },
+            "features": [
+                {
+                    "key": "forms.builder",
+                    "name": "Form builder",
+                    "permissions": ["view", "create", "edit"],
+                }
+            ],
+            "application": {
+                "launch": {
+                    "url": "https://forms.kya.example",
+                    "mode": "same-tab",
+                    "iconUrl": "https://forms.kya.example/icon.svg",
+                    "healthUrl": "https://forms.kya.example/health",
+                },
+                "requiredSdk": ">=0.2.0",
+            },
+            "integrations": {
+                "apiBaseUrl": "https://forms.kya.example/api",
+                "emits": ["form.submitted"],
+                "consumes": [],
+                "webhooks": ["form.submitted"],
+                "mcpTools": ["forms.create_form"],
+            },
+        }
+    )
+
+    manifest = ArtifactManifest.model_validate(payload)
+
+    assert manifest.application is not None
+    assert str(manifest.application.launch.url) == "https://forms.kya.example/"
+    assert manifest.governance is not None
+    assert manifest.governance.default_scope.value == "workspace"
+
+
+@pytest.mark.contract
+def test_rejects_application_metadata_on_non_app_artifact() -> None:
+    payload = valid_manifest()
+    payload["application"] = {"launch": {"url": "https://forms.kya.example"}}
+
+    with pytest.raises(ValidationError, match="Only app artifacts"):
+        ArtifactManifest.model_validate(payload)
+
+
+@pytest.mark.contract
+def test_rejects_default_scope_outside_allowed_scopes() -> None:
+    payload = valid_manifest()
+    payload["governance"] = {
+        "defaultScope": "workspace",
+        "allowedScopes": ["unit"],
+        "permissions": ["view"],
+    }
+
+    with pytest.raises(ValidationError, match="default scope"):
+        ArtifactManifest.model_validate(payload)
+
+
+@pytest.mark.contract
 def test_exports_a_versioned_json_schema(tmp_path: Path) -> None:
     generated_paths = export_contracts(tmp_path)
 
-    assert generated_paths == [tmp_path / "artifact-manifest.schema.json"]
+    assert generated_paths == [
+        tmp_path / "artifact-manifest.schema.json",
+        tmp_path / "event-envelope.schema.json",
+        tmp_path / "record-schema.schema.json",
+    ]
     schema = json.loads(generated_paths[0].read_text(encoding="utf-8"))
     assert schema["$id"] == "https://schemas.kya.energy/platform/artifact-manifest/v1"
     assert schema["properties"]["schemaVersion"]["const"] == "1"

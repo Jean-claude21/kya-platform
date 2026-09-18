@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 
 from kya_platform.api.routes.account import router as account_router
+from kya_platform.api.routes.applications import router as applications_router
 from kya_platform.api.routes.artifacts import router as artifacts_router
 from kya_platform.api.routes.audit import router as audit_router
 from kya_platform.api.routes.bootstrap import router as bootstrap_router
@@ -25,6 +26,7 @@ from kya_platform.api.routes.workspaces import router as workspaces_router
 
 api_router = APIRouter()
 api_router.include_router(account_router)
+api_router.include_router(applications_router)
 api_router.include_router(artifacts_router)
 api_router.include_router(bootstrap_router)
 api_router.include_router(catalog_router)

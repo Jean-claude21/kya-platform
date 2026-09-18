@@ -68,6 +68,7 @@ from kya_platform.infrastructure.database.models.reliability import (
     OutboxEvent,
 )
 from kya_platform.infrastructure.database.models.secrets import SecretReferenceRow
+from kya_platform.infrastructure.database.models.webhooks import WebhookSubscriptionRow
 from kya_platform.infrastructure.database.models.workspaces import (
     WorkspaceLinkedUnitRow,
     WorkspaceMembershipRow,
@@ -129,6 +130,7 @@ __all__ = [
     "OutboxEvent",
     "PlatformBootstrapClaim",
     "SecretReferenceRow",
+    "WebhookSubscriptionRow",
     "WorkspaceLinkedUnitRow",
     "WorkspaceMembershipRow",
     "WorkspaceRow",

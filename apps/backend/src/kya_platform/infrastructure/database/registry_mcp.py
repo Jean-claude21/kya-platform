@@ -15,6 +15,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.sql.elements import ColumnElement
 
+from kya_platform.application.applications import RegisteredApplication
 from kya_platform.application.catalog import (
     CatalogBrowseQuery,
     CatalogDetail,
@@ -28,7 +29,7 @@ from kya_platform.application.publication.integrity import (
     SignatureVerification,
     verify_artifact_signature,
 )
-from kya_platform.contracts.artifact_manifest import ArtifactType
+from kya_platform.contracts.artifact_manifest import ArtifactManifest, ArtifactType
 from kya_platform.contracts.installation_plan import (
     ClientCompatibilityError,
     InstallationPlan,
@@ -317,6 +318,92 @@ class SqlAlchemyRegistryMcpBackend:
             )
             for artifact, workspace_name in result.all()
         )
+
+    async def list_applications(
+        self, *, allowed_ids: tuple[str, ...]
+    ) -> tuple[RegisteredApplication, ...]:
+        """Resolve launch metadata only for authorized, published application releases."""
+
+        identifiers = _uuid_identifiers(allowed_ids)
+        if not identifiers:
+            return ()
+        async with self._sessions() as session:
+            result = await session.execute(
+                select(CatalogArtifact, CatalogArtifactVersion, CatalogRelease)
+                .join(
+                    CatalogArtifactVersion,
+                    CatalogArtifactVersion.artifact_id == CatalogArtifact.id,
+                )
+                .join(
+                    CatalogRelease,
+                    CatalogRelease.artifact_version_id == CatalogArtifactVersion.id,
+                )
+                .where(
+                    CatalogArtifact.id.in_(identifiers),
+                    CatalogArtifact.artifact_type == ArtifactType.APP.value,
+                    CatalogArtifact.lifecycle == "published",
+                    CatalogArtifactVersion.status == "published",
+                    CatalogRelease.status == "published",
+                )
+                .order_by(CatalogArtifact.updated_at.desc(), CatalogRelease.published_at.desc())
+            )
+        applications: list[RegisteredApplication] = []
+        seen: set[UUID] = set()
+        for artifact, version, _release in result.all():
+            if artifact.id in seen:
+                continue
+            try:
+                manifest = ArtifactManifest.model_validate(version.manifest)
+            except ValidationError:
+                continue
+            if manifest.application is None:
+                continue
+            seen.add(artifact.id)
+            governance = manifest.governance
+            applications.append(
+                RegisteredApplication(
+                    artifact_id=_public_id(artifact),
+                    internal_id=str(artifact.id),
+                    name=artifact.name,
+                    summary=artifact.summary,
+                    version=version.version,
+                    lifecycle=artifact.lifecycle,
+                    owner_workspace_id=str(artifact.owner_workspace_id),
+                    launch_url=str(manifest.application.launch.url),
+                    launch_mode=manifest.application.launch.mode.value,
+                    icon_url=(
+                        str(manifest.application.launch.icon_url)
+                        if manifest.application.launch.icon_url is not None
+                        else None
+                    ),
+                    health_url=(
+                        str(manifest.application.launch.health_url)
+                        if manifest.application.launch.health_url is not None
+                        else None
+                    ),
+                    required_sdk=manifest.application.required_sdk,
+                    visibility=(
+                        governance.visibility.value
+                        if governance is not None
+                        else artifact.visibility
+                    ),
+                    default_scope=(
+                        governance.default_scope.value if governance is not None else "workspace"
+                    ),
+                    allowed_scopes=(
+                        tuple(scope.value for scope in governance.allowed_scopes)
+                        if governance is not None
+                        else ("workspace",)
+                    ),
+                    declared_permissions=(
+                        tuple(permission.value for permission in governance.permissions)
+                        if governance is not None
+                        else ("view", "use")
+                    ),
+                    features=tuple(feature.key for feature in manifest.features),
+                )
+            )
+        return tuple(applications)
 
     async def get_artifact(self, request: GetArtifactInput) -> ArtifactDetail:
         detail = await self.describe(public_id=request.artifact_id, version=request.version)
