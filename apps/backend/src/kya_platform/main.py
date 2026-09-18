@@ -4,6 +4,7 @@ import base64
 import logging
 from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, asynccontextmanager
+from datetime import UTC, datetime
 from typing import cast
 
 import httpx
@@ -99,6 +100,11 @@ from kya_platform.mcp.registry.runtime import (
     StateToolSetProvider,
 )
 from kya_platform.mcp.registry.server import create_registry_server
+from kya_platform.mcp.zoom.runtime import (
+    StateZoomMcpBackend,
+    StaticZoomConnectionResolver,
+    ZoomAuthorizationAdapter,
+)
 from kya_platform.observability import (
     CorrelationMiddleware,
     configure_logging,
@@ -188,6 +194,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         infisical_http_client: httpx.AsyncClient | None = None
         openfga_http_client: httpx.AsyncClient | None = None
+        zoom_http_client: httpx.AsyncClient | None = None
         signer: Ed25519ArtifactSigner | None = None
         pull_requests: GitHubAppPullRequestAdapter | None = None
         # Test settings may intentionally use a non-routable database URL to
@@ -324,6 +331,48 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 resolved_settings.infisical_environment,
                 resolved_settings.infisical_secret_path,
             )
+        if resolved_settings.has_zoom_configuration:
+            from kya_zoom_mcp.adapters.zoom import ZoomAPIAdapter, ZoomCredentials
+            from kya_zoom_mcp.service import ZoomMeetingService
+            from kya_zoom_mcp.stores import MemoryMeetingPlanStore, MemoryOperationStore
+
+            if (
+                resolved_settings.zoom_account_id is not None
+                and resolved_settings.zoom_client_id is not None
+                and resolved_settings.zoom_client_secret is not None
+            ):
+                zoom_account_id = resolved_settings.zoom_account_id
+                zoom_client_id = resolved_settings.zoom_client_id
+                zoom_client_secret = resolved_settings.zoom_client_secret
+            else:
+                resolver = app.state.infisical_secret_resolver
+                if resolver is None:
+                    raise RuntimeError("Zoom requires inline credentials or Infisical")
+                instant = datetime.now(UTC)
+                account_secret = await resolver.resolve("ZOOM_ACCOUNT_ID", at=instant)
+                client_id_secret = await resolver.resolve("ZOOM_CLIENT_ID", at=instant)
+                client_secret = await resolver.resolve("ZOOM_CLIENT_SECRET", at=instant)
+                zoom_account_id = account_secret.value.get_secret_value()
+                zoom_client_id = client_id_secret.value.get_secret_value()
+                zoom_client_secret = client_secret.value
+
+            zoom_http_client = httpx.AsyncClient(timeout=20.0)
+            app.state.zoom_service = ZoomMeetingService(
+                authorization=ZoomAuthorizationAdapter(),
+                connections=StaticZoomConnectionResolver(resolved_settings.zoom_host_id),
+                plans=MemoryMeetingPlanStore(),
+                operations=MemoryOperationStore(),
+                zoom=ZoomAPIAdapter(
+                    ZoomCredentials(
+                        account_id=zoom_account_id,
+                        client_id=zoom_client_id,
+                        client_secret=zoom_client_secret,
+                    ),
+                    zoom_http_client,
+                    api_base_url=resolved_settings.zoom_api_base_url,
+                    oauth_endpoint=resolved_settings.zoom_oauth_token_url,
+                ),
+            )
         if resolved_settings.openfga_api_url is not None:
             api_token = resolved_settings.openfga_api_token
             store_id = resolved_settings.openfga_store_id
@@ -410,6 +459,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     await infisical_http_client.aclose()
                 if openfga_http_client is not None:
                     await openfga_http_client.aclose()
+                if zoom_http_client is not None:
+                    await zoom_http_client.aclose()
                 if database_engine is not None:
                     await database_engine.dispose()
                 telemetry.shutdown()
@@ -447,9 +498,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.state.mcp_profile_repository = None
     application.state.mcp_preference_service = None
     application.state.mcp_tool_profile_runtime = None
+    application.state.zoom_service = None
     application.state.oauth_broker = oauth_broker
     configure_security_runtime(application.state, resolved_settings)
-    zoom_backend = getattr(application.state, "zoom_backend", None)
+    zoom_backend = (
+        StateZoomMcpBackend(application.state)
+        if resolved_settings.has_zoom_configuration
+        else None
+    )
     if resolved_settings.has_registry_mcp_configuration:
         authorization_server_url = resolved_settings.registry_mcp_authorization_server_url
         if oauth_broker is None or authorization_server_url is None:

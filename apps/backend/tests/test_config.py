@@ -51,6 +51,42 @@ def test_fastapi_lifecycle_wires_configured_infisical_resolver() -> None:
 
 
 @pytest.mark.unit
+def test_fastapi_lifecycle_wires_inline_zoom_runtime() -> None:
+    settings = Settings(
+        environment="test",
+        zoom_account_id="account",
+        zoom_client_id="client",
+        zoom_client_secret=SecretStr("secret"),
+    )
+    app = create_app(settings)
+
+    with TestClient(app):
+        assert app.state.zoom_service is not None
+
+
+@pytest.mark.unit
+def test_zoom_configuration_requires_complete_inline_credentials() -> None:
+    with pytest.raises(ValueError, match="Inline Zoom configuration must be complete"):
+        Settings(environment="test", zoom_client_id="client")
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    (
+        ("infisical_secret_path", "relative", "secret path"),
+        ("infisical_maximum_token_ttl_seconds", 0, "token TTL"),
+        ("zoom_host_id", "", "host ID"),
+        ("otel_metric_export_interval_millis", 999, "metric export interval"),
+    ),
+)
+def test_settings_reject_invalid_runtime_bounds(
+    field: str, value: object, message: str
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        Settings(**{field: value})
+
+@pytest.mark.unit
 def test_settings_normalize_otlp_endpoint() -> None:
     settings = Settings(_env_file=None, otel_exporter_otlp_endpoint="https://collector.example/")
 
