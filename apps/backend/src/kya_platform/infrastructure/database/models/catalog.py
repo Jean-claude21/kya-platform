@@ -339,6 +339,7 @@ class CatalogProposal(Base):
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     business_owner_id: Mapped[UUID | None] = mapped_column(nullable=True)
     technical_owner_id: Mapped[UUID | None] = mapped_column(nullable=True)
+    administrative_override_by: Mapped[UUID | None] = mapped_column(nullable=True)
     pull_request_url: Mapped[str | None] = mapped_column(String(700), nullable=True)
     merged_commit_sha: Mapped[str | None] = mapped_column(String(40), nullable=True)
     resulting_artifact_version_id: Mapped[UUID | None] = mapped_column(nullable=True)

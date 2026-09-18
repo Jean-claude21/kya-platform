@@ -73,6 +73,7 @@ class ProposalResponse(BaseModel):
     reviewed_at: datetime | None
     business_owner_id: UUID | None
     technical_owner_id: UUID | None
+    administrative_override_by: UUID | None
     pull_request_url: str | None
     merged_commit_sha: str | None
 
@@ -106,6 +107,7 @@ class ProposalReviewResponse(BaseModel):
     proposal: ProposalResponse
     files: list[ProposalFileResponse]
     evidence: list[ProposalEvidenceResponse]
+    administrative_override_allowed: bool = False
 
 
 def _response(proposal: Proposal) -> ProposalResponse:
@@ -123,6 +125,7 @@ def _response(proposal: Proposal) -> ProposalResponse:
         reviewed_at=proposal.reviewed_at,
         business_owner_id=proposal.business_owner_id,
         technical_owner_id=proposal.technical_owner_id,
+        administrative_override_by=proposal.administrative_override_by,
         pull_request_url=proposal.pull_request_url,
         merged_commit_sha=proposal.merged_commit_sha,
     )
@@ -215,6 +218,34 @@ async def _require_permission(
     )
     if not decision.allowed:
         raise ApiError(403, "permission_denied", "Accès refusé", "Action non autorisée.")
+
+
+async def _is_active_unit_administrator(request: Request, principal: AuthorizedPrincipal) -> bool:
+    """Resolve the explicit administrator relation; can_manage alone is insufficient."""
+
+    authorization: AuthorizationPort | None = request.app.state.authorization
+    if authorization is None:
+        raise ApiError(
+            503,
+            "authorization_unavailable",
+            "Autorisation indisponible",
+            "Le service d'autorisation n'est pas configuré.",
+        )
+    context, contextual_tuples = active_unit_context(
+        user_id=str(principal.principal_id),
+        unit_id=principal.active_unit_id,
+        current_time=datetime.now(UTC),
+    )
+    decision = await authorization.check(
+        CheckRequest(
+            user=f"user:{principal.principal_id}",
+            relation="administrator",
+            object=f"org_unit:{principal.active_unit_id}",
+            context=context,
+            contextual_tuples=contextual_tuples,
+        )
+    )
+    return decision.allowed
 
 
 @router.post("", response_model=ProposalResponse, status_code=status.HTTP_201_CREATED)
@@ -313,13 +344,18 @@ async def approve_proposal(
     request: Request,
     principal: Annotated[AuthorizedPrincipal, Depends(active_principal)],
 ) -> ProposalResponse:
-    await _require_review_permission(request, principal, proposal_id)
+    current = await _require_review_permission(request, principal, proposal_id)
+    administrative_override = (
+        current.requested_by == principal.principal_id
+        and await _is_active_unit_administrator(request, principal)
+    )
     try:
         proposal = await _service(request).approve(
             proposal_id,
             reviewer_id=principal.principal_id,
             business_owner_id=payload.business_owner_id,
             technical_owner_id=payload.technical_owner_id,
+            administrative_override=administrative_override,
             at=datetime.now(UTC),
             correlation_id=_correlation_id(request),
         )
@@ -335,12 +371,17 @@ async def reject_proposal(
     request: Request,
     principal: Annotated[AuthorizedPrincipal, Depends(active_principal)],
 ) -> ProposalResponse:
-    await _require_review_permission(request, principal, proposal_id)
+    current = await _require_review_permission(request, principal, proposal_id)
+    administrative_override = (
+        current.requested_by == principal.principal_id
+        and await _is_active_unit_administrator(request, principal)
+    )
     try:
         proposal = await _service(request).reject(
             proposal_id,
             reviewer_id=principal.principal_id,
             reason=payload.reason,
+            administrative_override=administrative_override,
             at=datetime.now(UTC),
             correlation_id=_correlation_id(request),
         )
@@ -389,7 +430,11 @@ async def get_proposal_review(
     request: Request,
     principal: Annotated[AuthorizedPrincipal, Depends(active_principal)],
 ) -> ProposalReviewResponse:
-    await _require_review_permission(request, principal, proposal_id)
+    proposal = await _require_review_permission(request, principal, proposal_id)
+    administrative_override_allowed = (
+        proposal.requested_by == principal.principal_id
+        and await _is_active_unit_administrator(request, principal)
+    )
     record = await _service(request).get_record(proposal_id)
     files = [
         ProposalFileResponse(
@@ -403,6 +448,7 @@ async def get_proposal_review(
     return ProposalReviewResponse(
         proposal=_response(record.proposal),
         files=files,
+        administrative_override_allowed=administrative_override_allowed,
         evidence=[
             ProposalEvidenceResponse(
                 code="admission_validation",

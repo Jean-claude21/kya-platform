@@ -35,13 +35,19 @@ class Mapping:
 
 
 class Policy:
-    def __init__(self, allowed: bool) -> None:
+    def __init__(self, allowed: bool, *, administrator_allowed: bool | None = None) -> None:
         self.allowed = allowed
+        self.administrator_allowed = (
+            allowed if administrator_allowed is None else administrator_allowed
+        )
         self.checks: list[CheckRequest] = []
 
     async def check(self, request: CheckRequest) -> AuthorizationDecision:
         self.checks.append(request)
-        return AuthorizationDecision(self.allowed, "01MODEL")
+        allowed = (
+            self.administrator_allowed if request.relation == "administrator" else self.allowed
+        )
+        return AuthorizationDecision(allowed, "01MODEL")
 
     async def list_objects(self, request: ListObjectsRequest) -> Sequence[str]:
         return ()
@@ -95,10 +101,17 @@ class ProposalCommands:
 
     async def approve(self, proposal_id: UUID, **values: object) -> Proposal:
         assert self.record is not None
+        reviewer_id = values["reviewer_id"]
+        business_owner_id = values["business_owner_id"]
+        technical_owner_id = values["technical_owner_id"]
+        assert isinstance(reviewer_id, UUID)
+        assert isinstance(business_owner_id, UUID)
+        assert isinstance(technical_owner_id, UUID)
         self.record = self.record.approve(
-            REVIEWER,
-            business_owner_id=BUSINESS_OWNER,
-            technical_owner_id=TECHNICAL_OWNER,
+            reviewer_id,
+            business_owner_id=business_owner_id,
+            technical_owner_id=technical_owner_id,
+            administrative_override=bool(values.get("administrative_override", False)),
             at=NOW,
         )
         return self.record
@@ -119,8 +132,10 @@ class ProposalCommands:
         return self.record
 
 
-def configure(app: FastAPI, *, allowed: bool) -> tuple[TestClient, Policy, ProposalCommands]:
-    policy = Policy(allowed)
+def configure(
+    app: FastAPI, *, allowed: bool, administrator_allowed: bool | None = None
+) -> tuple[TestClient, Policy, ProposalCommands]:
+    policy = Policy(allowed, administrator_allowed=administrator_allowed)
     commands = ProposalCommands()
     app.state.token_verifier = Verifier()
     app.state.identity_mapping = Mapping()
@@ -185,7 +200,9 @@ def test_denied_submission_never_reaches_the_proposal_service(app: FastAPI) -> N
 
 
 @pytest.mark.integration
-def test_approval_assigns_ownership_the_author_never_inherits(app: FastAPI) -> None:
+def test_principal_administrator_can_approve_own_proposal_with_audited_override(
+    app: FastAPI,
+) -> None:
     client, policy, commands = configure(app, allowed=True)
     commands.record = opened_proposal()
     with client:
@@ -200,8 +217,36 @@ def test_approval_assigns_ownership_the_author_never_inherits(app: FastAPI) -> N
 
     assert response.status_code == 200
     assert response.json()["status"] == ProposalStatus.APPROVED.value
+    assert response.json()["administrative_override_by"] == str(AUTHOR)
     assert policy.checks[0].relation == "can_manage"
     assert policy.checks[0].object == f"workspace:{WORKSPACE}"
+    assert policy.checks[1].relation == "administrator"
+    assert policy.checks[1].object == "org_unit:direction-cvsi"
+
+
+@pytest.mark.integration
+def test_manager_cannot_approve_own_proposal_without_administrator_relation(
+    app: FastAPI,
+) -> None:
+    client, policy, commands = configure(
+        app,
+        allowed=True,
+        administrator_allowed=False,
+    )
+    commands.record = opened_proposal()
+    with client:
+        response = client.post(
+            f"/api/v1/proposals/{PROPOSAL}/approvals",
+            headers=headers(),
+            json={
+                "business_owner_id": str(BUSINESS_OWNER),
+                "technical_owner_id": str(TECHNICAL_OWNER),
+            },
+        )
+
+    assert response.status_code == 403
+    assert response.json()["code"] == "proposal_duty_conflict"
+    assert policy.checks[-1].relation == "administrator"
 
 
 @pytest.mark.integration

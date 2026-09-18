@@ -253,6 +253,7 @@ class Proposal:
     reviewed_at: datetime | None = None
     business_owner_id: UUID | None = None
     technical_owner_id: UUID | None = None
+    administrative_override_by: UUID | None = None
     pull_request_url: str | None = None
     merged_commit_sha: str | None = None
     resulting_artifact_version_id: UUID | None = None
@@ -290,11 +291,12 @@ class Proposal:
         *,
         business_owner_id: UUID,
         technical_owner_id: UUID,
+        administrative_override: bool = False,
         at: datetime,
     ) -> Proposal:
         if self.status not in {ProposalStatus.SUBMITTED, ProposalStatus.IN_REVIEW}:
             raise ValueError("proposal is not awaiting a review decision")
-        if reviewer_id == self.requested_by:
+        if reviewer_id == self.requested_by and not administrative_override:
             raise PermissionError("an author cannot approve own proposal")
         return replace(
             self,
@@ -303,12 +305,20 @@ class Proposal:
             reviewed_at=at,
             business_owner_id=business_owner_id,
             technical_owner_id=technical_owner_id,
+            administrative_override_by=reviewer_id if administrative_override else None,
         )
 
-    def reject(self, reviewer_id: UUID, *, reason: str, at: datetime) -> Proposal:
+    def reject(
+        self,
+        reviewer_id: UUID,
+        *,
+        reason: str,
+        administrative_override: bool = False,
+        at: datetime,
+    ) -> Proposal:
         if self.status not in {ProposalStatus.SUBMITTED, ProposalStatus.IN_REVIEW}:
             raise ValueError("proposal is not awaiting a review decision")
-        if reviewer_id == self.requested_by:
+        if reviewer_id == self.requested_by and not administrative_override:
             raise PermissionError("an author cannot reject own proposal")
         return replace(
             self,
@@ -316,6 +326,7 @@ class Proposal:
             reviewer_id=reviewer_id,
             review_reason=reason,
             reviewed_at=at,
+            administrative_override_by=reviewer_id if administrative_override else None,
         )
 
     def mark_pull_request_open(self, *, pull_request_url: str) -> Proposal:
