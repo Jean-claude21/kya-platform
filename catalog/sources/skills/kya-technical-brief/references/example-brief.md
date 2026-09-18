@@ -6,11 +6,11 @@
 
 **Options**
 
-| Option | Benefice | Cout | Risque |
-|---|---|---|---|
-| File Redis | Simple, deja deploye | Faible | Perte de messages si Redis tombe |
-| RabbitMQ | Garanties de livraison | Moyen | Nouvelle brique a exploiter |
-| Table de jobs en base | Aucune dependance nouvelle | Faible | Contention sur la base |
+| Option                | Benefice                   | Cout   | Risque                           |
+| --------------------- | -------------------------- | ------ | -------------------------------- |
+| File Redis            | Simple, deja deploye       | Faible | Perte de messages si Redis tombe |
+| RabbitMQ              | Garanties de livraison     | Moyen  | Nouvelle brique a exploiter      |
+| Table de jobs en base | Aucune dependance nouvelle | Faible | Contention sur la base           |
 
 **Decision** - File Redis avec persistance activee : cout d'adoption le plus bas pour le volume actuel.
 
