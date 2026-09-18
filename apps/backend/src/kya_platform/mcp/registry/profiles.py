@@ -7,6 +7,7 @@ from kya_platform.application.mcp_profiles import (
 from kya_platform.mcp.data.contracts import DATA_TOOLS
 from kya_platform.mcp.intelligence.contracts import INTELLIGENCE_TOOLS
 from kya_platform.mcp.registry.contracts import REGISTRY_TOOLS, RegistryTool
+from kya_platform.mcp.zoom.contracts import ZOOM_TOOLS
 
 
 def _registration(tool: RegistryTool, namespace: str) -> ToolRegistration:
@@ -30,6 +31,7 @@ TOOL_REGISTRATIONS = tuple(
         *(_registration(tool, "registry") for tool in REGISTRY_TOOLS),
         *(_registration(tool, "data") for tool in DATA_TOOLS),
         *(_registration(tool, "intelligence") for tool in INTELLIGENCE_TOOLS),
+        *(_registration(tool, "zoom") for tool in ZOOM_TOOLS),
     ]
 )
 
@@ -38,6 +40,7 @@ _DATA_READ = tuple(tool.name for tool in DATA_TOOLS if not tool.is_write)
 _DATA_OPERATOR = tuple(tool.name for tool in DATA_TOOLS)
 _INTELLIGENCE_READ = tuple(tool.name for tool in INTELLIGENCE_TOOLS if not tool.is_write)
 _INTELLIGENCE_OPERATOR = tuple(tool.name for tool in INTELLIGENCE_TOOLS)
+_ZOOM_ALL = tuple(tool.name for tool in ZOOM_TOOLS)
 _CATALOG_PUBLISHER = tuple(tool.name for tool in REGISTRY_TOOLS)
 
 SYSTEM_PROFILES = (
@@ -70,6 +73,12 @@ SYSTEM_PROFILES = (
         "Opérateur du catalogue",
         "Lire, installer, mettre à jour et publier selon les autorisations métier.",
         _CATALOG_PUBLISHER,
+    ),
+    SystemProfileRegistration(
+        "zoom-operator",
+        "Opérateur Zoom",
+        "Préparer, créer et consulter les réunions Zoom de l'organisation.",
+        _ZOOM_ALL,
     ),
 )
 
