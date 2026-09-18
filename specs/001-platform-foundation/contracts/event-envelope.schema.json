@@ -23,9 +23,7 @@
           "title": "Workspaceid"
         }
       },
-      "required": [
-        "unitId"
-      ],
+      "required": ["unitId"],
       "title": "EventContext",
       "type": "object"
     }
@@ -120,16 +118,7 @@
       "type": "object"
     }
   },
-  "required": [
-    "id",
-    "type",
-    "source",
-    "subject",
-    "time",
-    "context",
-    "correlationId",
-    "data"
-  ],
+  "required": ["id", "type", "source", "subject", "time", "context", "correlationId", "data"],
   "title": "KyaEventEnvelope",
   "type": "object"
 }

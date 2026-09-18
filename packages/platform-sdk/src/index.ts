@@ -206,9 +206,7 @@ export class KyaPlatformClient {
 
   getOrganizationalUnit(unitKey: string): Promise<KyaOrganizationalUnit> {
     if (!unitKey.trim()) throw new Error('A KYA organizational unit key is required.');
-    return this.request<KyaOrganizationalUnit>(
-      `core/organization/${encodeURIComponent(unitKey)}`,
-    );
+    return this.request<KyaOrganizationalUnit>(`core/organization/${encodeURIComponent(unitKey)}`);
   }
 
   listChildUnits(unitKey: string): Promise<KyaOrganizationalUnitList> {

@@ -78,7 +78,10 @@ export function ApplicationLauncher({ query = '' }: { query?: string }) {
       )}
 
       {state.status === 'error' && (
-        <div className="application-launcher__state application-launcher__state--error" role="alert">
+        <div
+          className="application-launcher__state application-launcher__state--error"
+          role="alert"
+        >
           <Icon name="shield" />
           <div>
             <h2>Applications indisponibles</h2>
@@ -132,9 +135,7 @@ export function ApplicationLauncher({ query = '' }: { query?: string }) {
                     <span>{application.default_scope}</span>
                   </div>
                 </div>
-                <span
-                  className={`application-launcher__status ${isUsable ? '' : 'is-restricted'}`}
-                >
+                <span className={`application-launcher__status ${isUsable ? '' : 'is-restricted'}`}>
                   <i aria-hidden="true" /> {isUsable ? 'Disponible' : 'Accès restreint'}
                 </span>
                 <button

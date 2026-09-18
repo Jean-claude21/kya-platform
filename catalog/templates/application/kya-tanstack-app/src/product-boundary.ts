@@ -4,7 +4,9 @@ export type KyaAppRuntime = Readonly<{
   apiUrl: string;
   getAccessToken: () => Promise<string | null>;
   getActiveContext: () => KyaActiveContext | Promise<KyaActiveContext>;
-  reportTelemetry?: (event: Readonly<{ name: string; durationMs: number; outcome: string }>) => void;
+  reportTelemetry?: (
+    event: Readonly<{ name: string; durationMs: number; outcome: string }>,
+  ) => void;
 }>;
 
 export function createKyaAppClient(runtime: KyaAppRuntime): KyaPlatformClient {

@@ -26,24 +26,13 @@
           "type": "array"
         }
       },
-      "required": [
-        "maxBytesPerFile",
-        "allowedMediaTypes"
-      ],
+      "required": ["maxBytesPerFile", "allowedMediaTypes"],
       "title": "AttachmentPolicy",
       "type": "object"
     },
     "CapabilityPermission": {
       "description": "Stable verbs shared by applications, MCP tools, skills and data products.",
-      "enum": [
-        "view",
-        "use",
-        "create",
-        "edit",
-        "administer",
-        "publish",
-        "share"
-      ],
+      "enum": ["view", "use", "create", "edit", "administer", "publish", "share"],
       "title": "CapabilityPermission",
       "type": "string"
     },
@@ -52,10 +41,7 @@
       "properties": {
         "enforcement": {
           "default": "schema",
-          "enum": [
-            "schema",
-            "record"
-          ],
+          "enum": ["schema", "record"],
           "title": "Enforcement",
           "type": "string"
         },
@@ -68,9 +54,7 @@
           "type": "array"
         }
       },
-      "required": [
-        "permissions"
-      ],
+      "required": ["permissions"],
       "title": "RecordAccessPolicy",
       "type": "object"
     },
@@ -133,11 +117,7 @@
           "default": null
         }
       },
-      "required": [
-        "key",
-        "label",
-        "type"
-      ],
+      "required": ["key", "label", "type"],
       "title": "RecordField",
       "type": "object"
     },
@@ -159,12 +139,7 @@
       "type": "string"
     },
     "RelationCardinality": {
-      "enum": [
-        "one-to-one",
-        "many-to-one",
-        "one-to-many",
-        "many-to-many"
-      ],
+      "enum": ["one-to-one", "many-to-one", "one-to-many", "many-to-many"],
       "title": "RelationCardinality",
       "type": "string"
     },
@@ -180,10 +155,7 @@
           "$ref": "#/$defs/RelationCardinality"
         }
       },
-      "required": [
-        "targetSchemaId",
-        "cardinality"
-      ],
+      "required": ["targetSchemaId", "cardinality"],
       "title": "RelationDefinition",
       "type": "object"
     },
@@ -207,9 +179,7 @@
           "type": "boolean"
         }
       },
-      "required": [
-        "retainDays"
-      ],
+      "required": ["retainDays"],
       "title": "RetentionPolicy",
       "type": "object"
     }
