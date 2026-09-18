@@ -86,7 +86,9 @@ export function ApplicationLauncher({ query = '' }: { query?: string }) {
             <button
               type="button"
               className="signature-outline"
-              onClick={() => window.location.reload()}
+              onClick={() => {
+                window.location.reload();
+              }}
             >
               Réessayer
             </button>
@@ -140,7 +142,9 @@ export function ApplicationLauncher({ query = '' }: { query?: string }) {
                   className="signature-primary application-launcher__open"
                   disabled={!isUsable}
                   title={isUsable ? undefined : "L'autorisation d'utilisation est requise."}
-                  onClick={() => launch(application)}
+                  onClick={() => {
+                    launch(application);
+                  }}
                 >
                   Ouvrir
                   <Icon name="chevron" />
