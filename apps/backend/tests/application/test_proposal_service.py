@@ -154,11 +154,33 @@ class FakePullRequests:
         return self._merge_commit
 
 
+class FakePublisher:
+    def __init__(self) -> None:
+        self.published: list[tuple[UUID, str]] = []
+        self.version_id = UUID("019914b2-1a40-7000-8000-0000000000d1")
+
+    async def publish(
+        self,
+        *,
+        proposal: Proposal,
+        package: ProposalPackage,
+        commit_sha: str,
+        correlation_id: UUID,
+    ) -> UUID:
+        del package, correlation_id
+        self.published.append((proposal.id, commit_sha))
+        return self.version_id
+
+
 def build_service(
-    proposals: FakeProposals, pull_requests: FakePullRequests
+    proposals: FakeProposals,
+    pull_requests: FakePullRequests,
+    publisher: FakePublisher | None = None,
 ) -> tuple[ProposalService, FakeUnitOfWork]:
     unit_of_work = FakeUnitOfWork(proposals)
-    service = ProposalService(cast(ProposalUnitOfWorkFactory, lambda: unit_of_work), pull_requests)
+    service = ProposalService(
+        cast(ProposalUnitOfWorkFactory, lambda: unit_of_work), pull_requests, publisher
+    )
     return service, unit_of_work
 
 
@@ -486,10 +508,15 @@ async def test_polling_after_merge_never_trusts_a_client_supplied_commit() -> No
     )
     proposals.records[PROPOSAL] = ProposalRecord(proposal=pull_request_open, package=package())
     merge_commit = "a" * 40
-    service, unit_of_work = build_service(proposals, FakePullRequests(merge_commit=merge_commit))
+    publisher = FakePublisher()
+    service, unit_of_work = build_service(
+        proposals, FakePullRequests(merge_commit=merge_commit), publisher
+    )
 
     merged = await service.poll_merge_status(PROPOSAL, correlation_id=CORRELATION)
 
     assert merged.status is ProposalStatus.MERGED
     assert merged.merged_commit_sha == merge_commit
+    assert merged.resulting_artifact_version_id == publisher.version_id
+    assert publisher.published == [(PROPOSAL, merge_commit)]
     assert unit_of_work.outbox.messages[-1].topic == "proposal.merged"

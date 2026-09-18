@@ -65,6 +65,9 @@ from kya_platform.infrastructure.database.intelligence import SqlAlchemyIntellig
 from kya_platform.infrastructure.database.mcp_profiles import SqlAlchemyMcpProfileRegistry
 from kya_platform.infrastructure.database.oauth_broker import VALID_SCOPES, OAuthBroker
 from kya_platform.infrastructure.database.proposal import SqlAlchemyProposalUnitOfWork
+from kya_platform.infrastructure.database.proposal_publication import (
+    SqlAlchemyMergedProposalPublisher,
+)
 from kya_platform.infrastructure.database.publication import (
     SqlAlchemyAttestationRepository,
     SqlAlchemyPublicationUnitOfWork,
@@ -185,6 +188,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         infisical_http_client: httpx.AsyncClient | None = None
         openfga_http_client: httpx.AsyncClient | None = None
+        signer: Ed25519ArtifactSigner | None = None
+        pull_requests: GitHubAppPullRequestAdapter | None = None
         # Test settings may intentionally use a non-routable database URL to
         # validate configuration wiring. Catalogue synchronization is an
         # operational startup concern and is covered by repository tests.
@@ -334,6 +339,27 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 model_id=model_id,
             )
         authorization_port = app.state.authorization
+        if (
+            authorization_port is not None
+            and session_factory is not None
+            and signer is not None
+            and pull_requests is not None
+            and resolved_settings.github_proposal_repository is not None
+        ):
+            app.state.proposal_service = ProposalService(
+                cast(
+                    ProposalUnitOfWorkFactory,
+                    lambda: SqlAlchemyProposalUnitOfWork(session_factory),
+                ),
+                pull_requests,
+                SqlAlchemyMergedProposalPublisher(
+                    session_factory,
+                    signer,
+                    authorization_port,
+                    repository=resolved_settings.github_proposal_repository,
+                    public_api_url=resolved_settings.oauth_issuer_url,
+                ),
+            )
         if authorization_port is not None and session_factory is not None:
             app.state.scope_promotion_service = ScopePromotionService(
                 cast(

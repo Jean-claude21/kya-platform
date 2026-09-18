@@ -99,6 +99,34 @@ class OpenFgaHttpAdapter:
             },
         )
 
+    async def grant_artifact_workspace(self, artifact_id: UUID, workspace_id: UUID) -> None:
+        """Make a catalog artifact visible through its governed workspace relation."""
+
+        payload = {
+            "authorization_model_id": self._model_id,
+            "writes": {
+                "tuple_keys": [
+                    {
+                        "user": f"workspace:{workspace_id}",
+                        "relation": "workspace",
+                        "object": f"artifact:{artifact_id}",
+                    }
+                ]
+            },
+        }
+        try:
+            await self._post("write", payload)
+        except OpenFgaUnavailableError:
+            decision = await self.check(
+                CheckRequest(
+                    user=f"workspace:{workspace_id}",
+                    relation="workspace",
+                    object=f"artifact:{artifact_id}",
+                )
+            )
+            if not decision.allowed:
+                raise
+
     async def _post(self, operation: str, payload: Mapping[str, object]) -> dict[str, object]:
         try:
             response = await self._client.post(
