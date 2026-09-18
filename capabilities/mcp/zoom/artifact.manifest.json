@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "1",
+  "id": "kya:mcp-server:kya-zoom",
+  "type": "mcp-server",
+  "name": "KYA Zoom",
+  "version": "0.1.0",
+  "summary": "Governed Zoom meeting preparation, creation and consultation for KYA users.",
+  "owners": {
+    "business": "cvsi-platform",
+    "technical": "cvsi-platform",
+    "workspace": "kya-platform"
+  },
+  "source": {
+    "repository": "https://github.com/Jean-claude21/kya-platform",
+    "commit": "0000000000000000000000000000000000000000",
+    "path": "capabilities/mcp/zoom"
+  },
+  "integrity": {
+    "algorithm": "sha256",
+    "digest": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "compatibility": {
+    "mcp-python": ">=2,<3",
+    "transport": "streamable-http"
+  },
+  "dependencies": [],
+  "scopes": ["zoom.meeting.read", "zoom.meeting.create"],
+  "risk": "controlled-write"
+}

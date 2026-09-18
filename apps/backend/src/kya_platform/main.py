@@ -449,6 +449,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.state.mcp_tool_profile_runtime = None
     application.state.oauth_broker = oauth_broker
     configure_security_runtime(application.state, resolved_settings)
+    zoom_backend = getattr(application.state, "zoom_backend", None)
     if resolved_settings.has_registry_mcp_configuration:
         authorization_server_url = resolved_settings.registry_mcp_authorization_server_url
         if oauth_broker is None or authorization_server_url is None:
@@ -463,6 +464,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             data_audit=StateDataMcpAuditSink(application.state),
             intelligence_backend=StateIntelligenceMcpBackend(application.state),
             proposal_backend=StateProposalMcpBackend(application.state),
+            zoom_backend=zoom_backend,
             tool_set_provider=(
                 StateToolSetProvider(application.state)
                 if resolved_settings.mcp_tool_profile_mode != "off"

@@ -60,6 +60,12 @@ jobs:
       - run: uv run ruff format --check apps/backend
       - run: uv run mypy
       - run: uv run pytest
+      - name: Check KYA-Zoom MCP
+        run: |
+          uv run --package kya-zoom-mcp ruff check capabilities/mcp/zoom
+          uv run --package kya-zoom-mcp ruff format --check capabilities/mcp/zoom
+          uv run --package kya-zoom-mcp mypy capabilities/mcp/zoom/src
+          uv run --package kya-zoom-mcp pytest capabilities/mcp/zoom/tests
       - run: uv run mkdocs build --strict
 
   governance-and-plugin:

@@ -754,4 +754,6 @@ def test_registry_http_uses_2026_stateless_request_metadata() -> None:
         "data:content:read",
         "data:ingest",
         "data:read",
+        "zoom:create",
+        "zoom:read",
     ]
