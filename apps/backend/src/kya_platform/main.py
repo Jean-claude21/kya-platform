@@ -459,7 +459,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             allow_origins=list(resolved_settings.cors_allowed_origins),
             allow_credentials=False,
             allow_methods=["GET", "POST", "OPTIONS"],
-            allow_headers=["Authorization", "Content-Type", "X-KYA-Unit-ID"],
+            allow_headers=[
+                "Authorization",
+                "Content-Type",
+                "Idempotency-Key",
+                "X-KYA-Unit-ID",
+                "X-KYA-Workspace-ID",
+            ],
         )
     application.add_middleware(
         CorrelationMiddleware,
