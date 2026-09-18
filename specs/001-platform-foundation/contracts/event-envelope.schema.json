@@ -1,0 +1,135 @@
+{
+  "$defs": {
+    "EventContext": {
+      "additionalProperties": false,
+      "properties": {
+        "unitId": {
+          "maxLength": 255,
+          "minLength": 1,
+          "title": "Unitid",
+          "type": "string"
+        },
+        "workspaceId": {
+          "anyOf": [
+            {
+              "maxLength": 255,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Workspaceid"
+        }
+      },
+      "required": [
+        "unitId"
+      ],
+      "title": "EventContext",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "CloudEvents-shaped business event with explicit KYA governance context.",
+  "properties": {
+    "specversion": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Specversion",
+      "type": "string"
+    },
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "type": {
+      "maxLength": 160,
+      "pattern": "^[a-z][a-z0-9]*(?:\\.[a-z][a-z0-9]*)+$",
+      "title": "Type",
+      "type": "string"
+    },
+    "source": {
+      "format": "uri",
+      "minLength": 1,
+      "title": "Source",
+      "type": "string"
+    },
+    "subject": {
+      "maxLength": 255,
+      "minLength": 1,
+      "title": "Subject",
+      "type": "string"
+    },
+    "time": {
+      "format": "date-time",
+      "title": "Time",
+      "type": "string"
+    },
+    "datacontenttype": {
+      "const": "application/json",
+      "default": "application/json",
+      "title": "Datacontenttype",
+      "type": "string"
+    },
+    "schemaVersion": {
+      "default": "1",
+      "maxLength": 32,
+      "minLength": 1,
+      "title": "Schemaversion",
+      "type": "string"
+    },
+    "context": {
+      "$ref": "#/$defs/EventContext"
+    },
+    "correlationId": {
+      "format": "uuid",
+      "title": "Correlationid",
+      "type": "string"
+    },
+    "causationId": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Causationid"
+    },
+    "actorId": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Actorid"
+    },
+    "data": {
+      "additionalProperties": true,
+      "title": "Data",
+      "type": "object"
+    }
+  },
+  "required": [
+    "id",
+    "type",
+    "source",
+    "subject",
+    "time",
+    "context",
+    "correlationId",
+    "data"
+  ],
+  "title": "KyaEventEnvelope",
+  "type": "object"
+}

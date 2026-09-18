@@ -24,3 +24,20 @@ const kya = new KyaPlatformClient({
 
 Applications provide the Neon Auth token and selected organizational context. The SDK attaches
 them to requests; KYA-Platform and OpenFGA remain the authorization authority.
+
+The same client exposes the permission-filtered application registry and KYA Core context:
+
+```ts
+const session = await kya.getSession();
+const applications = await kya.listApplications();
+const activeUnit = await kya.getOrganizationalUnit(session.active_unit_id);
+
+for (const application of applications.items) {
+  if (application.enabled && application.effective_permissions.includes('use')) {
+    console.log(application.name, application.launch_url);
+  }
+}
+```
+
+Applications may provide `onTelemetry` to observe status, latency and KYA correlation identifiers.
+Telemetry events never contain the access token or response payload.

@@ -1,24 +1,208 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.kya.energy/platform/artifact-manifest/v1",
-  "title": "KYA Artifact Manifest",
-  "type": "object",
-  "additionalProperties": false,
-  "required": [
-    "schemaVersion",
-    "id",
-    "type",
-    "name",
-    "version",
-    "owners",
-    "source",
-    "integrity",
-    "compatibility"
-  ],
-  "properties": {
-    "schemaVersion": { "const": "1" },
-    "id": { "type": "string", "pattern": "^kya:[a-z0-9-]+:[a-z0-9][a-z0-9-]*$" },
-    "type": {
+  "$defs": {
+    "ApplicationDeclaration": {
+      "additionalProperties": false,
+      "properties": {
+        "launch": {
+          "$ref": "#/$defs/ApplicationLaunch"
+        },
+        "requiredSdk": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Requiredsdk"
+        }
+      },
+      "required": [
+        "launch"
+      ],
+      "title": "ApplicationDeclaration",
+      "type": "object"
+    },
+    "ApplicationLaunch": {
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "format": "uri",
+          "minLength": 1,
+          "title": "Url",
+          "type": "string"
+        },
+        "mode": {
+          "$ref": "#/$defs/ApplicationLaunchMode",
+          "default": "same-tab"
+        },
+        "iconUrl": {
+          "anyOf": [
+            {
+              "format": "uri",
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Iconurl"
+        },
+        "healthUrl": {
+          "anyOf": [
+            {
+              "format": "uri",
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Healthurl"
+        }
+      },
+      "required": [
+        "url"
+      ],
+      "title": "ApplicationLaunch",
+      "type": "object"
+    },
+    "ApplicationLaunchMode": {
+      "enum": [
+        "same-tab",
+        "new-tab",
+        "embedded"
+      ],
+      "title": "ApplicationLaunchMode",
+      "type": "string"
+    },
+    "ArtifactDependency": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "range": {
+          "minLength": 1,
+          "title": "Range",
+          "type": "string"
+        },
+        "optional": {
+          "default": false,
+          "title": "Optional",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "range"
+      ],
+      "title": "ArtifactDependency",
+      "type": "object"
+    },
+    "ArtifactIntegrity": {
+      "additionalProperties": false,
+      "properties": {
+        "algorithm": {
+          "const": "sha256",
+          "title": "Algorithm",
+          "type": "string"
+        },
+        "digest": {
+          "pattern": "^[a-fA-F0-9]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "signature": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Signature"
+        }
+      },
+      "required": [
+        "algorithm",
+        "digest"
+      ],
+      "title": "ArtifactIntegrity",
+      "type": "object"
+    },
+    "ArtifactOwners": {
+      "additionalProperties": false,
+      "properties": {
+        "business": {
+          "minLength": 1,
+          "title": "Business",
+          "type": "string"
+        },
+        "technical": {
+          "minLength": 1,
+          "title": "Technical",
+          "type": "string"
+        },
+        "workspace": {
+          "minLength": 1,
+          "title": "Workspace",
+          "type": "string"
+        }
+      },
+      "required": [
+        "business",
+        "technical",
+        "workspace"
+      ],
+      "title": "ArtifactOwners",
+      "type": "object"
+    },
+    "ArtifactSource": {
+      "additionalProperties": false,
+      "properties": {
+        "repository": {
+          "format": "uri",
+          "minLength": 1,
+          "title": "Repository",
+          "type": "string"
+        },
+        "commit": {
+          "pattern": "^[a-fA-F0-9]{40}$",
+          "title": "Commit",
+          "type": "string"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path"
+        }
+      },
+      "required": [
+        "repository",
+        "commit"
+      ],
+      "title": "ArtifactSource",
+      "type": "object"
+    },
+    "ArtifactType": {
       "enum": [
         "app",
         "system",
@@ -32,59 +216,305 @@
         "design-system",
         "connector",
         "policy"
-      ]
+      ],
+      "title": "ArtifactType",
+      "type": "string"
     },
-    "name": { "type": "string", "minLength": 2, "maxLength": 120 },
-    "version": {
-      "type": "string",
-      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$"
-    },
-    "summary": { "type": "string", "maxLength": 500 },
-    "owners": {
-      "type": "object",
+    "CapabilityFeature": {
       "additionalProperties": false,
-      "required": ["business", "technical", "workspace"],
       "properties": {
-        "business": { "type": "string" },
-        "technical": { "type": "string" },
-        "workspace": { "type": "string" }
-      }
+        "key": {
+          "pattern": "^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$",
+          "title": "Key",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 120,
+          "minLength": 2,
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "maxLength": 500,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "permissions": {
+          "items": {
+            "$ref": "#/$defs/CapabilityPermission"
+          },
+          "minItems": 1,
+          "title": "Permissions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "key",
+        "name",
+        "permissions"
+      ],
+      "title": "CapabilityFeature",
+      "type": "object"
+    },
+    "CapabilityGovernance": {
+      "additionalProperties": false,
+      "properties": {
+        "visibility": {
+          "$ref": "#/$defs/CapabilityVisibility",
+          "default": "restricted"
+        },
+        "defaultScope": {
+          "$ref": "#/$defs/CapabilityScopeKind"
+        },
+        "allowedScopes": {
+          "items": {
+            "$ref": "#/$defs/CapabilityScopeKind"
+          },
+          "minItems": 1,
+          "title": "Allowedscopes",
+          "type": "array"
+        },
+        "permissions": {
+          "items": {
+            "$ref": "#/$defs/CapabilityPermission"
+          },
+          "minItems": 1,
+          "title": "Permissions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "defaultScope",
+        "allowedScopes",
+        "permissions"
+      ],
+      "title": "CapabilityGovernance",
+      "type": "object"
+    },
+    "CapabilityPermission": {
+      "description": "Stable verbs shared by applications, MCP tools, skills and data products.",
+      "enum": [
+        "view",
+        "use",
+        "create",
+        "edit",
+        "administer",
+        "publish",
+        "share"
+      ],
+      "title": "CapabilityPermission",
+      "type": "string"
+    },
+    "CapabilityScopeKind": {
+      "description": "Organizational boundary at which a capability may be assigned.",
+      "enum": [
+        "personal",
+        "workspace",
+        "unit",
+        "subsidiary",
+        "group"
+      ],
+      "title": "CapabilityScopeKind",
+      "type": "string"
+    },
+    "CapabilityVisibility": {
+      "enum": [
+        "private",
+        "restricted",
+        "internal",
+        "public"
+      ],
+      "title": "CapabilityVisibility",
+      "type": "string"
+    },
+    "IntegrationDeclaration": {
+      "additionalProperties": false,
+      "description": "Machine-readable integration surface. It never carries credentials.",
+      "properties": {
+        "apiBaseUrl": {
+          "anyOf": [
+            {
+              "format": "uri",
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Apibaseurl"
+        },
+        "emits": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Emits",
+          "type": "array"
+        },
+        "consumes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Consumes",
+          "type": "array"
+        },
+        "webhooks": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Webhooks",
+          "type": "array"
+        },
+        "mcpTools": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Mcptools",
+          "type": "array"
+        }
+      },
+      "title": "IntegrationDeclaration",
+      "type": "object"
+    },
+    "RiskLevel": {
+      "enum": [
+        "read",
+        "controlled-write",
+        "sensitive-write",
+        "administrative"
+      ],
+      "title": "RiskLevel",
+      "type": "string"
+    }
+  },
+  "$id": "https://schemas.kya.energy/platform/artifact-manifest/v1",
+  "additionalProperties": false,
+  "description": "Immutable release metadata; never contains a secret value.",
+  "properties": {
+    "schemaVersion": {
+      "const": "1",
+      "title": "Schemaversion",
+      "type": "string"
+    },
+    "id": {
+      "pattern": "^kya:[a-z0-9-]+:[a-z0-9][a-z0-9-]*$",
+      "title": "Id",
+      "type": "string"
+    },
+    "type": {
+      "$ref": "#/$defs/ArtifactType"
+    },
+    "name": {
+      "maxLength": 120,
+      "minLength": 2,
+      "title": "Name",
+      "type": "string"
+    },
+    "version": {
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$",
+      "title": "Version",
+      "type": "string"
+    },
+    "summary": {
+      "anyOf": [
+        {
+          "maxLength": 500,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Summary"
+    },
+    "owners": {
+      "$ref": "#/$defs/ArtifactOwners"
     },
     "source": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["repository", "commit"],
-      "properties": {
-        "repository": { "type": "string", "format": "uri" },
-        "commit": { "type": "string", "pattern": "^[a-fA-F0-9]{40}$" },
-        "path": { "type": "string" }
-      }
+      "$ref": "#/$defs/ArtifactSource"
     },
     "integrity": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["algorithm", "digest"],
-      "properties": {
-        "algorithm": { "const": "sha256" },
-        "digest": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" },
-        "signature": { "type": "string" }
-      }
+      "$ref": "#/$defs/ArtifactIntegrity"
     },
-    "compatibility": { "type": "object", "additionalProperties": { "type": "string" } },
+    "compatibility": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Compatibility",
+      "type": "object"
+    },
     "dependencies": {
-      "type": "array",
       "items": {
-        "type": "object",
-        "required": ["id", "range"],
-        "properties": {
-          "id": { "type": "string" },
-          "range": { "type": "string" },
-          "optional": { "type": "boolean", "default": false }
-        },
-        "additionalProperties": false
-      }
+        "$ref": "#/$defs/ArtifactDependency"
+      },
+      "title": "Dependencies",
+      "type": "array"
     },
-    "scopes": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
-    "risk": { "enum": ["read", "controlled-write", "sensitive-write", "administrative"] }
-  }
+    "scopes": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Scopes",
+      "type": "array"
+    },
+    "risk": {
+      "$ref": "#/$defs/RiskLevel",
+      "default": "read"
+    },
+    "governance": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CapabilityGovernance"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "features": {
+      "items": {
+        "$ref": "#/$defs/CapabilityFeature"
+      },
+      "title": "Features",
+      "type": "array"
+    },
+    "application": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ApplicationDeclaration"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "integrations": {
+      "$ref": "#/$defs/IntegrationDeclaration"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "id",
+    "type",
+    "name",
+    "version",
+    "owners",
+    "source",
+    "integrity",
+    "compatibility"
+  ],
+  "title": "ArtifactManifest",
+  "type": "object"
 }

@@ -20,6 +20,54 @@ export type KyaWorkspace = Readonly<{
 
 export type KyaWorkspaceList = Readonly<{ items: readonly KyaWorkspace[] }>;
 
+export type KyaOrganizationalUnit = Readonly<{
+  id: string;
+  key: string;
+  type_key: string;
+  name: string;
+  valid_from: string;
+  valid_until: string | null;
+}>;
+
+export type KyaOrganizationalUnitList = Readonly<{
+  items: readonly KyaOrganizationalUnit[];
+}>;
+
+export type KyaApplication = Readonly<{
+  artifact_id: string;
+  name: string;
+  summary: string | null;
+  version: string;
+  lifecycle: string;
+  enabled: boolean;
+  owner_workspace_id: string;
+  launch_url: string;
+  launch_mode: 'same-tab' | 'new-tab' | 'embedded';
+  icon_url: string | null;
+  health_url: string | null;
+  required_sdk: string | null;
+  visibility: 'private' | 'restricted' | 'internal' | 'public';
+  default_scope: 'personal' | 'workspace' | 'unit' | 'subsidiary' | 'group';
+  allowed_scopes: readonly string[];
+  declared_permissions: readonly string[];
+  effective_permissions: readonly string[];
+  features: readonly string[];
+}>;
+
+export type KyaApplicationList = Readonly<{
+  items: readonly KyaApplication[];
+  active_unit: string;
+}>;
+
+export type KyaTelemetryEvent = Readonly<{
+  kind: 'request.completed' | 'request.failed';
+  path: string;
+  method: string;
+  status: number;
+  duration_ms: number;
+  correlation_id: string | null;
+}>;
+
 export type KyaProblem = Readonly<{
   code?: string;
   title?: string;
@@ -37,6 +85,7 @@ export type KyaPlatformClientOptions = Readonly<{
   getAccessToken: () => Promise<string | null>;
   getActiveContext: () => KyaActiveContext | Promise<KyaActiveContext>;
   fetch?: typeof globalThis.fetch;
+  onTelemetry?: (event: KyaTelemetryEvent) => void;
 }>;
 
 export class KyaPlatformError extends Error {
@@ -71,6 +120,7 @@ export class KyaPlatformClient {
   readonly #getAccessToken: KyaPlatformClientOptions['getAccessToken'];
   readonly #getActiveContext: KyaPlatformClientOptions['getActiveContext'];
   readonly #fetch: typeof globalThis.fetch;
+  readonly #onTelemetry: KyaPlatformClientOptions['onTelemetry'];
 
   constructor(options: KyaPlatformClientOptions) {
     this.#apiUrl = normalizeApiUrl(options.apiUrl);
@@ -81,6 +131,7 @@ export class KyaPlatformClient {
     // invoking it through `this.#fetch(...)` otherwise changes the receiver to
     // the SDK instance and fails before the request reaches KYA-Platform.
     this.#fetch = options.fetch ?? globalThis.fetch.bind(globalThis);
+    this.#onTelemetry = options.onTelemetry;
   }
 
   async request<T>(
@@ -104,7 +155,30 @@ export class KyaPlatformClient {
     };
     const signal = options.signal ?? init.signal;
     if (signal !== undefined) request.signal = signal;
-    const response = await this.#fetch(`${this.#apiUrl}/${path.replace(/^\/+/, '')}`, request);
+    const normalizedPath = path.replace(/^\/+/, '');
+    const startedAt = Date.now();
+    let response: Response;
+    try {
+      response = await this.#fetch(`${this.#apiUrl}/${normalizedPath}`, request);
+    } catch (error) {
+      this.#emitTelemetry({
+        kind: 'request.failed',
+        path: normalizedPath,
+        method: init.method ?? 'GET',
+        status: 0,
+        duration_ms: Date.now() - startedAt,
+        correlation_id: null,
+      });
+      throw error;
+    }
+    this.#emitTelemetry({
+      kind: response.ok ? 'request.completed' : 'request.failed',
+      path: normalizedPath,
+      method: init.method ?? 'GET',
+      status: response.status,
+      duration_ms: Date.now() - startedAt,
+      correlation_id: response.headers.get('x-correlation-id'),
+    });
     if (!response.ok) {
       const problem = (await response.json().catch(() => null)) as KyaProblem | null;
       throw new KyaPlatformError(response.status, problem);
@@ -119,5 +193,36 @@ export class KyaPlatformClient {
 
   listWorkspaces(): Promise<KyaWorkspaceList> {
     return this.request<KyaWorkspaceList>('workspaces');
+  }
+
+  listApplications(): Promise<KyaApplicationList> {
+    return this.request<KyaApplicationList>('applications');
+  }
+
+  getApplication(artifactId: string): Promise<KyaApplication> {
+    if (!artifactId.trim()) throw new Error('A KYA application artifact id is required.');
+    return this.request<KyaApplication>(`applications/${encodeURIComponent(artifactId)}`);
+  }
+
+  getOrganizationalUnit(unitKey: string): Promise<KyaOrganizationalUnit> {
+    if (!unitKey.trim()) throw new Error('A KYA organizational unit key is required.');
+    return this.request<KyaOrganizationalUnit>(
+      `core/organization/${encodeURIComponent(unitKey)}`,
+    );
+  }
+
+  listChildUnits(unitKey: string): Promise<KyaOrganizationalUnitList> {
+    if (!unitKey.trim()) throw new Error('A KYA organizational unit key is required.');
+    return this.request<KyaOrganizationalUnitList>(
+      `core/organization/${encodeURIComponent(unitKey)}/children`,
+    );
+  }
+
+  #emitTelemetry(event: KyaTelemetryEvent): void {
+    try {
+      this.#onTelemetry?.(event);
+    } catch {
+      // Application telemetry must never change the result of a governed API call.
+    }
   }
 }
