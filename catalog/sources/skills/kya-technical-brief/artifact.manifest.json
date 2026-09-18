@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1",
+  "id": "kya:skill:kya-technical-brief",
+  "type": "skill",
+  "name": "KYA Technical Brief",
+  "version": "0.1.0",
+  "summary": "Short structured technical brief format for KYA decisions: context, problem, options, decision, next steps.",
+  "owners": {
+    "business": "communication",
+    "technical": "cvsi-platform",
+    "workspace": "kya-platform"
+  },
+  "compatibility": {
+    "codex": ">=2026-09",
+    "claude-code": ">=2026-09",
+    "portable-zip": ">=2026-09"
+  },
+  "dependencies": [],
+  "scopes": ["skill.discover"],
+  "risk": "read"
+}
