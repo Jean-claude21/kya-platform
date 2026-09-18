@@ -36,6 +36,8 @@ VALID_SCOPES = frozenset(
         "data:read",
         "data:ingest",
         "data:content:read",
+        "zoom:create",
+        "zoom:read",
     }
 )
 
