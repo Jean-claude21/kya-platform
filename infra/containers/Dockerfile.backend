@@ -12,6 +12,7 @@ WORKDIR /app
 COPY --from=uv /uv /uvx /bin/
 COPY pyproject.toml uv.lock ./
 COPY apps/backend/pyproject.toml apps/backend/pyproject.toml
+COPY capabilities/mcp/zoom/pyproject.toml capabilities/mcp/zoom/pyproject.toml
 RUN uv sync \
     --locked \
     --no-dev \
