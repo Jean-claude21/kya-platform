@@ -4,7 +4,7 @@ from uuid import UUID
 import pytest
 from mcp.server.mcpserver import MCPServer
 
-from kya_platform.authorization import AuthorizationService
+from kya_platform.authorization import AuthorizationDecision, AuthorizationService, CheckRequest
 from kya_platform.mcp.registry.server import RegistryGuard
 from kya_platform.mcp.zoom.contracts import (
     CreateZoomMeetingInput,
@@ -54,9 +54,10 @@ class DummyZoomBackend:
 
 
 class DummyPolicy:
-    async def check(self, request: object) -> object:
-        from kya_platform.authorization.model import AuthorizationDecision
+    checks: ClassVar[list[CheckRequest]] = []
 
+    async def check(self, request: CheckRequest) -> AuthorizationDecision:
+        self.checks.append(request)
         return AuthorizationDecision(allowed=True, model_id="test")
 
     async def list_authorized_objects(self, request: object) -> tuple[str, ...]:
@@ -72,6 +73,7 @@ class DummyToken:
 
 @pytest.mark.asyncio
 async def test_zoom_tools_registration_and_execution() -> None:
+    DummyPolicy.checks.clear()
     server = MCPServer("test-registry")
     auth = AuthorizationService(DummyPolicy())
     guard = RegistryGuard(auth, access_token_provider=lambda: DummyToken())  # type: ignore[arg-type]
@@ -111,3 +113,7 @@ async def test_zoom_tools_registration_and_execution() -> None:
 
     meeting = await server.call_tool("get_zoom_meeting", {"meeting_id": "89360940442"})
     assert meeting.structured_content["meeting_id"] == "89360940442"
+
+    decisions = {(check.relation, check.object) for check in DummyPolicy.checks}
+    assert ("can_view", "org_unit:direction-systemes") in decisions
+    assert ("can_manage", "org_unit:direction-systemes") in decisions
