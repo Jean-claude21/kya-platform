@@ -194,7 +194,8 @@
         "model",
         "design-system",
         "connector",
-        "policy"
+        "policy",
+        "document-type"
       ],
       "title": "ArtifactType",
       "type": "string"

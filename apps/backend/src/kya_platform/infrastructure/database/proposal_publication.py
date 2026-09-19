@@ -31,6 +31,7 @@ _SOURCE_DIRECTORIES = {
     ArtifactType.SKILL: "skills",
     ArtifactType.MCP_SERVER: "mcp-servers",
     ArtifactType.APPLICATION: "applications",
+    ArtifactType.DOCUMENT_TYPE: "document-types",
 }
 
 

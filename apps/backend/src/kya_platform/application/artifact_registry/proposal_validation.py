@@ -9,7 +9,10 @@ import re
 import unicodedata
 from pathlib import PurePosixPath
 
-from kya_platform.contracts.artifact_package import MAX_PACKAGE_BYTES
+from pydantic import ValidationError
+
+from kya_platform.contracts.artifact_package import MAX_PACKAGE_BYTES, PackageFileKind
+from kya_platform.contracts.document_type import DocumentTypeDefinition
 from kya_platform.contracts.proposal_package import ProposalPackage
 from kya_platform.domain.catalog import ArtifactType
 
@@ -36,6 +39,7 @@ _REQUIRED_FILES: dict[ArtifactType, frozenset[str]] = {
     ArtifactType.MCP_SERVER: frozenset(
         {"artifact.manifest.json", "capability.manifest.json", "pyproject.toml"}
     ),
+    ArtifactType.DOCUMENT_TYPE: frozenset({"artifact.manifest.json", "document-type.json"}),
 }
 
 
@@ -45,7 +49,7 @@ def validate_proposal_package(package: ProposalPackage, artifact_type: ArtifactT
     required = _REQUIRED_FILES.get(artifact_type)
     if required is None:
         raise ProposalValidationError(
-            "proposals currently support only skill, app, and mcp-server artifacts"
+            "proposals currently support only skill, app, mcp-server, and document-type artifacts"
         )
     paths = {file.path for file in package.files}
     missing = sorted(required - paths)
@@ -75,6 +79,14 @@ def validate_proposal_package(package: ProposalPackage, artifact_type: ArtifactT
             raise ProposalValidationError(f"probable secret detected in: {file.path}")
     if total_size > MAX_PACKAGE_BYTES:
         raise ProposalValidationError("proposal package exceeds the uncompressed size limit")
+    if artifact_type is ArtifactType.DOCUMENT_TYPE:
+        definition = next(file for file in package.files if file.path == "document-type.json")
+        if definition.kind is not PackageFileKind.SCHEMA:
+            raise ProposalValidationError("document-type.json must be classified as schema")
+        try:
+            DocumentTypeDefinition.model_validate_json(definition.decoded())
+        except (UnicodeDecodeError, ValidationError, ValueError) as error:
+            raise ProposalValidationError("document-type.json is invalid") from error
 
 
 __all__ = ["ProposalValidationError", "validate_proposal_package"]

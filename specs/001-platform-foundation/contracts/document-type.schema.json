@@ -1,0 +1,852 @@
+{
+  "$defs": {
+    "ActorSelector": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/ActorSelectorKind"
+        },
+        "value": {
+          "minLength": 1,
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": ["kind", "value"],
+      "title": "ActorSelector",
+      "type": "object"
+    },
+    "ActorSelectorKind": {
+      "enum": ["actor", "role", "record-field", "permission", "manager-of-field"],
+      "title": "ActorSelectorKind",
+      "type": "string"
+    },
+    "AttachmentPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "maxFiles": {
+          "default": 1,
+          "maximum": 50,
+          "minimum": 1,
+          "title": "Maxfiles",
+          "type": "integer"
+        },
+        "maxBytesPerFile": {
+          "maximum": 104857600,
+          "minimum": 1,
+          "title": "Maxbytesperfile",
+          "type": "integer"
+        },
+        "allowedMediaTypes": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "minItems": 1,
+          "title": "Allowedmediatypes",
+          "type": "array"
+        }
+      },
+      "required": ["maxBytesPerFile", "allowedMediaTypes"],
+      "title": "AttachmentPolicy",
+      "type": "object"
+    },
+    "CapabilityPermission": {
+      "description": "Stable verbs shared by applications, MCP tools, skills and data products.",
+      "enum": ["view", "use", "create", "edit", "administer", "publish", "share"],
+      "title": "CapabilityPermission",
+      "type": "string"
+    },
+    "ConditionClause": {
+      "additionalProperties": false,
+      "properties": {
+        "field": {
+          "pattern": "^[a-z][a-z0-9]*(?:[_-][a-z0-9]+)*$",
+          "title": "Field",
+          "type": "string"
+        },
+        "operator": {
+          "$ref": "#/$defs/ConditionOperator"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "required": ["field", "operator"],
+      "title": "ConditionClause",
+      "type": "object"
+    },
+    "ConditionOperator": {
+      "enum": [
+        "equals",
+        "not-equals",
+        "greater-than",
+        "greater-than-or-equal",
+        "less-than",
+        "less-than-or-equal",
+        "in",
+        "not-in",
+        "is-set"
+      ],
+      "title": "ConditionOperator",
+      "type": "string"
+    },
+    "MetricAggregation": {
+      "enum": ["count", "sum", "average", "minimum", "maximum"],
+      "title": "MetricAggregation",
+      "type": "string"
+    },
+    "MetricDefinition": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "pattern": "^[a-z][a-z0-9]*(?:[_-][a-z0-9]+)*$",
+          "title": "Key",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 120,
+          "minLength": 2,
+          "title": "Name",
+          "type": "string"
+        },
+        "aggregation": {
+          "$ref": "#/$defs/MetricAggregation"
+        },
+        "field": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z][a-z0-9]*(?:[_-][a-z0-9]+)*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Field"
+        },
+        "groupBy": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 10,
+          "title": "Groupby",
+          "type": "array"
+        },
+        "filters": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ConditionClause"
+          },
+          "maxItems": 50,
+          "title": "Filters",
+          "type": "array"
+        }
+      },
+      "required": ["key", "name", "aggregation"],
+      "title": "MetricDefinition",
+      "type": "object"
+    },
+    "NotificationChannel": {
+      "enum": ["in-app", "email", "teams", "sms"],
+      "title": "NotificationChannel",
+      "type": "string"
+    },
+    "NotificationPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "pattern": "^[a-z][a-z0-9]*(?:[_-][a-z0-9]+)*$",
+          "title": "Key",
+          "type": "string"
+        },
+        "event": {
+          "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$",
+          "title": "Event",
+          "type": "string"
+        },
+        "recipients": {
+          "items": {
+            "$ref": "#/$defs/ActorSelector"
+          },
+          "maxItems": 50,
+          "minItems": 1,
+          "title": "Recipients",
+          "type": "array"
+        },
+        "channels": {
+          "items": {
+            "$ref": "#/$defs/NotificationChannel"
+          },
+          "maxItems": 10,
+          "minItems": 1,
+          "title": "Channels",
+          "type": "array"
+        },
+        "template": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Template",
+          "type": "string"
+        },
+        "delayMinutes": {
+          "default": 0,
+          "maximum": 525600,
+          "minimum": 0,
+          "title": "Delayminutes",
+          "type": "integer"
+        }
+      },
+      "required": ["key", "event", "recipients", "channels", "template"],
+      "title": "NotificationPolicy",
+      "type": "object"
+    },
+    "RecordAccessPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "enforcement": {
+          "default": "schema",
+          "enum": ["schema", "record"],
+          "title": "Enforcement",
+          "type": "string"
+        },
+        "permissions": {
+          "items": {
+            "$ref": "#/$defs/CapabilityPermission"
+          },
+          "minItems": 1,
+          "title": "Permissions",
+          "type": "array"
+        }
+      },
+      "required": ["permissions"],
+      "title": "RecordAccessPolicy",
+      "type": "object"
+    },
+    "RecordField": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$",
+          "title": "Key",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/$defs/RecordFieldType"
+        },
+        "required": {
+          "default": false,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "multiple": {
+          "default": false,
+          "title": "Multiple",
+          "type": "boolean"
+        },
+        "choices": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 200,
+          "title": "Choices",
+          "type": "array"
+        },
+        "relation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RelationDefinition"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "attachment": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AttachmentPolicy"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": ["key", "label", "type"],
+      "title": "RecordField",
+      "type": "object"
+    },
+    "RecordFieldType": {
+      "enum": [
+        "text",
+        "long-text",
+        "integer",
+        "decimal",
+        "boolean",
+        "date",
+        "datetime",
+        "choice",
+        "relation",
+        "attachment",
+        "json"
+      ],
+      "title": "RecordFieldType",
+      "type": "string"
+    },
+    "RecordSchema": {
+      "$id": "https://schemas.kya.energy/platform/record-schema/v1",
+      "additionalProperties": false,
+      "description": "Immutable schema version; records reference its exact id and version.",
+      "properties": {
+        "schemaVersion": {
+          "const": "1",
+          "title": "Schemaversion",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^kya:data-schema:[a-z0-9][a-z0-9-]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "version": {
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+          "title": "Version",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 120,
+          "minLength": 2,
+          "title": "Name",
+          "type": "string"
+        },
+        "ownerScope": {
+          "maxLength": 255,
+          "minLength": 1,
+          "title": "Ownerscope",
+          "type": "string"
+        },
+        "fields": {
+          "items": {
+            "$ref": "#/$defs/RecordField"
+          },
+          "maxItems": 500,
+          "minItems": 1,
+          "title": "Fields",
+          "type": "array"
+        },
+        "access": {
+          "$ref": "#/$defs/RecordAccessPolicy"
+        },
+        "retention": {
+          "$ref": "#/$defs/RetentionPolicy"
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "version",
+        "name",
+        "ownerScope",
+        "fields",
+        "access",
+        "retention"
+      ],
+      "title": "RecordSchema",
+      "type": "object"
+    },
+    "ReferenceBinding": {
+      "additionalProperties": false,
+      "description": "Governed lookup into another KYA capability without copying its authority.",
+      "properties": {
+        "field": {
+          "pattern": "^[a-z][a-z0-9]*(?:[_-][a-z0-9]+)*$",
+          "title": "Field",
+          "type": "string"
+        },
+        "providerArtifactId": {
+          "pattern": "^kya:[a-z0-9-]+:[a-z0-9][a-z0-9-]*$",
+          "title": "Providerartifactid",
+          "type": "string"
+        },
+        "resourceType": {
+          "pattern": "^[a-z][a-z0-9]*(?:[_-][a-z0-9]+)*$",
+          "title": "Resourcetype",
+          "type": "string"
+        },
+        "valueField": {
+          "pattern": "^[a-z][a-z0-9]*(?:[_-][a-z0-9]+)*$",
+          "title": "Valuefield",
+          "type": "string"
+        },
+        "displayFields": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 20,
+          "minItems": 1,
+          "title": "Displayfields",
+          "type": "array"
+        },
+        "searchFields": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Searchfields",
+          "type": "array"
+        },
+        "snapshotFields": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 50,
+          "title": "Snapshotfields",
+          "type": "array"
+        },
+        "consistency": {
+          "$ref": "#/$defs/ReferenceConsistency",
+          "default": "live-with-snapshot"
+        },
+        "requiredPermission": {
+          "minLength": 1,
+          "title": "Requiredpermission",
+          "type": "string"
+        }
+      },
+      "required": [
+        "field",
+        "providerArtifactId",
+        "resourceType",
+        "valueField",
+        "displayFields",
+        "requiredPermission"
+      ],
+      "title": "ReferenceBinding",
+      "type": "object"
+    },
+    "ReferenceConsistency": {
+      "enum": ["live", "snapshot", "live-with-snapshot"],
+      "title": "ReferenceConsistency",
+      "type": "string"
+    },
+    "RelationCardinality": {
+      "enum": ["one-to-one", "many-to-one", "one-to-many", "many-to-many"],
+      "title": "RelationCardinality",
+      "type": "string"
+    },
+    "RelationDefinition": {
+      "additionalProperties": false,
+      "properties": {
+        "targetSchemaId": {
+          "pattern": "^kya:data-schema:[a-z0-9][a-z0-9-]*$",
+          "title": "Targetschemaid",
+          "type": "string"
+        },
+        "cardinality": {
+          "$ref": "#/$defs/RelationCardinality"
+        }
+      },
+      "required": ["targetSchemaId", "cardinality"],
+      "title": "RelationDefinition",
+      "type": "object"
+    },
+    "RetentionPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "retainDays": {
+          "minimum": 1,
+          "title": "Retaindays",
+          "type": "integer"
+        },
+        "softDeleteDays": {
+          "default": 30,
+          "minimum": 0,
+          "title": "Softdeletedays",
+          "type": "integer"
+        },
+        "legalHoldSupported": {
+          "default": false,
+          "title": "Legalholdsupported",
+          "type": "boolean"
+        }
+      },
+      "required": ["retainDays"],
+      "title": "RetentionPolicy",
+      "type": "object"
+    },
+    "SignatureMode": {
+      "enum": ["internal-approval", "electronic"],
+      "title": "SignatureMode",
+      "type": "string"
+    },
+    "SignaturePolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "pattern": "^[a-z][a-z0-9]*(?:[_-][a-z0-9]+)*$",
+          "title": "Key",
+          "type": "string"
+        },
+        "transitionKey": {
+          "pattern": "^[a-z][a-z0-9]*(?:[_-][a-z0-9]+)*$",
+          "title": "Transitionkey",
+          "type": "string"
+        },
+        "mode": {
+          "$ref": "#/$defs/SignatureMode",
+          "default": "internal-approval"
+        },
+        "signers": {
+          "items": {
+            "$ref": "#/$defs/ActorSelector"
+          },
+          "maxItems": 20,
+          "minItems": 1,
+          "title": "Signers",
+          "type": "array"
+        },
+        "minimumSignatures": {
+          "maximum": 100,
+          "minimum": 1,
+          "title": "Minimumsignatures",
+          "type": "integer"
+        },
+        "bindAttachments": {
+          "default": true,
+          "title": "Bindattachments",
+          "type": "boolean"
+        }
+      },
+      "required": ["key", "transitionKey", "signers", "minimumSignatures"],
+      "title": "SignaturePolicy",
+      "type": "object"
+    },
+    "ViewDefinition": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "pattern": "^[a-z][a-z0-9]*(?:[_-][a-z0-9]+)*$",
+          "title": "Key",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 120,
+          "minLength": 2,
+          "title": "Name",
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/$defs/ViewType"
+        },
+        "fields": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 100,
+          "minItems": 1,
+          "title": "Fields",
+          "type": "array"
+        },
+        "titleField": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z][a-z0-9]*(?:[_-][a-z0-9]+)*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Titlefield"
+        },
+        "groupBy": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z][a-z0-9]*(?:[_-][a-z0-9]+)*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Groupby"
+        },
+        "dateField": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z][a-z0-9]*(?:[_-][a-z0-9]+)*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Datefield"
+        },
+        "default": {
+          "type": "boolean",
+          "default": false,
+          "title": "Default"
+        }
+      },
+      "required": ["key", "name", "type", "fields"],
+      "title": "ViewDefinition",
+      "type": "object"
+    },
+    "ViewType": {
+      "enum": ["form", "detail", "table", "board", "calendar", "timeline", "dashboard", "print"],
+      "title": "ViewType",
+      "type": "string"
+    },
+    "WorkflowDefinition": {
+      "additionalProperties": false,
+      "properties": {
+        "initialState": {
+          "pattern": "^[a-z][a-z0-9]*(?:[_-][a-z0-9]+)*$",
+          "title": "Initialstate",
+          "type": "string"
+        },
+        "states": {
+          "items": {
+            "$ref": "#/$defs/WorkflowState"
+          },
+          "maxItems": 100,
+          "minItems": 2,
+          "title": "States",
+          "type": "array"
+        },
+        "transitions": {
+          "items": {
+            "$ref": "#/$defs/WorkflowTransition"
+          },
+          "maxItems": 500,
+          "minItems": 1,
+          "title": "Transitions",
+          "type": "array"
+        }
+      },
+      "required": ["initialState", "states", "transitions"],
+      "title": "WorkflowDefinition",
+      "type": "object"
+    },
+    "WorkflowState": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "pattern": "^[a-z][a-z0-9]*(?:[_-][a-z0-9]+)*$",
+          "title": "Key",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 120,
+          "minLength": 2,
+          "title": "Name",
+          "type": "string"
+        },
+        "category": {
+          "$ref": "#/$defs/WorkflowStateCategory"
+        },
+        "terminal": {
+          "default": false,
+          "title": "Terminal",
+          "type": "boolean"
+        }
+      },
+      "required": ["key", "name", "category"],
+      "title": "WorkflowState",
+      "type": "object"
+    },
+    "WorkflowStateCategory": {
+      "enum": ["draft", "active", "completed", "rejected", "cancelled"],
+      "title": "WorkflowStateCategory",
+      "type": "string"
+    },
+    "WorkflowTransition": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "pattern": "^[a-z][a-z0-9]*(?:[_-][a-z0-9]+)*$",
+          "title": "Key",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 120,
+          "minLength": 2,
+          "title": "Name",
+          "type": "string"
+        },
+        "fromState": {
+          "pattern": "^[a-z][a-z0-9]*(?:[_-][a-z0-9]+)*$",
+          "title": "Fromstate",
+          "type": "string"
+        },
+        "toState": {
+          "pattern": "^[a-z][a-z0-9]*(?:[_-][a-z0-9]+)*$",
+          "title": "Tostate",
+          "type": "string"
+        },
+        "permission": {
+          "$ref": "#/$defs/CapabilityPermission"
+        },
+        "actors": {
+          "items": {
+            "$ref": "#/$defs/ActorSelector"
+          },
+          "maxItems": 20,
+          "minItems": 1,
+          "title": "Actors",
+          "type": "array"
+        },
+        "conditions": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ConditionClause"
+          },
+          "maxItems": 50,
+          "title": "Conditions",
+          "type": "array"
+        }
+      },
+      "required": ["key", "name", "fromState", "toState", "permission", "actors"],
+      "title": "WorkflowTransition",
+      "type": "object"
+    }
+  },
+  "$id": "https://schemas.kya.energy/platform/document-type/v1",
+  "additionalProperties": false,
+  "description": "Immutable, runtime-neutral business process definition.",
+  "properties": {
+    "schemaVersion": {
+      "const": "1",
+      "title": "Schemaversion",
+      "type": "string"
+    },
+    "id": {
+      "pattern": "^kya:document-type:[a-z0-9][a-z0-9-]*$",
+      "title": "Id",
+      "type": "string"
+    },
+    "version": {
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+      "title": "Version",
+      "type": "string"
+    },
+    "name": {
+      "maxLength": 120,
+      "minLength": 2,
+      "title": "Name",
+      "type": "string"
+    },
+    "recordSchema": {
+      "$ref": "#/$defs/RecordSchema"
+    },
+    "references": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ReferenceBinding"
+      },
+      "maxItems": 100,
+      "title": "References",
+      "type": "array"
+    },
+    "workflow": {
+      "$ref": "#/$defs/WorkflowDefinition"
+    },
+    "signatures": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/SignaturePolicy"
+      },
+      "maxItems": 100,
+      "title": "Signatures",
+      "type": "array"
+    },
+    "notifications": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/NotificationPolicy"
+      },
+      "maxItems": 200,
+      "title": "Notifications",
+      "type": "array"
+    },
+    "views": {
+      "items": {
+        "$ref": "#/$defs/ViewDefinition"
+      },
+      "maxItems": 100,
+      "minItems": 1,
+      "title": "Views",
+      "type": "array"
+    },
+    "metrics": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/MetricDefinition"
+      },
+      "maxItems": 100,
+      "title": "Metrics",
+      "type": "array"
+    }
+  },
+  "required": ["schemaVersion", "id", "version", "name", "recordSchema", "workflow", "views"],
+  "title": "DocumentTypeDefinition",
+  "type": "object"
+}

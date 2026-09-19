@@ -26,6 +26,7 @@ from kya_platform.contracts.artifact_package import (
     PackageFileKind,
     canonical_content_payload,
 )
+from kya_platform.contracts.document_type import DocumentTypeDefinition
 
 MAX_ARCHIVE_BYTES = 100 * 1024 * 1024
 MAX_COMPRESSION_RATIO = 100
@@ -42,7 +43,7 @@ _SECRET_PATTERNS = (
         rb"['\"]?[A-Za-z0-9_./+=-]{16,}"
     ),
 )
-_ContractT = TypeVar("_ContractT", ArtifactManifest, CapabilityManifest)
+_ContractT = TypeVar("_ContractT", ArtifactManifest, CapabilityManifest, DocumentTypeDefinition)
 
 
 class ArchiveValidationError(ValueError):
@@ -64,6 +65,8 @@ def calculate_payload_digest(files: list[PackageFile]) -> str:
 def _kind(path: str) -> PackageFileKind:
     if path in {"artifact.manifest.json", "capability.manifest.json", "sbom.cdx.json"}:
         return PackageFileKind.MANIFEST
+    if path == "document-type.json":
+        return PackageFileKind.SCHEMA
     if path == "SKILL.md":
         return PackageFileKind.INSTRUCTION
     prefix = PurePosixPath(path).parts[0]
@@ -227,6 +230,15 @@ class ArtifactArchiveValidator:
             expected_name = manifest.artifact_id.rsplit(":", 1)[-1]
             if frontmatter["name"] != expected_name:
                 raise ArchiveValidationError("SKILL.md name must match the artifact slug")
+        if manifest.artifact_type is ArtifactType.DOCUMENT_TYPE:
+            definition = self._json_model(contents, "document-type.json", DocumentTypeDefinition)
+            expected_id = manifest.artifact_id
+            if definition.document_type_id != expected_id:
+                raise ArchiveValidationError("document type id must match the artifact manifest")
+            if definition.version != manifest.version:
+                raise ArchiveValidationError(
+                    "document type version must match the artifact manifest"
+                )
         if package.has_executable_content:
             if "sbom.cdx.json" not in contents:
                 raise ArchiveValidationError("executable packages require sbom.cdx.json")

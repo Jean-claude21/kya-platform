@@ -15,6 +15,7 @@ from kya_platform.contracts.artifact_package import (
     PackageFileKind,
     canonical_content_payload,
 )
+from kya_platform.contracts.document_type import DocumentTypeDefinition
 from kya_platform.contracts.proposal_package import ProposalPackage
 from kya_platform.domain.catalog import ArtifactType
 
@@ -98,6 +99,17 @@ def prepare_proposal_release(
     }
     normalized_manifest["integrity"] = {"algorithm": "sha256", "digest": content_digest}
     manifest = ArtifactManifest.model_validate(normalized_manifest)
+    if artifact_type is ArtifactType.DOCUMENT_TYPE:
+        try:
+            document_type = DocumentTypeDefinition.model_validate_json(
+                content_by_path["document-type.json"]
+            )
+        except (KeyError, UnicodeDecodeError, ValueError) as error:
+            raise ValueError("proposal document type definition is invalid") from error
+        if document_type.document_type_id != manifest.artifact_id:
+            raise ValueError("document type id does not match the artifact manifest")
+        if document_type.version != manifest.version:
+            raise ValueError("document type version does not match the artifact manifest")
     manifest_bytes = (
         json.dumps(
             manifest.model_dump(mode="json", by_alias=True, exclude_none=True),
