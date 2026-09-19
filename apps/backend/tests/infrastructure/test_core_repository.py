@@ -7,14 +7,22 @@ from uuid import UUID
 
 import pytest
 
-from kya_platform.application.core import ClientRecord, CommandMetadata, CoreConflictError
+from kya_platform.application.core import (
+    ClientRecord,
+    CommandMetadata,
+    CoreConflictError,
+    EmployeeRecord,
+)
 from kya_platform.domain.core import (
     ClientAccount,
     ClientStatus,
     Party,
     PartyKind,
+    PersonProfile,
     Project,
     ProjectStatus,
+    WorkRelationship,
+    WorkRelationshipKind,
 )
 from kya_platform.domain.organization import DateRange, OrganizationalUnit
 from kya_platform.infrastructure.database.core import SqlAlchemyCoreRepository
@@ -23,7 +31,9 @@ from kya_platform.infrastructure.database.models import (
     CoreOrganizationalUnit,
     CoreOrganizationalUnitType,
     CoreParty,
+    CorePersonProfile,
     CoreProject,
+    CoreWorkRelationship,
     IdempotencyRecord,
     OutboxEvent,
 )
@@ -164,6 +174,35 @@ def project_row() -> CoreProject:
         version=1,
         created_by=ACTOR,
     )
+
+
+def employee_rows() -> tuple[CoreParty, CorePersonProfile, CoreWorkRelationship]:
+    party = CoreParty(
+        id=UUID(int=50),
+        kind="person",
+        display_name="Afi Mensah",
+        status="active",
+        version=1,
+        created_by=ACTOR,
+    )
+    profile = CorePersonProfile(
+        party_id=party.id,
+        given_name="Afi",
+        family_name="Mensah",
+        preferred_name=None,
+    )
+    relationship = CoreWorkRelationship(
+        id=ENTITY,
+        person_id=party.id,
+        employer_unit_id=UNIT,
+        principal_id=None,
+        kind="employee",
+        personnel_number="EMP-42",
+        valid_from=PERIOD.valid_from,
+        valid_until=None,
+        created_by=ACTOR,
+    )
+    return party, profile, relationship
 
 
 def command(request_hash: str = "a" * 64) -> CommandMetadata:
@@ -319,3 +358,46 @@ async def test_creating_unit_and_project_emit_transactional_events() -> None:
     )
     assert any(isinstance(row, CoreProject) for row in project_session.added)
     assert any(isinstance(row, OutboxEvent) for row in project_session.added)
+
+
+@pytest.mark.asyncio
+@pytest.mark.unit
+async def test_scoped_employee_reads_are_reconstructed_from_database_rows() -> None:
+    repository = SqlAlchemyCoreRepository(
+        Sessions(
+            RepositorySession(
+                scalar_values=[UNIT, UNIT],
+                execute_rows=[[employee_rows()], [employee_rows()]],
+            )
+        )  # type: ignore[arg-type]
+    )
+
+    employees = await repository.list_employees("direction-cvsi", limit=10)
+    employee = await repository.get_employee("direction-cvsi", ENTITY)
+
+    assert employees[0].profile.given_name == "Afi"
+    assert employee is not None and employee.relationship.id == ENTITY
+
+
+@pytest.mark.asyncio
+@pytest.mark.unit
+async def test_creating_an_employee_persists_party_profile_relationship_and_evidence() -> None:
+    session = RepositorySession(scalar_values=[UNIT, None])
+    repository = SqlAlchemyCoreRepository(Sessions(session))  # type: ignore[arg-type]
+    party = Party(UUID(int=50), PartyKind.PERSON, "Afi Mensah")
+    record = EmployeeRecord(
+        party,
+        PersonProfile(party.id, "Afi", "Mensah"),
+        WorkRelationship(
+            ENTITY, party.id, UNIT, WorkRelationshipKind.EMPLOYEE, PERIOD, personnel_number="EMP-42"
+        ),
+    )
+
+    created = await repository.create_employee("direction-cvsi", record, command=command())
+
+    assert created == record
+    assert any(isinstance(row, CoreParty) for row in session.added)
+    assert any(isinstance(row, CorePersonProfile) for row in session.added)
+    assert any(isinstance(row, CoreWorkRelationship) for row in session.added)
+    assert any(isinstance(row, OutboxEvent) for row in session.added)
+    assert any(isinstance(row, IdempotencyRecord) for row in session.added)

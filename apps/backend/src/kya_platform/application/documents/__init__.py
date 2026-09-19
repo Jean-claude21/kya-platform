@@ -4,6 +4,7 @@ from collections.abc import Mapping, Sequence
 from typing import Protocol
 from uuid import UUID
 
+from kya_platform.application.documents.runtime import TransitionPlan
 from kya_platform.domain.documents import (
     DocumentDefinition,
     DocumentEvidence,
@@ -25,6 +26,8 @@ class DocumentRepository(Protocol):
     async def publish_definition(self, definition: DocumentDefinition) -> DocumentDefinition: ...
 
     async def get_definition(self, public_id: str, version: str) -> DocumentDefinition | None: ...
+
+    async def get_definition_by_id(self, definition_id: UUID) -> DocumentDefinition | None: ...
 
     async def create_record(
         self, record: DocumentRecord, revision: DocumentRevision
@@ -50,6 +53,14 @@ class DocumentRepository(Protocol):
     async def list_evidence(
         self, record_id: UUID, *, owner_scope: str
     ) -> Sequence[DocumentEvidence]: ...
+
+    async def commit_transition(
+        self,
+        plan: TransitionPlan,
+        *,
+        owner_scope: str,
+        correlation_id: UUID,
+    ) -> DocumentRecord: ...
 
 
 class DocumentService:
@@ -99,6 +110,31 @@ class DocumentService:
         if evidence.revision > record.current_revision:
             raise DocumentConflictError("evidence cannot target a future revision")
         return await self._repository.append_evidence(evidence, owner_scope=owner_scope)
+
+    async def get(
+        self, record_id: UUID, *, owner_scope: str
+    ) -> tuple[DocumentRecord, DocumentRevision] | None:
+        return await self._repository.get_record(record_id, owner_scope=owner_scope)
+
+    async def get_definition(self, public_id: str, version: str) -> DocumentDefinition | None:
+        return await self._repository.get_definition(public_id, version)
+
+    async def get_definition_by_internal_id(self, definition_id: UUID) -> DocumentDefinition | None:
+        return await self._repository.get_definition_by_id(definition_id)
+
+    async def history(self, record_id: UUID, *, owner_scope: str) -> Sequence[DocumentEvidence]:
+        return await self._repository.list_evidence(record_id, owner_scope=owner_scope)
+
+    async def transition(
+        self,
+        plan: TransitionPlan,
+        *,
+        owner_scope: str,
+        correlation_id: UUID,
+    ) -> DocumentRecord:
+        return await self._repository.commit_transition(
+            plan, owner_scope=owner_scope, correlation_id=correlation_id
+        )
 
 
 def definition_document(value: Mapping[str, DocumentValue]) -> dict[str, object]:

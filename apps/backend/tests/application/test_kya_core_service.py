@@ -6,14 +6,17 @@ from uuid import UUID
 
 import pytest
 
-from kya_platform.application.core import ClientRecord, CommandMetadata, CoreService
+from kya_platform.application.core import ClientRecord, CommandMetadata, CoreService, EmployeeRecord
 from kya_platform.domain.core import (
     ClientAccount,
     ClientStatus,
     Party,
     PartyKind,
+    PersonProfile,
     Project,
     ProjectStatus,
+    WorkRelationship,
+    WorkRelationshipKind,
 )
 from kya_platform.domain.organization import DateRange, OrganizationalUnit, OrganizationalUnitType
 
@@ -90,6 +93,29 @@ class RecordingRepository:
         self.command = (owner_unit_key, command.actor_id, command.correlation_id)
         return project
 
+    async def list_employees(
+        self, employer_unit_key: str, *, limit: int
+    ) -> Sequence[EmployeeRecord]:
+        self.calls.append("list_employees")
+        return ()
+
+    async def get_employee(
+        self, employer_unit_key: str, work_relationship_id: UUID
+    ) -> EmployeeRecord | None:
+        self.calls.append("get_employee")
+        return None
+
+    async def create_employee(
+        self,
+        employer_unit_key: str,
+        record: EmployeeRecord,
+        *,
+        command: CommandMetadata,
+    ) -> EmployeeRecord:
+        self.calls.append("create_employee")
+        self.command = (employer_unit_key, command.actor_id, command.correlation_id)
+        return record
+
 
 @pytest.mark.asyncio
 @pytest.mark.unit
@@ -134,6 +160,14 @@ async def test_service_delegates_every_core_use_case() -> None:
     project = Project(
         UUID(int=12), "solar-one", "Solar One", UNIT, ProjectStatus.PLANNED, validity=period
     )
+    employee_party = Party(UUID(int=13), PartyKind.PERSON, "Employee One")
+    employee = EmployeeRecord(
+        employee_party,
+        PersonProfile(employee_party.id, "Employee", "One"),
+        WorkRelationship(
+            UUID(int=14), employee_party.id, UNIT, WorkRelationshipKind.EMPLOYEE, period
+        ),
+    )
     command = CommandMetadata(
         ACTOR,
         CORRELATION,
@@ -152,6 +186,9 @@ async def test_service_delegates_every_core_use_case() -> None:
     assert await service.list_projects(unit.key, limit=10) == ()
     assert await service.get_project(unit.key, project.id) is None
     assert await service.create_project(unit.key, project, command=command) == project
+    assert await service.list_employees(unit.key, limit=10) == ()
+    assert await service.get_employee(unit.key, employee.relationship.id) is None
+    assert await service.create_employee(unit.key, employee, command=command) == employee
     assert repository.calls == [
         "get_unit",
         "list_unit_types",
@@ -163,6 +200,9 @@ async def test_service_delegates_every_core_use_case() -> None:
         "list_projects",
         "get_project",
         "create_project",
+        "list_employees",
+        "get_employee",
+        "create_employee",
     ]
 
 
