@@ -33,6 +33,79 @@ export type KyaOrganizationalUnitList = Readonly<{
   items: readonly KyaOrganizationalUnit[];
 }>;
 
+export type KyaClient = Readonly<{
+  id: string;
+  key: string;
+  party_id: string;
+  party_kind: 'person' | 'organization';
+  display_name: string;
+  owner_unit_id: string;
+  status: 'prospect' | 'active' | 'suspended' | 'inactive' | 'archived';
+  valid_from: string;
+  valid_until: string | null;
+  version: number;
+}>;
+
+export type KyaClientList = Readonly<{ items: readonly KyaClient[] }>;
+
+export type KyaProject = Readonly<{
+  id: string;
+  key: string;
+  name: string;
+  owner_unit_id: string;
+  client_id: string | null;
+  status: 'planned' | 'active' | 'on_hold' | 'completed' | 'cancelled' | 'archived';
+  valid_from: string;
+  valid_until: string | null;
+  version: number;
+}>;
+
+export type KyaProjectList = Readonly<{ items: readonly KyaProject[] }>;
+
+export type KyaEmployee = Readonly<{
+  id: string;
+  party_id: string;
+  given_name: string;
+  family_name: string;
+  preferred_name: string | null;
+  employer_unit_id: string;
+  kind: 'employee' | 'intern' | 'contractor' | 'consultant';
+  personnel_number: string | null;
+  valid_from: string;
+  valid_until: string | null;
+}>;
+
+export type KyaEmployeeList = Readonly<{ items: readonly KyaEmployee[] }>;
+
+export type KyaDocumentValue =
+  | string
+  | number
+  | boolean
+  | null
+  | { readonly [key: string]: KyaDocumentValue }
+  | readonly KyaDocumentValue[];
+
+export type KyaDocumentRecord = Readonly<{
+  id: string;
+  definition_id: string;
+  owner_scope: string;
+  state: string;
+  current_revision: number;
+  payload: Readonly<Record<string, KyaDocumentValue>>;
+  created_at: string;
+  updated_at: string;
+}>;
+
+export type KyaDocumentEvidence = Readonly<{
+  id: string;
+  revision: number;
+  kind: string;
+  actor_id: string | null;
+  occurred_at: string;
+}>;
+
+export type KyaDocumentHistory = Readonly<{ items: readonly KyaDocumentEvidence[] }>;
+
 export type KyaApplication = Readonly<{
   artifact_id: string;
   name: string;
@@ -213,6 +286,104 @@ export class KyaPlatformClient {
     if (!unitKey.trim()) throw new Error('A KYA organizational unit key is required.');
     return this.request<KyaOrganizationalUnitList>(
       `core/organization/${encodeURIComponent(unitKey)}/children`,
+    );
+  }
+
+  listClients(unitKey: string): Promise<KyaClientList> {
+    if (!unitKey.trim()) throw new Error('A KYA organizational unit key is required.');
+    return this.request<KyaClientList>(`core/organization/${encodeURIComponent(unitKey)}/clients`);
+  }
+
+  getClient(unitKey: string, clientId: string): Promise<KyaClient> {
+    if (!unitKey.trim()) throw new Error('A KYA organizational unit key is required.');
+    if (!clientId.trim()) throw new Error('A KYA client id is required.');
+    return this.request<KyaClient>(
+      `core/organization/${encodeURIComponent(unitKey)}/clients/${encodeURIComponent(clientId)}`,
+    );
+  }
+
+  listProjects(unitKey: string): Promise<KyaProjectList> {
+    if (!unitKey.trim()) throw new Error('A KYA organizational unit key is required.');
+    return this.request<KyaProjectList>(
+      `core/organization/${encodeURIComponent(unitKey)}/projects`,
+    );
+  }
+
+  getProject(unitKey: string, projectId: string): Promise<KyaProject> {
+    if (!unitKey.trim()) throw new Error('A KYA organizational unit key is required.');
+    if (!projectId.trim()) throw new Error('A KYA project id is required.');
+    return this.request<KyaProject>(
+      `core/organization/${encodeURIComponent(unitKey)}/projects/${encodeURIComponent(projectId)}`,
+    );
+  }
+
+  listEmployees(unitKey: string): Promise<KyaEmployeeList> {
+    if (!unitKey.trim()) throw new Error('A KYA organizational unit key is required.');
+    return this.request<KyaEmployeeList>(
+      `core/organization/${encodeURIComponent(unitKey)}/employees`,
+    );
+  }
+
+  getEmployee(unitKey: string, employeeId: string): Promise<KyaEmployee> {
+    if (!unitKey.trim()) throw new Error('A KYA organizational unit key is required.');
+    if (!employeeId.trim()) throw new Error('A KYA employee id is required.');
+    return this.request<KyaEmployee>(
+      `core/organization/${encodeURIComponent(unitKey)}/employees/${encodeURIComponent(employeeId)}`,
+    );
+  }
+
+  createDocumentRecord(
+    input: Readonly<{
+      definitionId: string;
+      definitionVersion: string;
+      ownerScope: string;
+      payload: Record<string, KyaDocumentValue>;
+    }>,
+    options: KyaRequestOptions = {},
+  ): Promise<KyaDocumentRecord> {
+    return this.request<KyaDocumentRecord>(
+      'documents/records',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          definitionId: input.definitionId,
+          definitionVersion: input.definitionVersion,
+          ownerScope: input.ownerScope,
+          payload: input.payload,
+        }),
+      },
+      options,
+    );
+  }
+
+  getDocumentRecord(recordId: string, ownerScope: string): Promise<KyaDocumentRecord> {
+    if (!recordId.trim()) throw new Error('A KYA document record id is required.');
+    return this.request<KyaDocumentRecord>(
+      `documents/records/${encodeURIComponent(recordId)}?owner_scope=${encodeURIComponent(ownerScope)}`,
+    );
+  }
+
+  getDocumentHistory(recordId: string, ownerScope: string): Promise<KyaDocumentHistory> {
+    if (!recordId.trim()) throw new Error('A KYA document record id is required.');
+    return this.request<KyaDocumentHistory>(
+      `documents/records/${encodeURIComponent(recordId)}/history?owner_scope=${encodeURIComponent(ownerScope)}`,
+    );
+  }
+
+  executeDocumentTransition(
+    recordId: string,
+    ownerScope: string,
+    input: Readonly<{ transitionKey: string; payload: Record<string, KyaDocumentValue> }>,
+  ): Promise<KyaDocumentRecord> {
+    if (!recordId.trim()) throw new Error('A KYA document record id is required.');
+    return this.request<KyaDocumentRecord>(
+      `documents/records/${encodeURIComponent(recordId)}/transitions?owner_scope=${encodeURIComponent(ownerScope)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transitionKey: input.transitionKey, payload: input.payload }),
+      },
     );
   }
 
