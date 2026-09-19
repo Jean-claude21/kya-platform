@@ -45,6 +45,12 @@ from kya_platform.infrastructure.database.models.data import (
     DataSourceFlowRow,
     DataSourceRow,
 )
+from kya_platform.infrastructure.database.models.documents import (
+    DocumentDefinitionRow,
+    DocumentEvidenceRow,
+    DocumentRecordRow,
+    DocumentRevisionRow,
+)
 from kya_platform.infrastructure.database.models.identity import ExternalIdentity
 from kya_platform.infrastructure.database.models.intelligence import (
     IntelligenceSignalRow,
@@ -115,6 +121,10 @@ __all__ = [
     "DataSnapshotRow",
     "DataSourceFlowRow",
     "DataSourceRow",
+    "DocumentDefinitionRow",
+    "DocumentEvidenceRow",
+    "DocumentRecordRow",
+    "DocumentRevisionRow",
     "ExternalIdentity",
     "IdempotencyRecord",
     "IntelligenceSignalRow",
