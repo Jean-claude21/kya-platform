@@ -10,6 +10,7 @@ from kya_platform.api.routes.bootstrap import router as bootstrap_router
 from kya_platform.api.routes.catalog import router as catalog_router
 from kya_platform.api.routes.core import router as core_router
 from kya_platform.api.routes.data import router as data_router
+from kya_platform.api.routes.documents import router as documents_router
 from kya_platform.api.routes.health import router as health_router
 from kya_platform.api.routes.intelligence import router as intelligence_router
 from kya_platform.api.routes.mcp_profiles import router as mcp_profiles_router
@@ -32,6 +33,7 @@ api_router.include_router(bootstrap_router)
 api_router.include_router(catalog_router)
 api_router.include_router(core_router)
 api_router.include_router(data_router)
+api_router.include_router(documents_router)
 api_router.include_router(health_router)
 api_router.include_router(intelligence_router)
 api_router.include_router(mcp_profiles_router)

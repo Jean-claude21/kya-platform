@@ -131,6 +131,11 @@ class SqlAlchemyDocumentRepository:
             )
             return _definition(row) if row is not None else None
 
+    async def get_definition_by_id(self, definition_id: UUID) -> DocumentDefinition | None:
+        async with self._sessions() as session:
+            row = await session.get(DocumentDefinitionRow, definition_id)
+            return _definition(row) if row is not None else None
+
     async def create_record(
         self, record: DocumentRecord, revision: DocumentRevision
     ) -> DocumentRecord:

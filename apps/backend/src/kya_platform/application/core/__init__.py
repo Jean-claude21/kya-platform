@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
-from kya_platform.domain.core import ClientAccount, Party, Project
+from kya_platform.domain.core import ClientAccount, Party, PersonProfile, Project, WorkRelationship
 from kya_platform.domain.organization import OrganizationalUnit, OrganizationalUnitType
 
 
@@ -39,6 +39,13 @@ class CommandMetadata:
 class ClientRecord:
     party: Party
     account: ClientAccount
+
+
+@dataclass(frozen=True, slots=True)
+class EmployeeRecord:
+    party: Party
+    profile: PersonProfile
+    relationship: WorkRelationship
 
 
 class CoreRepository(Protocol):
@@ -81,6 +88,22 @@ class CoreRepository(Protocol):
         *,
         command: CommandMetadata,
     ) -> Project: ...
+
+    async def list_employees(
+        self, employer_unit_key: str, *, limit: int
+    ) -> Sequence[EmployeeRecord]: ...
+
+    async def get_employee(
+        self, employer_unit_key: str, work_relationship_id: UUID
+    ) -> EmployeeRecord | None: ...
+
+    async def create_employee(
+        self,
+        employer_unit_key: str,
+        record: EmployeeRecord,
+        *,
+        command: CommandMetadata,
+    ) -> EmployeeRecord: ...
 
 
 class CoreService:
@@ -139,6 +162,25 @@ class CoreService:
     ) -> Project:
         return await self._repository.create_project(owner_unit_key, project, command=command)
 
+    async def list_employees(
+        self, employer_unit_key: str, *, limit: int
+    ) -> Sequence[EmployeeRecord]:
+        return await self._repository.list_employees(employer_unit_key, limit=limit)
+
+    async def get_employee(
+        self, employer_unit_key: str, work_relationship_id: UUID
+    ) -> EmployeeRecord | None:
+        return await self._repository.get_employee(employer_unit_key, work_relationship_id)
+
+    async def create_employee(
+        self,
+        employer_unit_key: str,
+        record: EmployeeRecord,
+        *,
+        command: CommandMetadata,
+    ) -> EmployeeRecord:
+        return await self._repository.create_employee(employer_unit_key, record, command=command)
+
 
 __all__ = [
     "ClientRecord",
@@ -147,4 +189,5 @@ __all__ = [
     "CoreReferenceError",
     "CoreRepository",
     "CoreService",
+    "EmployeeRecord",
 ]

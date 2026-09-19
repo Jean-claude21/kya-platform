@@ -14,15 +14,19 @@ from kya_platform.application.core import (
     CommandMetadata,
     CoreConflictError,
     CoreReferenceError,
+    EmployeeRecord,
 )
 from kya_platform.domain.core import (
     ClientAccount,
     ClientStatus,
     Party,
     PartyKind,
+    PersonProfile,
     Project,
     ProjectStatus,
     RecordStatus,
+    WorkRelationship,
+    WorkRelationshipKind,
 )
 from kya_platform.domain.organization import DateRange, OrganizationalUnit, OrganizationalUnitType
 from kya_platform.infrastructure.database.models import (
@@ -31,7 +35,9 @@ from kya_platform.infrastructure.database.models import (
     CoreOrganizationalUnitRelation,
     CoreOrganizationalUnitType,
     CoreParty,
+    CorePersonProfile,
     CoreProject,
+    CoreWorkRelationship,
     IdempotencyRecord,
     OutboxEvent,
 )
@@ -87,6 +93,35 @@ def _project(row: CoreProject) -> Project:
         validity=DateRange(row.valid_from, row.valid_until),
         client_id=row.client_id,
         version=row.version,
+    )
+
+
+def _employee(
+    party: CoreParty, profile: CorePersonProfile, relationship: CoreWorkRelationship
+) -> EmployeeRecord:
+    return EmployeeRecord(
+        Party(
+            id=party.id,
+            kind=PartyKind(party.kind),
+            display_name=party.display_name,
+            status=RecordStatus(party.status),
+            version=party.version,
+        ),
+        PersonProfile(
+            party_id=profile.party_id,
+            given_name=profile.given_name,
+            family_name=profile.family_name,
+            preferred_name=profile.preferred_name,
+        ),
+        WorkRelationship(
+            id=relationship.id,
+            person_id=relationship.person_id,
+            employer_unit_id=relationship.employer_unit_id,
+            kind=WorkRelationshipKind(relationship.kind),
+            validity=DateRange(relationship.valid_from, relationship.valid_until),
+            personnel_number=relationship.personnel_number,
+            principal_id=relationship.principal_id,
+        ),
     )
 
 
@@ -403,6 +438,141 @@ class SqlAlchemyCoreRepository:
         except IntegrityError as error:
             raise CoreConflictError("project key already exists") from error
         return project
+
+    async def list_employees(
+        self, employer_unit_key: str, *, limit: int
+    ) -> Sequence[EmployeeRecord]:
+        async with self._sessions() as session:
+            employer_id = await self._unit_id(session, employer_unit_key)
+            if employer_id is None:
+                return ()
+            rows = await session.execute(
+                select(CoreParty, CorePersonProfile, CoreWorkRelationship)
+                .join(
+                    CoreWorkRelationship,
+                    CoreWorkRelationship.person_id == CoreParty.id,
+                )
+                .join(
+                    CorePersonProfile,
+                    CorePersonProfile.party_id == CoreParty.id,
+                )
+                .where(CoreWorkRelationship.employer_unit_id == employer_id)
+                .order_by(CoreParty.display_name, CoreWorkRelationship.id)
+                .limit(limit)
+            )
+            return tuple(
+                _employee(party, profile, relationship) for party, profile, relationship in rows
+            )
+
+    async def get_employee(
+        self, employer_unit_key: str, work_relationship_id: UUID
+    ) -> EmployeeRecord | None:
+        async with self._sessions() as session:
+            employer_id = await self._unit_id(session, employer_unit_key)
+            if employer_id is None:
+                return None
+            row = (
+                await session.execute(
+                    select(CoreParty, CorePersonProfile, CoreWorkRelationship)
+                    .join(
+                        CoreWorkRelationship,
+                        CoreWorkRelationship.person_id == CoreParty.id,
+                    )
+                    .join(
+                        CorePersonProfile,
+                        CorePersonProfile.party_id == CoreParty.id,
+                    )
+                    .where(
+                        CoreWorkRelationship.id == work_relationship_id,
+                        CoreWorkRelationship.employer_unit_id == employer_id,
+                    )
+                )
+            ).first()
+            return _employee(*row) if row is not None else None
+
+    async def create_employee(
+        self,
+        employer_unit_key: str,
+        record: EmployeeRecord,
+        *,
+        command: CommandMetadata,
+    ) -> EmployeeRecord:
+        try:
+            async with self._sessions() as session, session.begin():
+                employer_id = await self._required_unit_id(session, employer_unit_key)
+                scope = f"core:employee:create:{employer_id}:{command.actor_id}"
+                replay_id = await self._replay_id(session, scope, command)
+                if replay_id is not None:
+                    replay = (
+                        await session.execute(
+                            select(CoreParty, CorePersonProfile, CoreWorkRelationship)
+                            .join(
+                                CoreWorkRelationship,
+                                CoreWorkRelationship.person_id == CoreParty.id,
+                            )
+                            .join(
+                                CorePersonProfile,
+                                CorePersonProfile.party_id == CoreParty.id,
+                            )
+                            .where(
+                                CoreWorkRelationship.id == replay_id,
+                                CoreWorkRelationship.employer_unit_id == employer_id,
+                            )
+                        )
+                    ).first()
+                    if replay is None:
+                        raise CoreReferenceError(
+                            "idempotent employee result is no longer available"
+                        )
+                    return _employee(*replay)
+                if record.relationship.employer_unit_id != employer_id:
+                    raise CoreReferenceError(
+                        "employee employer does not match the authorized scope"
+                    )
+                party = CoreParty(
+                    id=record.party.id,
+                    kind=record.party.kind.value,
+                    display_name=record.party.display_name,
+                    status=record.party.status.value,
+                    version=record.party.version,
+                    created_by=command.actor_id,
+                )
+                profile = CorePersonProfile(
+                    party_id=record.party.id,
+                    given_name=record.profile.given_name,
+                    family_name=record.profile.family_name,
+                    preferred_name=record.profile.preferred_name,
+                )
+                relationship = CoreWorkRelationship(
+                    id=record.relationship.id,
+                    person_id=record.party.id,
+                    employer_unit_id=employer_id,
+                    principal_id=record.relationship.principal_id,
+                    kind=record.relationship.kind.value,
+                    personnel_number=record.relationship.personnel_number,
+                    valid_from=record.relationship.validity.valid_from,
+                    valid_until=record.relationship.validity.valid_until,
+                    created_by=command.actor_id,
+                )
+                session.add_all(
+                    [
+                        party,
+                        profile,
+                        relationship,
+                        _event(
+                            "kya.core.employee.created.v1",
+                            "employee",
+                            record.relationship.id,
+                            employer_id,
+                            command.actor_id,
+                            command.correlation_id,
+                        ),
+                    ]
+                )
+                self._remember(session, scope, command, record.relationship.id)
+        except IntegrityError as error:
+            raise CoreConflictError("employee party or work relationship already exists") from error
+        return record
 
     @staticmethod
     async def _unit_id(session: AsyncSession, key: str) -> UUID | None:

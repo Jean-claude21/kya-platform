@@ -13,6 +13,7 @@ from kya_platform.application.core import (
     CommandMetadata,
     CoreConflictError,
     CoreReferenceError,
+    EmployeeRecord,
 )
 from kya_platform.auth import AuthenticatedIdentity
 from kya_platform.authorization import AuthorizationDecision, CheckRequest, ListObjectsRequest
@@ -21,8 +22,11 @@ from kya_platform.domain.core import (
     ClientStatus,
     Party,
     PartyKind,
+    PersonProfile,
     Project,
     ProjectStatus,
+    WorkRelationship,
+    WorkRelationshipKind,
 )
 from kya_platform.domain.organization import DateRange, OrganizationalUnit, OrganizationalUnitType
 
@@ -30,6 +34,7 @@ ALICE = UUID("01993420-0000-7000-8000-000000000001")
 CVSI = UUID("01993420-0000-7000-8000-000000000002")
 CLIENT = UUID("01993420-0000-7000-8000-000000000003")
 PROJECT = UUID("01993420-0000-7000-8000-000000000004")
+EMPLOYEE = UUID("01993420-0000-7000-8000-000000000005")
 
 
 class Verifier:
@@ -78,6 +83,20 @@ class CoreStub:
         self.created_units: list[OrganizationalUnit] = []
         self.created_projects: list[Project] = []
         self.write_error: Exception | None = None
+        employee_party = Party(UUID(int=30), PartyKind.PERSON, "Afi Mensah")
+        self.employee = EmployeeRecord(
+            employee_party,
+            PersonProfile(employee_party.id, "Afi", "Mensah"),
+            WorkRelationship(
+                EMPLOYEE,
+                employee_party.id,
+                CVSI,
+                WorkRelationshipKind.EMPLOYEE,
+                period,
+                personnel_number="EMP-42",
+            ),
+        )
+        self.created_employees: list[EmployeeRecord] = []
 
     async def list_unit_types(self) -> Sequence[OrganizationalUnitType]:
         return (
@@ -147,6 +166,30 @@ class CoreStub:
             raise self.write_error
         self.created_projects.append(project)
         return project
+
+    async def list_employees(
+        self, employer_unit_key: str, *, limit: int
+    ) -> Sequence[EmployeeRecord]:
+        return (self.employee,) if employer_unit_key == self.unit.key else ()
+
+    async def get_employee(
+        self, employer_unit_key: str, work_relationship_id: UUID
+    ) -> EmployeeRecord | None:
+        if employer_unit_key == self.unit.key and work_relationship_id == EMPLOYEE:
+            return self.employee
+        return None
+
+    async def create_employee(
+        self,
+        employer_unit_key: str,
+        record: EmployeeRecord,
+        *,
+        command: CommandMetadata,
+    ) -> EmployeeRecord:
+        if self.write_error:
+            raise self.write_error
+        self.created_employees.append(record)
+        return record
 
 
 def configured(app: FastAPI, policy: Policy, core: CoreStub) -> TestClient:
@@ -364,3 +407,34 @@ def test_core_unavailable_is_reported_without_fallback(app: FastAPI) -> None:
         response = client.get("/api/v1/core/organization/direction-cvsi", headers=headers())
 
     assert response.status_code == 503
+
+
+@pytest.mark.integration
+def test_employee_read_list_and_create_contracts(app: FastAPI) -> None:
+    core = CoreStub()
+    with configured(app, Policy(True), core) as client:
+        listed = client.get("/api/v1/core/organization/direction-cvsi/employees", headers=headers())
+        found = client.get(
+            f"/api/v1/core/organization/direction-cvsi/employees/{EMPLOYEE}", headers=headers()
+        )
+        missing = client.get(
+            f"/api/v1/core/organization/direction-cvsi/employees/{UUID(int=999)}",
+            headers=headers(),
+        )
+        created = client.post(
+            "/api/v1/core/organization/direction-cvsi/employees",
+            headers=headers(),
+            json={
+                "given_name": "Koffi",
+                "family_name": "Adjo",
+                "valid_from": "2026-09-07T00:00:00Z",
+            },
+        )
+
+    assert listed.json()["items"][0]["id"] == str(EMPLOYEE)
+    assert found.status_code == 200
+    assert found.json()["given_name"] == "Afi"
+    assert missing.status_code == 404
+    assert created.status_code == 201
+    assert core.created_employees[0].profile.given_name == "Koffi"
+    assert core.created_employees[0].relationship.employer_unit_id == CVSI

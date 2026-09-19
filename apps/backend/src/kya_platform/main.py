@@ -26,6 +26,7 @@ from kya_platform.application.audit import AuditQueryService, AuditWriter
 from kya_platform.application.content import ContentService
 from kya_platform.application.core import CoreService
 from kya_platform.application.data import DataService
+from kya_platform.application.documents import DocumentService
 from kya_platform.application.intelligence import IntelligenceService
 from kya_platform.application.mcp_profiles import McpPreferenceService, McpProfileService
 from kya_platform.application.mcp_profiles.runtime import (
@@ -61,6 +62,7 @@ from kya_platform.infrastructure.database.builtin_artifacts import (
 from kya_platform.infrastructure.database.content import SqlAlchemyContentRepository
 from kya_platform.infrastructure.database.core import SqlAlchemyCoreRepository
 from kya_platform.infrastructure.database.data import SqlAlchemyDataRepository
+from kya_platform.infrastructure.database.documents import SqlAlchemyDocumentRepository
 from kya_platform.infrastructure.database.identity import SqlAlchemyIdentityMapping
 from kya_platform.infrastructure.database.intelligence import SqlAlchemyIntelligenceRepository
 from kya_platform.infrastructure.database.mcp_profiles import SqlAlchemyMcpProfileRegistry
@@ -208,6 +210,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             app.state.identity_mapping = SqlAlchemyIdentityMapping(session_factory)
             app.state.bootstrap_claims = SqlAlchemyBootstrapClaimRepository(session_factory)
             app.state.core_service = CoreService(SqlAlchemyCoreRepository(session_factory))
+            app.state.document_service = DocumentService(
+                SqlAlchemyDocumentRepository(session_factory)
+            )
             workspace_repository = SqlAlchemyWorkspaceRepository(session_factory)
             app.state.workspace_queries = workspace_repository
             app.state.workspace_commands = workspace_repository
