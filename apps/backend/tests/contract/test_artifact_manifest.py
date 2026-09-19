@@ -164,6 +164,7 @@ def test_exports_a_versioned_json_schema(tmp_path: Path) -> None:
         tmp_path / "artifact-manifest.schema.json",
         tmp_path / "event-envelope.schema.json",
         tmp_path / "record-schema.schema.json",
+        tmp_path / "document-type.schema.json",
     ]
     schema = json.loads(generated_paths[0].read_text(encoding="utf-8"))
     assert schema["$id"] == "https://schemas.kya.energy/platform/artifact-manifest/v1"

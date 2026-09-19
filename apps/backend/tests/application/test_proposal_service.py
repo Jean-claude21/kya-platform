@@ -1,5 +1,7 @@
 """Proposal use cases: a non-developer contribution never bypasses human review."""
 
+import base64
+import json
 from datetime import UTC, datetime
 from types import TracebackType
 from typing import Self, cast
@@ -83,6 +85,71 @@ def mcp_package() -> ProposalPackage:
                 path="pyproject.toml",
                 kind=PackageFileKind.METADATA,
                 content_base64="W3Byb2plY3RdCm5hbWUgPSAia3lhLW1jcC10ZXN0Igo=",
+            ),
+        ]
+    )
+
+
+def document_type_package() -> ProposalPackage:
+    definition = {
+        "schemaVersion": "1",
+        "id": "kya:document-type:employee-survey",
+        "version": "0.1.0",
+        "name": "Employee survey",
+        "recordSchema": {
+            "schemaVersion": "1",
+            "id": "kya:data-schema:employee-survey-response",
+            "version": "0.1.0",
+            "name": "Employee survey response",
+            "ownerScope": "workspace:people",
+            "fields": [{"key": "rating", "label": "Rating", "type": "integer"}],
+            "access": {"permissions": ["view", "create"]},
+            "retention": {"retainDays": 365},
+        },
+        "workflow": {
+            "initialState": "draft",
+            "states": [
+                {"key": "draft", "name": "Draft", "category": "draft"},
+                {
+                    "key": "submitted",
+                    "name": "Submitted",
+                    "category": "completed",
+                    "terminal": True,
+                },
+            ],
+            "transitions": [
+                {
+                    "key": "submit",
+                    "name": "Submit",
+                    "fromState": "draft",
+                    "toState": "submitted",
+                    "permission": "create",
+                    "actors": [{"kind": "actor", "value": "current"}],
+                }
+            ],
+        },
+        "views": [
+            {
+                "key": "survey_form",
+                "name": "Survey form",
+                "type": "form",
+                "fields": ["rating"],
+                "default": True,
+            }
+        ],
+    }
+    encoded = base64.b64encode(json.dumps(definition).encode()).decode()
+    return ProposalPackage(
+        files=[
+            ProposalFile(
+                path="artifact.manifest.json",
+                kind=PackageFileKind.MANIFEST,
+                content_base64="e30=",
+            ),
+            ProposalFile(
+                path="document-type.json",
+                kind=PackageFileKind.SCHEMA,
+                content_base64=encoded,
             ),
         ]
     )
@@ -252,6 +319,53 @@ async def test_mcp_submission_uses_the_same_governed_proposal_path() -> None:
     assert proposal.artifact_type is ArtifactType.MCP_SERVER
     assert proposal.status is ProposalStatus.SUBMITTED
     assert unit_of_work.commits == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.unit
+async def test_document_type_submission_uses_the_same_governed_proposal_path() -> None:
+    proposals = FakeProposals()
+    service, unit_of_work = build_service(proposals, FakePullRequests())
+
+    proposal = await service.submit(
+        proposal_id=PROPOSAL,
+        target_workspace_id=WORKSPACE,
+        slug="employee-survey",
+        artifact_type=ArtifactType.DOCUMENT_TYPE,
+        artifact_id=None,
+        package=document_type_package(),
+        requested_by=AUTHOR,
+        at=NOW,
+        correlation_id=CORRELATION,
+    )
+
+    assert proposal.artifact_type is ArtifactType.DOCUMENT_TYPE
+    assert proposal.status is ProposalStatus.SUBMITTED
+    assert unit_of_work.commits == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.unit
+async def test_document_type_submission_rejects_invalid_definition() -> None:
+    proposals = FakeProposals()
+    service, unit_of_work = build_service(proposals, FakePullRequests())
+    invalid = document_type_package()
+    invalid.files[1].content_base64 = "e30="
+
+    with pytest.raises(ProposalValidationError, match=r"document-type\.json is invalid"):
+        await service.submit(
+            proposal_id=PROPOSAL,
+            target_workspace_id=WORKSPACE,
+            slug="employee-survey",
+            artifact_type=ArtifactType.DOCUMENT_TYPE,
+            artifact_id=None,
+            package=invalid,
+            requested_by=AUTHOR,
+            at=NOW,
+            correlation_id=CORRELATION,
+        )
+
+    assert unit_of_work.commits == 0
 
 
 @pytest.mark.asyncio
