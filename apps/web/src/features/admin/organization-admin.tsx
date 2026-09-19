@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Icon, StatusBadge } from '@kya/design-system';
-import { platformRequest } from '../../platform/api';
+import { platformRequest, idempotencyKey } from '../../platform/api';
 import { getActiveUnitId } from '../../platform/active-context';
 import { organizationalUnitTypeLabel } from '../../platform/organizational-units';
 
-type Unit = {
+export type Unit = {
   id: string;
   key: string;
   type_key: string;
@@ -13,43 +13,49 @@ type Unit = {
   valid_until: string | null;
 };
 type List<T> = { items: T[] };
-type UnitType = {
+export type UnitType = {
   key: string;
   label: string;
   allowed_parent_types: string[];
   is_temporary: boolean;
 };
 
-export function OrganizationAdmin() {
-  const [root, setRoot] = useState<Unit | null>(null);
-  const [children, setChildren] = useState<Unit[]>([]);
-  const [unitTypes, setUnitTypes] = useState<UnitType[]>([]);
-  const [error, setError] = useState('');
-  useEffect(() => {
-    let active = true;
-    const unitKey = getActiveUnitId();
-    void Promise.all([
-      platformRequest<Unit>(`/core/organization/${unitKey}`),
-      platformRequest<List<Unit>>(`/core/organization/${unitKey}/children`),
-      platformRequest<List<UnitType>>(`/core/organization/${unitKey}/unit-types`),
-    ])
-      .then(([unit, list, types]) => {
-        if (active) {
-          setRoot(unit);
-          setChildren(list.items);
-          setUnitTypes(types.items);
-        }
-      })
-      .catch((failure: unknown) => {
-        if (active)
-          setError(failure instanceof Error ? failure.message : 'Organisation indisponible.');
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
+export type CreateUnitState =
+  | { phase: 'idle' }
+  | { phase: 'working' }
+  | { phase: 'success'; message: string }
+  | { phase: 'error'; message: string };
+
+export function OrganizationAdminView({
+  root,
+  children,
+  unitTypes,
+  error,
+  creation,
+  newKey,
+  newName,
+  newTypeKey,
+  onKeyChange,
+  onNameChange,
+  onTypeChange,
+  onSubmit,
+}: {
+  root: Unit | null;
+  children: Unit[];
+  unitTypes: UnitType[];
+  error: string;
+  creation: CreateUnitState;
+  newKey: string;
+  newName: string;
+  newTypeKey: string;
+  onKeyChange: (value: string) => void;
+  onNameChange: (value: string) => void;
+  onTypeChange: (value: string) => void;
+  onSubmit: () => void;
+}) {
   const labels = new Map(unitTypes.map((type) => [type.key, type.label]));
   const typeLabel = (key: string) => labels.get(key) ?? organizationalUnitTypeLabel(key);
+
   return (
     <section className="admin-detail-page" aria-labelledby="organization-title">
       <header className="page-lead">
@@ -137,41 +143,161 @@ export function OrganizationAdmin() {
             </p>
           </div>
         </section>
-        <aside className="inheritance-panel">
-          <h2>Dimensions séparées</h2>
-          <ol>
-            <li>
-              <span>1</span>
-              <div>
-                <strong>Groupe</strong>
-                <small>Sommet institutionnel</small>
-              </div>
-            </li>
-            <li>
-              <span>2</span>
-              <div>
-                <strong>Filiale</strong>
-                <small>Autorité juridique ou opérationnelle</small>
-              </div>
-            </li>
-            <li>
-              <span>3</span>
-              <div>
-                <strong>Agence</strong>
-                <small>Unité locale rattachée à une filiale</small>
-              </div>
-            </li>
-            <li>
-              <span>4</span>
-              <div>
-                <strong>Pays</strong>
-                <small>Localisation, distincte du propriétaire</small>
-              </div>
-            </li>
-          </ol>
-          <p>Les relations sont datées : un rattachement change sans effacer le passé.</p>
+        <aside className="core-create-panel">
+          <h2>Créer une unité fille</h2>
+          <p>Rattachée à l’unité active, avec une validité qui démarre aujourd’hui.</p>
+          <form
+            className="review-decision-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              onSubmit();
+            }}
+          >
+            <label>
+              <span>Type d’unité</span>
+              <select
+                value={newTypeKey}
+                onChange={(event) => {
+                  onTypeChange(event.target.value);
+                }}
+                disabled={unitTypes.length === 0}
+              >
+                {unitTypes.map((type) => (
+                  <option key={type.key} value={type.key}>
+                    {type.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Clé stable</span>
+              <input
+                type="text"
+                value={newKey}
+                placeholder="agence-lome"
+                onChange={(event) => {
+                  onKeyChange(event.target.value);
+                }}
+              />
+            </label>
+            <label>
+              <span>Nom</span>
+              <input
+                type="text"
+                value={newName}
+                placeholder="Agence Lomé"
+                onChange={(event) => {
+                  onNameChange(event.target.value);
+                }}
+              />
+            </label>
+            <button
+              className="signature-primary"
+              type="submit"
+              disabled={creation.phase === 'working' || !newKey.trim() || !newName.trim()}
+            >
+              {creation.phase === 'working' ? 'Création…' : 'Créer l’unité'}
+            </button>
+            {creation.phase === 'success' && (
+              <p className="review-duty-warning" data-override="false" role="status">
+                {creation.message}
+              </p>
+            )}
+            {creation.phase === 'error' && (
+              <p className="review-duty-warning" data-override="true" role="alert">
+                {creation.message}
+              </p>
+            )}
+          </form>
         </aside>
       </div>
     </section>
+  );
+}
+
+export function OrganizationAdmin() {
+  const [root, setRoot] = useState<Unit | null>(null);
+  const [children, setChildren] = useState<Unit[]>([]);
+  const [unitTypes, setUnitTypes] = useState<UnitType[]>([]);
+  const [error, setError] = useState('');
+  const [creation, setCreation] = useState<CreateUnitState>({ phase: 'idle' });
+  const [newKey, setNewKey] = useState('');
+  const [newName, setNewName] = useState('');
+  const [newTypeKey, setNewTypeKey] = useState('');
+
+  function reload() {
+    const unitKey = getActiveUnitId();
+    return Promise.all([
+      platformRequest<Unit>(`/core/organization/${unitKey}`),
+      platformRequest<List<Unit>>(`/core/organization/${unitKey}/children`),
+      platformRequest<List<UnitType>>(`/core/organization/${unitKey}/unit-types`),
+    ]).then(([unit, list, types]) => {
+      setRoot(unit);
+      setChildren(list.items);
+      setUnitTypes(types.items);
+      setNewTypeKey((current) => current || (types.items[0]?.key ?? ''));
+    });
+  }
+
+  useEffect(() => {
+    let active = true;
+    reload().catch((failure: unknown) => {
+      if (active)
+        setError(failure instanceof Error ? failure.message : 'Organisation indisponible.');
+    });
+   return () => {
+     active = false;
+   };
+ }, []);
+
+  function submit() {
+    if (!newKey.trim() || !newName.trim() || !newTypeKey.trim()) return;
+    setCreation({ phase: 'working' });
+    const unitKey = getActiveUnitId();
+    void platformRequest<Unit>(`/core/organization/${unitKey}/children`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Idempotency-Key': idempotencyKey('core-unit-create'),
+      },
+      body: JSON.stringify({
+        key: newKey.trim(),
+        type_key: newTypeKey,
+        name: newName.trim(),
+        valid_from: new Date().toISOString(),
+      }),
+    })
+      .then(() => reload())
+      .then(() => {
+        setNewKey('');
+        setNewName('');
+        setCreation({
+          phase: 'success',
+          message: 'La nouvelle unité a été enregistrée dans KYA Core.',
+        });
+      })
+      .catch((failure: unknown) => {
+        setCreation({
+          phase: 'error',
+          message: failure instanceof Error ? failure.message : 'La création a échoué.',
+        });
+      });
+  }
+
+  return (
+    <OrganizationAdminView
+      root={root}
+      children={children}
+      unitTypes={unitTypes}
+      error={error}
+      creation={creation}
+      newKey={newKey}
+      newName={newName}
+      newTypeKey={newTypeKey}
+      onKeyChange={setNewKey}
+      onNameChange={setNewName}
+      onTypeChange={setNewTypeKey}
+      onSubmit={submit}
+    />
   );
 }
