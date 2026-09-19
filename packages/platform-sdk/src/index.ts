@@ -282,12 +282,12 @@ export class KyaPlatformClient {
     return this.request<KyaOrganizationalUnit>(`core/organization/${encodeURIComponent(unitKey)}`);
   }
 
- listChildUnits(unitKey: string): Promise<KyaOrganizationalUnitList> {
-   if (!unitKey.trim()) throw new Error('A KYA organizational unit key is required.');
-   return this.request<KyaOrganizationalUnitList>(
-     `core/organization/${encodeURIComponent(unitKey)}/children`,
-   );
- }
+  listChildUnits(unitKey: string): Promise<KyaOrganizationalUnitList> {
+    if (!unitKey.trim()) throw new Error('A KYA organizational unit key is required.');
+    return this.request<KyaOrganizationalUnitList>(
+      `core/organization/${encodeURIComponent(unitKey)}/children`,
+    );
+  }
 
   listClients(unitKey: string): Promise<KyaClientList> {
     if (!unitKey.trim()) throw new Error('A KYA organizational unit key is required.');

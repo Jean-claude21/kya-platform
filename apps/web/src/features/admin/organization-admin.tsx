@@ -245,10 +245,10 @@ export function OrganizationAdmin() {
       if (active)
         setError(failure instanceof Error ? failure.message : 'Organisation indisponible.');
     });
-   return () => {
-     active = false;
-   };
- }, []);
+    return () => {
+      active = false;
+    };
+  }, []);
 
   function submit() {
     if (!newKey.trim() || !newName.trim() || !newTypeKey.trim()) return;

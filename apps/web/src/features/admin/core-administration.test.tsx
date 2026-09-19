@@ -1,10 +1,18 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../platform/api', () => ({ platformRequest: vi.fn(), idempotencyKey: vi.fn(() => 'test-key') }));
+vi.mock('../../platform/api', () => ({
+  platformRequest: vi.fn(),
+  idempotencyKey: vi.fn(() => 'test-key'),
+}));
 vi.mock('../../platform/active-context', () => ({ getActiveUnitId: () => 'direction-cvsi' }));
 
-import { CoreAdministrationView, type Client, type Project, type Employee } from './core-administration';
+import {
+  CoreAdministrationView,
+  type Client,
+  type Project,
+  type Employee,
+} from './core-administration';
 
 const client: Client = {
   id: '019a2000-0000-7000-8000-000000000010',
@@ -140,4 +148,3 @@ describe('core administration', () => {
     expect(html).toContain('Aucun employé visible dans ce périmètre.');
   });
 });
-

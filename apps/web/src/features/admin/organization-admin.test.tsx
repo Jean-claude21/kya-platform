@@ -1,7 +1,10 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../platform/api', () => ({ platformRequest: vi.fn(), idempotencyKey: vi.fn(() => 'test-key') }));
+vi.mock('../../platform/api', () => ({
+  platformRequest: vi.fn(),
+  idempotencyKey: vi.fn(() => 'test-key'),
+}));
 vi.mock('../../platform/active-context', () => ({ getActiveUnitId: () => 'direction-cvsi' }));
 
 import { OrganizationAdminView, type Unit, type UnitType } from './organization-admin';
@@ -57,9 +60,7 @@ describe('organization admin', () => {
 
   it('disables submission until required fields are filled', () => {
     const empty = renderToStaticMarkup(view({ newKey: '', newName: '' }));
-    const filled = renderToStaticMarkup(
-      view({ newKey: 'agence-lome', newName: 'Agence Lomé' }),
-    );
+    const filled = renderToStaticMarkup(view({ newKey: 'agence-lome', newName: 'Agence Lomé' }));
 
     expect(empty).toContain('disabled');
     expect(filled.match(/disabled/g)?.length ?? 0).toBeLessThan(
@@ -69,7 +70,12 @@ describe('organization admin', () => {
 
   it('surfaces creation feedback without hiding errors', () => {
     const success = renderToStaticMarkup(
-      view({ creation: { phase: 'success', message: 'La nouvelle unité a été enregistrée dans KYA Core.' } }),
+      view({
+        creation: {
+          phase: 'success',
+          message: 'La nouvelle unité a été enregistrée dans KYA Core.',
+        },
+      }),
     );
     const failure = renderToStaticMarkup(
       view({ creation: { phase: 'error', message: 'La création a échoué.' } }),
@@ -81,12 +87,9 @@ describe('organization admin', () => {
 
   it('renders truthful loading and error states without a root unit', () => {
     const loading = renderToStaticMarkup(view({ root: null, error: '' }));
-    const failed = renderToStaticMarkup(
-      view({ root: null, error: 'Organisation indisponible.' }),
-    );
+    const failed = renderToStaticMarkup(view({ root: null, error: 'Organisation indisponible.' }));
 
     expect(loading).toContain('Chargement de la structure');
     expect(failed).toContain('Organisation indisponible.');
   });
 });
-

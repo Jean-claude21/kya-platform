@@ -475,10 +475,10 @@ export function CoreAdministration() {
     reload().catch((failure: unknown) => {
       if (active) setError(failure instanceof Error ? failure.message : 'KYA Core indisponible.');
     });
-   return () => {
-     active = false;
-   };
- }, []);
+    return () => {
+      active = false;
+    };
+  }, []);
 
   function submitClient() {
     if (!clientKey.trim() || !clientName.trim()) return;
