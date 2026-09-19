@@ -9,8 +9,8 @@
 - [x] Export a public JSON Schema for document type generators.
 - [x] Admit document type packages into proposal validation.
 - [x] Route approved document type proposals through GitHub and signed publication.
-- [ ] Persist immutable document definitions in the native runtime.
-- [ ] Persist versioned document records and append-only evidence.
+- [x] Persist immutable document definitions in the native runtime.
+- [x] Persist versioned document records and append-only evidence.
 - [ ] Execute authorized workflow transitions server-side.
 - [ ] Dispatch notification intents through the shared outbox worker.
 - [ ] Record signatures against exact document revisions and attachment digests.
