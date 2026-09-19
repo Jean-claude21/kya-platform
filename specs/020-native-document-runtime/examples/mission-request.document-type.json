@@ -10,23 +10,82 @@
     "name": "Demande de mission",
     "ownerScope": "workspace:operations",
     "fields": [
-      { "key": "requester", "label": "Demandeur", "type": "relation", "required": true, "relation": { "targetSchemaId": "kya:data-schema:person", "cardinality": "many-to-one" } },
-      { "key": "client", "label": "Client", "type": "relation", "relation": { "targetSchemaId": "kya:data-schema:client", "cardinality": "many-to-one" } },
-      { "key": "project", "label": "Projet", "type": "relation", "relation": { "targetSchemaId": "kya:data-schema:project", "cardinality": "many-to-one" } },
+      {
+        "key": "requester",
+        "label": "Demandeur",
+        "type": "relation",
+        "required": true,
+        "relation": { "targetSchemaId": "kya:data-schema:person", "cardinality": "many-to-one" }
+      },
+      {
+        "key": "client",
+        "label": "Client",
+        "type": "relation",
+        "relation": { "targetSchemaId": "kya:data-schema:client", "cardinality": "many-to-one" }
+      },
+      {
+        "key": "project",
+        "label": "Projet",
+        "type": "relation",
+        "relation": { "targetSchemaId": "kya:data-schema:project", "cardinality": "many-to-one" }
+      },
       { "key": "destination", "label": "Destination", "type": "text", "required": true },
       { "key": "purpose", "label": "Objet de la mission", "type": "long-text", "required": true },
       { "key": "start_at", "label": "Départ", "type": "datetime", "required": true },
       { "key": "end_at", "label": "Retour prévu", "type": "datetime", "required": true },
       { "key": "estimated_cost", "label": "Coût estimé", "type": "decimal" },
-      { "key": "supporting_documents", "label": "Justificatifs", "type": "attachment", "multiple": true, "attachment": { "maxFiles": 10, "maxBytesPerFile": 20971520, "allowedMediaTypes": ["application/pdf", "image/jpeg", "image/png"] } }
+      {
+        "key": "supporting_documents",
+        "label": "Justificatifs",
+        "type": "attachment",
+        "multiple": true,
+        "attachment": {
+          "maxFiles": 10,
+          "maxBytesPerFile": 20971520,
+          "allowedMediaTypes": ["application/pdf", "image/jpeg", "image/png"]
+        }
+      }
     ],
-    "access": { "enforcement": "record", "permissions": ["view", "create", "edit", "administer", "publish"] },
+    "access": {
+      "enforcement": "record",
+      "permissions": ["view", "create", "edit", "administer", "publish"]
+    },
     "retention": { "retainDays": 3650, "softDeleteDays": 30, "legalHoldSupported": true }
   },
   "references": [
-    { "field": "requester", "providerArtifactId": "kya:api:kya-core", "resourceType": "person", "valueField": "id", "displayFields": ["display_name", "employee_number"], "searchFields": ["display_name", "employee_number"], "snapshotFields": ["display_name", "employee_number", "organizational_unit"], "consistency": "live-with-snapshot", "requiredPermission": "person.reference" },
-    { "field": "client", "providerArtifactId": "kya:api:kya-core", "resourceType": "client", "valueField": "id", "displayFields": ["name", "account_number"], "searchFields": ["name", "account_number"], "snapshotFields": ["name", "account_number"], "consistency": "live-with-snapshot", "requiredPermission": "client.reference" },
-    { "field": "project", "providerArtifactId": "kya:api:kya-core", "resourceType": "project", "valueField": "id", "displayFields": ["name", "code"], "searchFields": ["name", "code"], "snapshotFields": ["name", "code", "client_id"], "consistency": "live-with-snapshot", "requiredPermission": "project.reference" }
+    {
+      "field": "requester",
+      "providerArtifactId": "kya:api:kya-core",
+      "resourceType": "person",
+      "valueField": "id",
+      "displayFields": ["display_name", "employee_number"],
+      "searchFields": ["display_name", "employee_number"],
+      "snapshotFields": ["display_name", "employee_number", "organizational_unit"],
+      "consistency": "live-with-snapshot",
+      "requiredPermission": "person.reference"
+    },
+    {
+      "field": "client",
+      "providerArtifactId": "kya:api:kya-core",
+      "resourceType": "client",
+      "valueField": "id",
+      "displayFields": ["name", "account_number"],
+      "searchFields": ["name", "account_number"],
+      "snapshotFields": ["name", "account_number"],
+      "consistency": "live-with-snapshot",
+      "requiredPermission": "client.reference"
+    },
+    {
+      "field": "project",
+      "providerArtifactId": "kya:api:kya-core",
+      "resourceType": "project",
+      "valueField": "id",
+      "displayFields": ["name", "code"],
+      "searchFields": ["name", "code"],
+      "snapshotFields": ["name", "code", "client_id"],
+      "consistency": "live-with-snapshot",
+      "requiredPermission": "project.reference"
+    }
   ],
   "workflow": {
     "initialState": "draft",
@@ -39,28 +98,127 @@
       { "key": "cancelled", "name": "Annulée", "category": "cancelled", "terminal": true }
     ],
     "transitions": [
-      { "key": "submit", "name": "Soumettre", "fromState": "draft", "toState": "submitted", "permission": "create", "actors": [{ "kind": "actor", "value": "current" }], "conditions": [{ "field": "purpose", "operator": "is-set" }] },
-      { "key": "approve", "name": "Approuver", "fromState": "submitted", "toState": "approved", "permission": "administer", "actors": [{ "kind": "role", "value": "mission-approver" }] },
-      { "key": "reject", "name": "Rejeter", "fromState": "submitted", "toState": "rejected", "permission": "administer", "actors": [{ "kind": "role", "value": "mission-approver" }] },
-      { "key": "complete", "name": "Clôturer", "fromState": "approved", "toState": "completed", "permission": "edit", "actors": [{ "kind": "record-field", "value": "requester" }] },
-      { "key": "cancel", "name": "Annuler", "fromState": "approved", "toState": "cancelled", "permission": "administer", "actors": [{ "kind": "role", "value": "mission-approver" }] }
+      {
+        "key": "submit",
+        "name": "Soumettre",
+        "fromState": "draft",
+        "toState": "submitted",
+        "permission": "create",
+        "actors": [{ "kind": "actor", "value": "current" }],
+        "conditions": [{ "field": "purpose", "operator": "is-set" }]
+      },
+      {
+        "key": "approve",
+        "name": "Approuver",
+        "fromState": "submitted",
+        "toState": "approved",
+        "permission": "administer",
+        "actors": [{ "kind": "role", "value": "mission-approver" }]
+      },
+      {
+        "key": "reject",
+        "name": "Rejeter",
+        "fromState": "submitted",
+        "toState": "rejected",
+        "permission": "administer",
+        "actors": [{ "kind": "role", "value": "mission-approver" }]
+      },
+      {
+        "key": "complete",
+        "name": "Clôturer",
+        "fromState": "approved",
+        "toState": "completed",
+        "permission": "edit",
+        "actors": [{ "kind": "record-field", "value": "requester" }]
+      },
+      {
+        "key": "cancel",
+        "name": "Annuler",
+        "fromState": "approved",
+        "toState": "cancelled",
+        "permission": "administer",
+        "actors": [{ "kind": "role", "value": "mission-approver" }]
+      }
     ]
   },
-  "privacy": { "identityMode": "identified", "minimumAggregateSize": 1, "allowIndividualReporting": true, "sensitiveFields": ["requester", "estimated_cost"] },
+  "privacy": {
+    "identityMode": "identified",
+    "minimumAggregateSize": 1,
+    "allowIndividualReporting": true,
+    "sensitiveFields": ["requester", "estimated_cost"]
+  },
   "signatures": [
-    { "key": "mission_approval", "transitionKey": "approve", "mode": "internal-approval", "signers": [{ "kind": "role", "value": "mission-approver" }], "minimumSignatures": 1, "bindAttachments": true }
+    {
+      "key": "mission_approval",
+      "transitionKey": "approve",
+      "mode": "internal-approval",
+      "signers": [{ "kind": "role", "value": "mission-approver" }],
+      "minimumSignatures": 1,
+      "bindAttachments": true
+    }
   ],
   "notifications": [
-    { "key": "mission_submitted", "event": "document.submitted", "recipients": [{ "kind": "role", "value": "mission-approver" }], "channels": ["in-app", "email"], "template": "operations.mission.submitted" },
-    { "key": "mission_approved", "event": "document.approved", "recipients": [{ "kind": "record-field", "value": "requester" }], "channels": ["in-app", "email"], "template": "operations.mission.approved" }
+    {
+      "key": "mission_submitted",
+      "event": "document.submitted",
+      "recipients": [{ "kind": "role", "value": "mission-approver" }],
+      "channels": ["in-app", "email"],
+      "template": "operations.mission.submitted"
+    },
+    {
+      "key": "mission_approved",
+      "event": "document.approved",
+      "recipients": [{ "kind": "record-field", "value": "requester" }],
+      "channels": ["in-app", "email"],
+      "template": "operations.mission.approved"
+    }
   ],
   "views": [
-    { "key": "mission_form", "name": "Formulaire de mission", "type": "form", "fields": ["requester", "client", "project", "destination", "purpose", "start_at", "end_at", "estimated_cost", "supporting_documents"], "titleField": "purpose", "default": true },
-    { "key": "mission_table", "name": "Missions", "type": "table", "fields": ["requester", "client", "destination", "start_at", "end_at"] },
-    { "key": "mission_calendar", "name": "Calendrier des missions", "type": "calendar", "fields": ["requester", "destination", "start_at", "end_at"], "dateField": "start_at" }
+    {
+      "key": "mission_form",
+      "name": "Formulaire de mission",
+      "type": "form",
+      "fields": [
+        "requester",
+        "client",
+        "project",
+        "destination",
+        "purpose",
+        "start_at",
+        "end_at",
+        "estimated_cost",
+        "supporting_documents"
+      ],
+      "titleField": "purpose",
+      "default": true
+    },
+    {
+      "key": "mission_table",
+      "name": "Missions",
+      "type": "table",
+      "fields": ["requester", "client", "destination", "start_at", "end_at"]
+    },
+    {
+      "key": "mission_calendar",
+      "name": "Calendrier des missions",
+      "type": "calendar",
+      "fields": ["requester", "destination", "start_at", "end_at"],
+      "dateField": "start_at"
+    }
   ],
   "metrics": [
-    { "key": "mission_count", "name": "Nombre de missions", "aggregation": "count", "groupBy": ["client"] },
-    { "key": "estimated_cost_sum", "name": "Coût estimé total", "aggregation": "sum", "field": "estimated_cost", "groupBy": ["client"] }
+    {
+      "key": "mission_count",
+      "name": "Nombre de missions",
+      "aggregation": "count",
+      "groupBy": ["client"]
+    },
+    {
+      "key": "estimated_cost_sum",
+      "name": "Coût estimé total",
+      "aggregation": "sum",
+      "field": "estimated_cost",
+      "groupBy": ["client"]
+    }
   ]
 }
