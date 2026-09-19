@@ -1,0 +1,63 @@
+{
+  "schemaVersion": "1",
+  "id": "kya:document-type:equipment-movement",
+  "version": "0.1.0",
+  "name": "Mouvement de matériel",
+  "recordSchema": {
+    "schemaVersion": "1",
+    "id": "kya:data-schema:equipment-movement",
+    "version": "0.1.0",
+    "name": "Mouvement de matériel",
+    "ownerScope": "workspace:assets",
+    "fields": [
+      { "key": "movement_type", "label": "Type de mouvement", "type": "choice", "required": true, "choices": ["entry", "exit", "transfer", "return"] },
+      { "key": "equipment", "label": "Matériel", "type": "relation", "required": true, "multiple": true, "relation": { "targetSchemaId": "kya:data-schema:equipment", "cardinality": "many-to-many" } },
+      { "key": "custodian", "label": "Responsable", "type": "relation", "required": true, "relation": { "targetSchemaId": "kya:data-schema:person", "cardinality": "many-to-one" } },
+      { "key": "client", "label": "Client concerné", "type": "relation", "relation": { "targetSchemaId": "kya:data-schema:client", "cardinality": "many-to-one" } },
+      { "key": "source_site", "label": "Site de départ", "type": "relation", "relation": { "targetSchemaId": "kya:data-schema:site", "cardinality": "many-to-one" } },
+      { "key": "destination_site", "label": "Site de destination", "type": "relation", "relation": { "targetSchemaId": "kya:data-schema:site", "cardinality": "many-to-one" } },
+      { "key": "occurred_at", "label": "Date du mouvement", "type": "datetime", "required": true },
+      { "key": "condition", "label": "État du matériel", "type": "choice", "required": true, "choices": ["new", "good", "damaged", "unusable"] },
+      { "key": "notes", "label": "Observations", "type": "long-text" },
+      { "key": "evidence", "label": "Photos et justificatifs", "type": "attachment", "multiple": true, "attachment": { "maxFiles": 20, "maxBytesPerFile": 20971520, "allowedMediaTypes": ["application/pdf", "image/jpeg", "image/png"] } }
+    ],
+    "access": { "enforcement": "record", "permissions": ["view", "create", "edit", "administer", "publish"] },
+    "retention": { "retainDays": 3650, "softDeleteDays": 30, "legalHoldSupported": true }
+  },
+  "references": [
+    { "field": "equipment", "providerArtifactId": "kya:api:inventory", "resourceType": "equipment", "valueField": "id", "displayFields": ["name", "asset_number"], "searchFields": ["name", "asset_number", "serial_number"], "snapshotFields": ["name", "asset_number", "serial_number"], "consistency": "live-with-snapshot", "requiredPermission": "equipment.reference" },
+    { "field": "custodian", "providerArtifactId": "kya:api:kya-core", "resourceType": "person", "valueField": "id", "displayFields": ["display_name", "employee_number"], "searchFields": ["display_name", "employee_number"], "snapshotFields": ["display_name", "employee_number"], "consistency": "live-with-snapshot", "requiredPermission": "person.reference" },
+    { "field": "client", "providerArtifactId": "kya:api:kya-core", "resourceType": "client", "valueField": "id", "displayFields": ["name", "account_number"], "searchFields": ["name", "account_number"], "snapshotFields": ["name", "account_number"], "consistency": "live-with-snapshot", "requiredPermission": "client.reference" },
+    { "field": "source_site", "providerArtifactId": "kya:api:kya-core", "resourceType": "site", "valueField": "id", "displayFields": ["name", "code"], "searchFields": ["name", "code"], "snapshotFields": ["name", "code"], "consistency": "live-with-snapshot", "requiredPermission": "site.reference" },
+    { "field": "destination_site", "providerArtifactId": "kya:api:kya-core", "resourceType": "site", "valueField": "id", "displayFields": ["name", "code"], "searchFields": ["name", "code"], "snapshotFields": ["name", "code"], "consistency": "live-with-snapshot", "requiredPermission": "site.reference" }
+  ],
+  "workflow": {
+    "initialState": "draft",
+    "states": [
+      { "key": "draft", "name": "Brouillon", "category": "draft" },
+      { "key": "submitted", "name": "Soumis", "category": "active" },
+      { "key": "verified", "name": "Vérifié", "category": "completed", "terminal": true },
+      { "key": "rejected", "name": "Rejeté", "category": "rejected", "terminal": true }
+    ],
+    "transitions": [
+      { "key": "submit", "name": "Soumettre", "fromState": "draft", "toState": "submitted", "permission": "create", "actors": [{ "kind": "actor", "value": "current" }] },
+      { "key": "verify", "name": "Vérifier le mouvement", "fromState": "submitted", "toState": "verified", "permission": "administer", "actors": [{ "kind": "role", "value": "asset-controller" }] },
+      { "key": "reject", "name": "Rejeter", "fromState": "submitted", "toState": "rejected", "permission": "administer", "actors": [{ "kind": "role", "value": "asset-controller" }] }
+    ]
+  },
+  "privacy": { "identityMode": "identified", "minimumAggregateSize": 1, "allowIndividualReporting": true, "sensitiveFields": ["custodian"] },
+  "signatures": [
+    { "key": "asset_verification", "transitionKey": "verify", "mode": "internal-approval", "signers": [{ "kind": "role", "value": "asset-controller" }], "minimumSignatures": 1, "bindAttachments": true }
+  ],
+  "notifications": [
+    { "key": "movement_submitted", "event": "document.submitted", "recipients": [{ "kind": "role", "value": "asset-controller" }], "channels": ["in-app", "email"], "template": "assets.movement.submitted" },
+    { "key": "movement_verified", "event": "document.verified", "recipients": [{ "kind": "record-field", "value": "custodian" }], "channels": ["in-app", "email"], "template": "assets.movement.verified" }
+  ],
+  "views": [
+    { "key": "movement_form", "name": "Saisie du mouvement", "type": "form", "fields": ["movement_type", "equipment", "custodian", "client", "source_site", "destination_site", "occurred_at", "condition", "notes", "evidence"], "titleField": "movement_type", "default": true },
+    { "key": "movement_table", "name": "Mouvements", "type": "table", "fields": ["movement_type", "equipment", "custodian", "source_site", "destination_site", "occurred_at", "condition"] }
+  ],
+  "metrics": [
+    { "key": "movement_count", "name": "Nombre de mouvements", "aggregation": "count", "groupBy": ["movement_type", "condition"] }
+  ]
+}
