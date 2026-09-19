@@ -11,10 +11,11 @@
 - [x] Route approved document type proposals through GitHub and signed publication.
 - [x] Persist immutable document definitions in the native runtime.
 - [x] Persist versioned document records and append-only evidence.
-- [ ] Execute authorized workflow transitions server-side.
-- [ ] Dispatch notification intents through the shared outbox worker.
+- [x] Execute authorized workflow transitions server-side.
+- [x] Dispatch notification intents through the shared outbox worker.
 - [ ] Record signatures against exact document revisions and attachment digests.
 - [ ] Build permission-filtered list, detail and form rendering APIs.
 - [ ] Build metric projections with privacy thresholds.
 - [ ] Expose governed authoring and preview tools through MCP.
-- [ ] Deliver the KYA RH employee-satisfaction vertical slice.
+- [ ] Validate mission and equipment-movement operational form slices.
+- [ ] Specify KYA RH surveys and evaluations as a separate product slice.

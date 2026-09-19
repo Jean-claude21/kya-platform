@@ -7,6 +7,8 @@ from uuid import UUID
 import pytest
 
 from kya_platform.application.documents import DocumentConflictError, DocumentNotFoundError
+from kya_platform.application.documents.runtime import NotificationIntent, TransitionPlan
+from kya_platform.contracts.document_type import ActorSelector, ActorSelectorKind
 from kya_platform.domain.documents import (
     DocumentDefinition,
     DocumentEvidence,
@@ -76,6 +78,42 @@ def evidence() -> DocumentEvidence:
         evidence=payload,
         digest=canonical_digest(payload),
         occurred_at=NOW,
+    )
+
+
+def transition_plan() -> TransitionPlan:
+    next_revision = revision(2)
+    proof_payload = {
+        "transitionKey": "submit",
+        "fromState": "draft",
+        "toState": "submitted",
+        "revisionDigest": next_revision.digest,
+    }
+    return TransitionPlan(
+        transition_key="submit",
+        from_state="draft",
+        to_state="submitted",
+        revision=next_revision,
+        evidence=DocumentEvidence(
+            id=EVIDENCE_ID,
+            record_id=RECORD_ID,
+            revision=2,
+            kind=EvidenceKind.TRANSITION,
+            actor_id=ACTOR_ID,
+            evidence=proof_payload,
+            digest=canonical_digest(proof_payload),
+            occurred_at=NOW,
+        ),
+        notifications=(
+            NotificationIntent(
+                policy_key="mission_submitted",
+                event="document.submitted",
+                recipients=(ActorSelector(kind=ActorSelectorKind.ROLE, value="manager"),),
+                channels=("in-app", "email"),
+                template="operations.mission.submitted",
+                available_at=NOW,
+            ),
+        ),
     )
 
 
@@ -287,6 +325,50 @@ async def test_get_record_detects_broken_revision_pointer() -> None:
     with pytest.raises(RuntimeError, match="current revision"):
         await repository(Session(scalars=[record_row()], gets=[None])).get_record(
             RECORD_ID, owner_scope="workspace:people"
+        )
+
+
+@pytest.mark.asyncio
+async def test_transition_commits_revision_evidence_and_outbox_atomically() -> None:
+    row = record_row()
+    session = Session(scalars=[row])
+
+    updated = await repository(session).commit_transition(
+        transition_plan(),
+        owner_scope="workspace:people",
+        correlation_id=UUID("66666666-6666-4666-8666-666666666666"),
+    )
+
+    assert updated.state == "submitted"
+    assert updated.current_revision == 2
+    assert session.commits == 1
+    assert len(session.added) == 4
+    topics = {getattr(item, "topic", None) for item in session.added}
+    assert topics == {None, "document.transitioned", "document.notification.requested"}
+    notification = next(
+        item
+        for item in session.added
+        if getattr(item, "topic", None) == "document.notification.requested"
+    )
+    assert notification.payload["recipients"] == [{"kind": "role", "value": "manager"}]
+
+
+@pytest.mark.asyncio
+async def test_transition_fails_if_record_moved_or_is_outside_scope() -> None:
+    with pytest.raises(DocumentNotFoundError):
+        await repository(Session(scalars=[None])).commit_transition(
+            transition_plan(),
+            owner_scope="workspace:other",
+            correlation_id=UUID("66666666-6666-4666-8666-666666666666"),
+        )
+
+    moved = record_row(current_revision=2)
+    moved.state = "submitted"
+    with pytest.raises(DocumentConflictError, match="changed"):
+        await repository(Session(scalars=[moved])).commit_transition(
+            transition_plan(),
+            owner_scope="workspace:people",
+            correlation_id=UUID("66666666-6666-4666-8666-666666666666"),
         )
 
 

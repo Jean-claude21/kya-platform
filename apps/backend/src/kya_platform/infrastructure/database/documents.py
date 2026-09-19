@@ -9,6 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from kya_platform.application.documents import DocumentConflictError, DocumentNotFoundError
+from kya_platform.application.documents.runtime import TransitionPlan
 from kya_platform.domain.documents import (
     DocumentDefinition,
     DocumentEvidence,
@@ -23,6 +24,7 @@ from kya_platform.infrastructure.database.models.documents import (
     DocumentRecordRow,
     DocumentRevisionRow,
 )
+from kya_platform.infrastructure.database.models.reliability import OutboxEvent
 
 
 def _definition(row: DocumentDefinitionRow) -> DocumentDefinition:
@@ -229,6 +231,110 @@ class SqlAlchemyDocumentRepository:
                 await session.rollback()
                 raise DocumentConflictError(
                     "document revision conflicts with immutable history"
+                ) from error
+            return _record(row)
+
+    async def commit_transition(
+        self,
+        plan: TransitionPlan,
+        *,
+        owner_scope: str,
+        correlation_id: UUID,
+    ) -> DocumentRecord:
+        """Append state, revision, evidence and notification intents atomically."""
+
+        async with self._sessions() as session:
+            row = await session.scalar(
+                select(DocumentRecordRow)
+                .where(
+                    DocumentRecordRow.id == plan.revision.record_id,
+                    DocumentRecordRow.owner_scope == owner_scope,
+                )
+                .with_for_update()
+            )
+            if row is None:
+                raise DocumentNotFoundError("document record does not exist")
+            if row.state != plan.from_state or row.current_revision + 1 != plan.revision.revision:
+                raise DocumentConflictError("document changed after the transition was planned")
+            if (
+                plan.evidence.record_id != row.id
+                or plan.evidence.revision != plan.revision.revision
+            ):
+                raise DocumentConflictError("transition evidence is not bound to its revision")
+            events = [
+                OutboxEvent(
+                    topic="document.transitioned",
+                    aggregate_type="document",
+                    aggregate_id=str(row.id),
+                    correlation_id=correlation_id,
+                    payload={
+                        "schema_version": "1",
+                        "record_id": str(row.id),
+                        "owner_scope": owner_scope,
+                        "transition_key": plan.transition_key,
+                        "from_state": plan.from_state,
+                        "to_state": plan.to_state,
+                        "revision": plan.revision.revision,
+                        "revision_digest": plan.revision.digest,
+                    },
+                )
+            ]
+            events.extend(
+                OutboxEvent(
+                    topic="document.notification.requested",
+                    aggregate_type="document",
+                    aggregate_id=str(row.id),
+                    correlation_id=correlation_id,
+                    available_at=intent.available_at,
+                    payload={
+                        "schema_version": "1",
+                        "record_id": str(row.id),
+                        "owner_scope": owner_scope,
+                        "revision": plan.revision.revision,
+                        "policy_key": intent.policy_key,
+                        "event": intent.event,
+                        "recipients": [
+                            selector.model_dump(mode="json", by_alias=True)
+                            for selector in intent.recipients
+                        ],
+                        "channels": list(intent.channels),
+                        "template": intent.template,
+                    },
+                )
+                for intent in plan.notifications
+            )
+            session.add_all(
+                [
+                    DocumentRevisionRow(
+                        record_id=plan.revision.record_id,
+                        revision=plan.revision.revision,
+                        payload=dict(plan.revision.payload),
+                        digest=plan.revision.digest,
+                        authored_by=plan.revision.authored_by,
+                        created_at=plan.revision.created_at,
+                    ),
+                    DocumentEvidenceRow(
+                        id=plan.evidence.id,
+                        record_id=plan.evidence.record_id,
+                        revision=plan.evidence.revision,
+                        kind=plan.evidence.kind.value,
+                        actor_id=plan.evidence.actor_id,
+                        evidence=dict(plan.evidence.evidence),
+                        digest=plan.evidence.digest,
+                        occurred_at=plan.evidence.occurred_at,
+                    ),
+                    *events,
+                ]
+            )
+            row.state = plan.to_state
+            row.current_revision = plan.revision.revision
+            row.updated_at = plan.revision.created_at
+            try:
+                await session.commit()
+            except IntegrityError as error:
+                await session.rollback()
+                raise DocumentConflictError(
+                    "transition conflicts with immutable document history"
                 ) from error
             return _record(row)
 

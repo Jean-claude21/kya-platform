@@ -28,11 +28,13 @@ Every document type release contains:
 The initial publication route is the existing proposal flow: submission, deterministic admission,
 Studio review, GitHub pull request, immutable signed release and scope assignment.
 
-## First vertical slice
+## First operational proofs
 
-The first runtime proof is an employee satisfaction campaign in KYA RH. It must support anonymous
-responses, separated participation identity, a minimum aggregation threshold, notifications,
-permission-filtered results and auditable publication of the underlying document type.
+The first runtime proofs are generic operational forms: mission requests and equipment entry,
+exit, transfer and return. They exercise governed references to people, clients, projects, sites
+and inventory while preserving a permission-checked live identifier plus a bounded historical
+snapshot. KYA RH remains a separate product slice whose survey and evaluation semantics will be
+specified independently.
 
 ## Storage direction
 
