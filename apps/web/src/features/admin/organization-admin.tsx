@@ -64,7 +64,9 @@ function TreeBranch({
             type="button"
             className="org-node__toggle"
             aria-label={expanded ? 'Réduire' : 'Développer'}
-            onClick={() => setExpanded((value) => !value)}
+            onClick={() => {
+              setExpanded((value) => !value);
+            }}
           >
             <Icon name="chevron" />
           </button>
@@ -410,7 +412,6 @@ export function OrganizationAdmin() {
     return () => {
       active = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function view(unit: Unit) {
