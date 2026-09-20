@@ -141,6 +141,10 @@ class ArtifactPackage(StrictPackageContract):
                 raise ValueError("a skill requires SKILL.md classified as instruction")
             if skill.executable:
                 raise ValueError("SKILL.md cannot be executable")
+        if self.artifact.artifact_type is ArtifactType.DOCUMENT_TYPE:
+            definition = by_path.get("document-type.json")
+            if definition is None or definition.kind is not PackageFileKind.SCHEMA:
+                raise ValueError("a document type requires document-type.json classified as schema")
 
         has_executable_content = any(
             item.executable or item.kind is PackageFileKind.SCRIPT for item in self.files

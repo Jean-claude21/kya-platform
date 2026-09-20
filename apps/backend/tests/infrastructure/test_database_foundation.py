@@ -31,6 +31,7 @@ from kya_platform.infrastructure.database.models import (
     OAuthTokenRecord,
     OutboxEvent,
     PlatformBootstrapClaim,
+    WebhookSubscriptionRow,
 )
 from kya_platform.infrastructure.database.session import normalize_asyncpg_url
 
@@ -50,6 +51,7 @@ def test_reliability_models_have_explicit_schema_ownership() -> None:
     assert AuditEvent.__table__.schema == "audit"
     assert OutboxEvent.__table__.schema == "reliability"
     assert IdempotencyRecord.__table__.schema == "reliability"
+    assert WebhookSubscriptionRow.__table__.schema == "reliability"
     assert set(Base.metadata.tables) == {
         "audit.event",
         "catalog.artifact",
@@ -94,6 +96,10 @@ def test_reliability_models_have_explicit_schema_ownership() -> None:
         "data.snapshot",
         "data.source",
         "data.source_flow",
+        "documents.definition",
+        "documents.evidence",
+        "documents.record",
+        "documents.revision",
         "identity.external_identity",
         "identity.platform_bootstrap_claim",
         "intelligence.signal",
@@ -108,6 +114,7 @@ def test_reliability_models_have_explicit_schema_ownership() -> None:
         "oauth.token",
         "reliability.idempotency_record",
         "reliability.outbox_event",
+        "reliability.webhook_subscription",
     }
     assert OAuthClient.__table__.schema == "oauth"
     assert OAuthGrant.__table__.schema == "oauth"

@@ -18,7 +18,7 @@ dev = [
 ]
 
 [tool.uv.workspace]
-members = ["apps/backend"]
+members = ["apps/backend", "capabilities/mcp/zoom"]
 
 [tool.pytest.ini_options]
 addopts = [

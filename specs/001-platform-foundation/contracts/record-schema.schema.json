@@ -1,0 +1,246 @@
+{
+  "$defs": {
+    "AttachmentPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "maxFiles": {
+          "default": 1,
+          "maximum": 50,
+          "minimum": 1,
+          "title": "Maxfiles",
+          "type": "integer"
+        },
+        "maxBytesPerFile": {
+          "maximum": 104857600,
+          "minimum": 1,
+          "title": "Maxbytesperfile",
+          "type": "integer"
+        },
+        "allowedMediaTypes": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "minItems": 1,
+          "title": "Allowedmediatypes",
+          "type": "array"
+        }
+      },
+      "required": ["maxBytesPerFile", "allowedMediaTypes"],
+      "title": "AttachmentPolicy",
+      "type": "object"
+    },
+    "CapabilityPermission": {
+      "description": "Stable verbs shared by applications, MCP tools, skills and data products.",
+      "enum": ["view", "use", "create", "edit", "administer", "publish", "share"],
+      "title": "CapabilityPermission",
+      "type": "string"
+    },
+    "RecordAccessPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "enforcement": {
+          "default": "schema",
+          "enum": ["schema", "record"],
+          "title": "Enforcement",
+          "type": "string"
+        },
+        "permissions": {
+          "items": {
+            "$ref": "#/$defs/CapabilityPermission"
+          },
+          "minItems": 1,
+          "title": "Permissions",
+          "type": "array"
+        }
+      },
+      "required": ["permissions"],
+      "title": "RecordAccessPolicy",
+      "type": "object"
+    },
+    "RecordField": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$",
+          "title": "Key",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/$defs/RecordFieldType"
+        },
+        "required": {
+          "default": false,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "multiple": {
+          "default": false,
+          "title": "Multiple",
+          "type": "boolean"
+        },
+        "choices": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 200,
+          "title": "Choices",
+          "type": "array"
+        },
+        "relation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RelationDefinition"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "attachment": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AttachmentPolicy"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": ["key", "label", "type"],
+      "title": "RecordField",
+      "type": "object"
+    },
+    "RecordFieldType": {
+      "enum": [
+        "text",
+        "long-text",
+        "integer",
+        "decimal",
+        "boolean",
+        "date",
+        "datetime",
+        "choice",
+        "relation",
+        "attachment",
+        "json"
+      ],
+      "title": "RecordFieldType",
+      "type": "string"
+    },
+    "RelationCardinality": {
+      "enum": ["one-to-one", "many-to-one", "one-to-many", "many-to-many"],
+      "title": "RelationCardinality",
+      "type": "string"
+    },
+    "RelationDefinition": {
+      "additionalProperties": false,
+      "properties": {
+        "targetSchemaId": {
+          "pattern": "^kya:data-schema:[a-z0-9][a-z0-9-]*$",
+          "title": "Targetschemaid",
+          "type": "string"
+        },
+        "cardinality": {
+          "$ref": "#/$defs/RelationCardinality"
+        }
+      },
+      "required": ["targetSchemaId", "cardinality"],
+      "title": "RelationDefinition",
+      "type": "object"
+    },
+    "RetentionPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "retainDays": {
+          "minimum": 1,
+          "title": "Retaindays",
+          "type": "integer"
+        },
+        "softDeleteDays": {
+          "default": 30,
+          "minimum": 0,
+          "title": "Softdeletedays",
+          "type": "integer"
+        },
+        "legalHoldSupported": {
+          "default": false,
+          "title": "Legalholdsupported",
+          "type": "boolean"
+        }
+      },
+      "required": ["retainDays"],
+      "title": "RetentionPolicy",
+      "type": "object"
+    }
+  },
+  "$id": "https://schemas.kya.energy/platform/record-schema/v1",
+  "additionalProperties": false,
+  "description": "Immutable schema version; records reference its exact id and version.",
+  "properties": {
+    "schemaVersion": {
+      "const": "1",
+      "title": "Schemaversion",
+      "type": "string"
+    },
+    "id": {
+      "pattern": "^kya:data-schema:[a-z0-9][a-z0-9-]*$",
+      "title": "Id",
+      "type": "string"
+    },
+    "version": {
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+      "title": "Version",
+      "type": "string"
+    },
+    "name": {
+      "maxLength": 120,
+      "minLength": 2,
+      "title": "Name",
+      "type": "string"
+    },
+    "ownerScope": {
+      "maxLength": 255,
+      "minLength": 1,
+      "title": "Ownerscope",
+      "type": "string"
+    },
+    "fields": {
+      "items": {
+        "$ref": "#/$defs/RecordField"
+      },
+      "maxItems": 500,
+      "minItems": 1,
+      "title": "Fields",
+      "type": "array"
+    },
+    "access": {
+      "$ref": "#/$defs/RecordAccessPolicy"
+    },
+    "retention": {
+      "$ref": "#/$defs/RetentionPolicy"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "id",
+    "version",
+    "name",
+    "ownerScope",
+    "fields",
+    "access",
+    "retention"
+  ],
+  "title": "RecordSchema",
+  "type": "object"
+}

@@ -4,6 +4,7 @@ import base64
 import logging
 from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, asynccontextmanager
+from datetime import UTC, datetime
 from typing import cast
 
 import httpx
@@ -25,6 +26,7 @@ from kya_platform.application.audit import AuditQueryService, AuditWriter
 from kya_platform.application.content import ContentService
 from kya_platform.application.core import CoreService
 from kya_platform.application.data import DataService
+from kya_platform.application.documents import DocumentService
 from kya_platform.application.intelligence import IntelligenceService
 from kya_platform.application.mcp_profiles import McpPreferenceService, McpProfileService
 from kya_platform.application.mcp_profiles.runtime import (
@@ -60,11 +62,15 @@ from kya_platform.infrastructure.database.builtin_artifacts import (
 from kya_platform.infrastructure.database.content import SqlAlchemyContentRepository
 from kya_platform.infrastructure.database.core import SqlAlchemyCoreRepository
 from kya_platform.infrastructure.database.data import SqlAlchemyDataRepository
+from kya_platform.infrastructure.database.documents import SqlAlchemyDocumentRepository
 from kya_platform.infrastructure.database.identity import SqlAlchemyIdentityMapping
 from kya_platform.infrastructure.database.intelligence import SqlAlchemyIntelligenceRepository
 from kya_platform.infrastructure.database.mcp_profiles import SqlAlchemyMcpProfileRegistry
 from kya_platform.infrastructure.database.oauth_broker import VALID_SCOPES, OAuthBroker
 from kya_platform.infrastructure.database.proposal import SqlAlchemyProposalUnitOfWork
+from kya_platform.infrastructure.database.proposal_publication import (
+    SqlAlchemyMergedProposalPublisher,
+)
 from kya_platform.infrastructure.database.publication import (
     SqlAlchemyAttestationRepository,
     SqlAlchemyPublicationUnitOfWork,
@@ -96,6 +102,11 @@ from kya_platform.mcp.registry.runtime import (
     StateToolSetProvider,
 )
 from kya_platform.mcp.registry.server import create_registry_server
+from kya_platform.mcp.zoom.runtime import (
+    StateZoomMcpBackend,
+    StaticZoomConnectionResolver,
+    ZoomAuthorizationAdapter,
+)
 from kya_platform.observability import (
     CorrelationMiddleware,
     configure_logging,
@@ -185,6 +196,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         infisical_http_client: httpx.AsyncClient | None = None
         openfga_http_client: httpx.AsyncClient | None = None
+        zoom_http_client: httpx.AsyncClient | None = None
+        signer: Ed25519ArtifactSigner | None = None
+        pull_requests: GitHubAppPullRequestAdapter | None = None
         # Test settings may intentionally use a non-routable database URL to
         # validate configuration wiring. Catalogue synchronization is an
         # operational startup concern and is covered by repository tests.
@@ -196,6 +210,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             app.state.identity_mapping = SqlAlchemyIdentityMapping(session_factory)
             app.state.bootstrap_claims = SqlAlchemyBootstrapClaimRepository(session_factory)
             app.state.core_service = CoreService(SqlAlchemyCoreRepository(session_factory))
+            app.state.document_service = DocumentService(
+                SqlAlchemyDocumentRepository(session_factory)
+            )
             workspace_repository = SqlAlchemyWorkspaceRepository(session_factory)
             app.state.workspace_queries = workspace_repository
             app.state.workspace_commands = workspace_repository
@@ -319,6 +336,48 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 resolved_settings.infisical_environment,
                 resolved_settings.infisical_secret_path,
             )
+        if resolved_settings.has_zoom_configuration:
+            from kya_zoom_mcp.adapters.zoom import ZoomAPIAdapter, ZoomCredentials
+            from kya_zoom_mcp.service import ZoomMeetingService
+            from kya_zoom_mcp.stores import MemoryMeetingPlanStore, MemoryOperationStore
+
+            if (
+                resolved_settings.zoom_account_id is not None
+                and resolved_settings.zoom_client_id is not None
+                and resolved_settings.zoom_client_secret is not None
+            ):
+                zoom_account_id = resolved_settings.zoom_account_id
+                zoom_client_id = resolved_settings.zoom_client_id
+                zoom_client_secret = resolved_settings.zoom_client_secret
+            else:
+                resolver = app.state.infisical_secret_resolver
+                if resolver is None:
+                    raise RuntimeError("Zoom requires inline credentials or Infisical")
+                instant = datetime.now(UTC)
+                account_secret = await resolver.resolve("ZOOM_ACCOUNT_ID", at=instant)
+                client_id_secret = await resolver.resolve("ZOOM_CLIENT_ID", at=instant)
+                client_secret = await resolver.resolve("ZOOM_CLIENT_SECRET", at=instant)
+                zoom_account_id = account_secret.value.get_secret_value()
+                zoom_client_id = client_id_secret.value.get_secret_value()
+                zoom_client_secret = client_secret.value
+
+            zoom_http_client = httpx.AsyncClient(timeout=20.0)
+            app.state.zoom_service = ZoomMeetingService(
+                authorization=ZoomAuthorizationAdapter(),
+                connections=StaticZoomConnectionResolver(resolved_settings.zoom_host_id),
+                plans=MemoryMeetingPlanStore(),
+                operations=MemoryOperationStore(),
+                zoom=ZoomAPIAdapter(
+                    ZoomCredentials(
+                        account_id=zoom_account_id,
+                        client_id=zoom_client_id,
+                        client_secret=zoom_client_secret,
+                    ),
+                    zoom_http_client,
+                    api_base_url=resolved_settings.zoom_api_base_url,
+                    oauth_endpoint=resolved_settings.zoom_oauth_token_url,
+                ),
+            )
         if resolved_settings.openfga_api_url is not None:
             api_token = resolved_settings.openfga_api_token
             store_id = resolved_settings.openfga_store_id
@@ -334,6 +393,27 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 model_id=model_id,
             )
         authorization_port = app.state.authorization
+        if (
+            authorization_port is not None
+            and session_factory is not None
+            and signer is not None
+            and pull_requests is not None
+            and resolved_settings.github_proposal_repository is not None
+        ):
+            app.state.proposal_service = ProposalService(
+                cast(
+                    ProposalUnitOfWorkFactory,
+                    lambda: SqlAlchemyProposalUnitOfWork(session_factory),
+                ),
+                pull_requests,
+                SqlAlchemyMergedProposalPublisher(
+                    session_factory,
+                    signer,
+                    authorization_port,
+                    repository=resolved_settings.github_proposal_repository,
+                    public_api_url=resolved_settings.oauth_issuer_url,
+                ),
+            )
         if authorization_port is not None and session_factory is not None:
             app.state.scope_promotion_service = ScopePromotionService(
                 cast(
@@ -384,6 +464,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     await infisical_http_client.aclose()
                 if openfga_http_client is not None:
                     await openfga_http_client.aclose()
+                if zoom_http_client is not None:
+                    await zoom_http_client.aclose()
                 if database_engine is not None:
                     await database_engine.dispose()
                 telemetry.shutdown()
@@ -421,8 +503,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.state.mcp_profile_repository = None
     application.state.mcp_preference_service = None
     application.state.mcp_tool_profile_runtime = None
+    application.state.zoom_service = None
     application.state.oauth_broker = oauth_broker
     configure_security_runtime(application.state, resolved_settings)
+    zoom_backend = (
+        StateZoomMcpBackend(application.state) if resolved_settings.has_zoom_configuration else None
+    )
     if resolved_settings.has_registry_mcp_configuration:
         authorization_server_url = resolved_settings.registry_mcp_authorization_server_url
         if oauth_broker is None or authorization_server_url is None:
@@ -437,6 +523,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             data_audit=StateDataMcpAuditSink(application.state),
             intelligence_backend=StateIntelligenceMcpBackend(application.state),
             proposal_backend=StateProposalMcpBackend(application.state),
+            zoom_backend=zoom_backend,
             tool_set_provider=(
                 StateToolSetProvider(application.state)
                 if resolved_settings.mcp_tool_profile_mode != "off"

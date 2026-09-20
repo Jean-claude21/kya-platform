@@ -87,6 +87,12 @@ class Settings(BaseSettings):
     object_storage_bucket: str | None = None
     object_storage_access_key_id: SecretStr | None = None
     object_storage_secret_access_key: SecretStr | None = None
+    zoom_account_id: str | None = None
+    zoom_client_id: str | None = None
+    zoom_client_secret: SecretStr | None = None
+    zoom_host_id: str = "me"
+    zoom_api_base_url: str = "https://api.zoom.us/v2"
+    zoom_oauth_token_url: str = "https://zoom.us/oauth/token"  # noqa: S105 -- URL
 
     @model_validator(mode="after")
     def validate_infisical_configuration(self) -> Settings:
@@ -102,6 +108,15 @@ class Settings(BaseSettings):
             raise ValueError("Infisical secret path must start with /")
         if not 1 <= self.infisical_maximum_token_ttl_seconds <= 7_200:
             raise ValueError("Infisical maximum token TTL must be between 1 and 7200 seconds")
+        zoom_credentials = (
+            self.zoom_account_id,
+            self.zoom_client_id,
+            self.zoom_client_secret,
+        )
+        if any(item is not None for item in zoom_credentials) and not all(zoom_credentials):
+            raise ValueError("Inline Zoom configuration must be complete")
+        if not self.zoom_host_id.strip():
+            raise ValueError("Zoom host ID must not be empty")
         if self.otel_exporter_otlp_endpoint is not None:
             endpoint = self.otel_exporter_otlp_endpoint.rstrip("/")
             if not endpoint.startswith(("http://", "https://")):
@@ -232,6 +247,15 @@ class Settings(BaseSettings):
     @property
     def has_infisical_configuration(self) -> bool:
         return self.infisical_api_url is not None
+
+    @property
+    def has_zoom_configuration(self) -> bool:
+        """Zoom credentials may be injected directly or resolved from Infisical."""
+
+        return bool(
+            (self.environment != "test" and self.has_infisical_configuration)
+            or all((self.zoom_account_id, self.zoom_client_id, self.zoom_client_secret))
+        )
 
     @property
     def has_github_proposal_configuration(self) -> bool:

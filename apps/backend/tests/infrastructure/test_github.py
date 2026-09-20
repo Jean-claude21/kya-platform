@@ -81,6 +81,7 @@ def adapter(
         (ArtifactType.SKILL, "skills"),
         (ArtifactType.MCP_SERVER, "mcp-servers"),
         (ArtifactType.APPLICATION, "applications"),
+        (ArtifactType.DOCUMENT_TYPE, "document-types"),
     ),
 )
 async def test_open_pull_request_never_holds_standing_merge_rights(

@@ -52,15 +52,17 @@ from kya_platform.mcp.registry.contracts import (
     ToolAccessContext,
     ToolAuthorizer,
 )
+from kya_platform.mcp.zoom.contracts import ZOOM_TOOLS
 
 if TYPE_CHECKING:
     from kya_platform.mcp.data.server import DataMcpAuditSink, DataMcpBackend
     from kya_platform.mcp.intelligence.server import IntelligenceMcpBackend
+    from kya_platform.mcp.zoom.server import ZoomMcpBackend
 
 type AccessTokenProvider = Callable[[], AccessToken | None]
 type ToolVisibility = Callable[[str], Awaitable[bool]]
 type ToolSetProvider = Callable[[], Awaitable[frozenset[str]]]
-ALL_TOOLS = REGISTRY_TOOLS + DATA_TOOLS + INTELLIGENCE_TOOLS
+ALL_TOOLS = REGISTRY_TOOLS + DATA_TOOLS + INTELLIGENCE_TOOLS + ZOOM_TOOLS
 SUPPORTED_SCOPES = sorted({item.oauth_scope for item in ALL_TOOLS})
 logger = logging.getLogger(__name__)
 
@@ -304,6 +306,7 @@ def create_registry_server(
     intelligence_backend: IntelligenceMcpBackend | None = None,
     proposal_backend: ProposalMcpBackend | None = None,
     tool_set_provider: ToolSetProvider | None = None,
+    zoom_backend: ZoomMcpBackend | None = None,
 ) -> MCPServer[None]:
     """Build the remote server; OAuth authenticates and KYA policy authorizes."""
 
@@ -641,6 +644,12 @@ def create_registry_server(
         register_intelligence_tools(
             server, backend=intelligence_backend, guard=guard, audit=data_audit
         )
+    if zoom_backend is not None:
+        if data_audit is None:
+            raise ValueError("Zoom MCP requires the shared audit sink")
+        from kya_platform.mcp.zoom.server import register_zoom_tools
+
+        register_zoom_tools(server, backend=zoom_backend, guard=guard, audit=data_audit)
 
     return server
 

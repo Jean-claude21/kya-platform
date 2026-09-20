@@ -13,6 +13,7 @@ import { PublicationWorkbench } from '../features/publication/publication-workbe
 import { SystemAuthorityWorkbench } from '../features/systems/system-authority-workbench';
 import { SecretAccessWorkbench } from '../features/secrets/secret-access-workbench';
 import { AuditTimeline } from '../features/audit/audit-timeline';
+import { ApplicationLauncher } from '../features/applications/application-launcher';
 import { authClient } from '../auth/client';
 import { platformRequest } from '../platform/api';
 import { getActiveUnitId, setActiveUnitId } from '../platform/active-context';
@@ -21,6 +22,7 @@ export type Module =
   'Accueil' | 'Catalogue' | 'Apps' | 'MCP' | 'Skills' | 'Studio' | 'Administration' | AdminTarget;
 const navigation: Array<{ target: Module; label: string; icon: IconName }> = [
   { target: 'Accueil', label: 'Accueil', icon: 'home' },
+  { target: 'Apps', label: 'Applications', icon: 'apps' },
   { target: 'Catalogue', label: 'Catalogue', icon: 'catalog' },
   { target: 'MCP', label: 'Mes connexions', icon: 'network' },
   { target: 'Espaces', label: 'Espaces', icon: 'people' },
@@ -126,16 +128,13 @@ export function PlatformShell() {
         preview={isPreview}
       />
     );
-  else if (activeModule === 'Catalogue' || activeModule === 'Apps' || activeModule === 'Skills') {
+  else if (activeModule === 'Apps') screen = <ApplicationLauncher query={query} />;
+  else if (activeModule === 'Catalogue' || activeModule === 'Skills') {
     screen = (
       <CatalogWorkbench
         key={activeModule + catalogQuery}
         initialQuery={catalogQuery}
-        {...(activeModule === 'Apps'
-          ? { typeFilter: 'App' as const }
-          : activeModule === 'Skills'
-            ? { typeFilter: 'Skill' as const }
-            : {})}
+        {...(activeModule === 'Skills' ? { typeFilter: 'Skill' as const } : {})}
       />
     );
   } else if (activeModule === 'MCP') screen = <AiEnvironment />;

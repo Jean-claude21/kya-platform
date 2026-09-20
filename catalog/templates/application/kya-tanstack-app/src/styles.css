@@ -1,0 +1,42 @@
+:root {
+  color: #063d3a;
+  background: #ffffff;
+  font-family: 'Segoe UI Variable', 'Segoe UI', Arial, sans-serif;
+  font-synthesis: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.app-shell {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: clamp(2rem, 7vw, 6rem);
+}
+
+.eyebrow {
+  color: #a45722;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+h1 {
+  max-width: 16ch;
+  margin: 0.5rem 0 1rem;
+  font-size: clamp(2.5rem, 6vw, 5.5rem);
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+}
+
+main > p:last-child {
+  max-width: 42rem;
+  color: #5f6d69;
+  font-size: 1.125rem;
+  line-height: 1.6;
+}

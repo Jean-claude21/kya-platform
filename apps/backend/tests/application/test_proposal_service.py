@@ -1,5 +1,7 @@
 """Proposal use cases: a non-developer contribution never bypasses human review."""
 
+import base64
+import json
 from datetime import UTC, datetime
 from types import TracebackType
 from typing import Self, cast
@@ -88,6 +90,71 @@ def mcp_package() -> ProposalPackage:
     )
 
 
+def document_type_package() -> ProposalPackage:
+    definition = {
+        "schemaVersion": "1",
+        "id": "kya:document-type:employee-survey",
+        "version": "0.1.0",
+        "name": "Employee survey",
+        "recordSchema": {
+            "schemaVersion": "1",
+            "id": "kya:data-schema:employee-survey-response",
+            "version": "0.1.0",
+            "name": "Employee survey response",
+            "ownerScope": "workspace:people",
+            "fields": [{"key": "rating", "label": "Rating", "type": "integer"}],
+            "access": {"permissions": ["view", "create"]},
+            "retention": {"retainDays": 365},
+        },
+        "workflow": {
+            "initialState": "draft",
+            "states": [
+                {"key": "draft", "name": "Draft", "category": "draft"},
+                {
+                    "key": "submitted",
+                    "name": "Submitted",
+                    "category": "completed",
+                    "terminal": True,
+                },
+            ],
+            "transitions": [
+                {
+                    "key": "submit",
+                    "name": "Submit",
+                    "fromState": "draft",
+                    "toState": "submitted",
+                    "permission": "create",
+                    "actors": [{"kind": "actor", "value": "current"}],
+                }
+            ],
+        },
+        "views": [
+            {
+                "key": "survey_form",
+                "name": "Survey form",
+                "type": "form",
+                "fields": ["rating"],
+                "default": True,
+            }
+        ],
+    }
+    encoded = base64.b64encode(json.dumps(definition).encode()).decode()
+    return ProposalPackage(
+        files=[
+            ProposalFile(
+                path="artifact.manifest.json",
+                kind=PackageFileKind.MANIFEST,
+                content_base64="e30=",
+            ),
+            ProposalFile(
+                path="document-type.json",
+                kind=PackageFileKind.SCHEMA,
+                content_base64=encoded,
+            ),
+        ]
+    )
+
+
 class FakeProposals:
     def __init__(self) -> None:
         self.records: dict[UUID, ProposalRecord] = {}
@@ -154,11 +221,33 @@ class FakePullRequests:
         return self._merge_commit
 
 
+class FakePublisher:
+    def __init__(self) -> None:
+        self.published: list[tuple[UUID, str]] = []
+        self.version_id = UUID("019914b2-1a40-7000-8000-0000000000d1")
+
+    async def publish(
+        self,
+        *,
+        proposal: Proposal,
+        package: ProposalPackage,
+        commit_sha: str,
+        correlation_id: UUID,
+    ) -> UUID:
+        del package, correlation_id
+        self.published.append((proposal.id, commit_sha))
+        return self.version_id
+
+
 def build_service(
-    proposals: FakeProposals, pull_requests: FakePullRequests
+    proposals: FakeProposals,
+    pull_requests: FakePullRequests,
+    publisher: FakePublisher | None = None,
 ) -> tuple[ProposalService, FakeUnitOfWork]:
     unit_of_work = FakeUnitOfWork(proposals)
-    service = ProposalService(cast(ProposalUnitOfWorkFactory, lambda: unit_of_work), pull_requests)
+    service = ProposalService(
+        cast(ProposalUnitOfWorkFactory, lambda: unit_of_work), pull_requests, publisher
+    )
     return service, unit_of_work
 
 
@@ -230,6 +319,53 @@ async def test_mcp_submission_uses_the_same_governed_proposal_path() -> None:
     assert proposal.artifact_type is ArtifactType.MCP_SERVER
     assert proposal.status is ProposalStatus.SUBMITTED
     assert unit_of_work.commits == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.unit
+async def test_document_type_submission_uses_the_same_governed_proposal_path() -> None:
+    proposals = FakeProposals()
+    service, unit_of_work = build_service(proposals, FakePullRequests())
+
+    proposal = await service.submit(
+        proposal_id=PROPOSAL,
+        target_workspace_id=WORKSPACE,
+        slug="employee-survey",
+        artifact_type=ArtifactType.DOCUMENT_TYPE,
+        artifact_id=None,
+        package=document_type_package(),
+        requested_by=AUTHOR,
+        at=NOW,
+        correlation_id=CORRELATION,
+    )
+
+    assert proposal.artifact_type is ArtifactType.DOCUMENT_TYPE
+    assert proposal.status is ProposalStatus.SUBMITTED
+    assert unit_of_work.commits == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.unit
+async def test_document_type_submission_rejects_invalid_definition() -> None:
+    proposals = FakeProposals()
+    service, unit_of_work = build_service(proposals, FakePullRequests())
+    invalid = document_type_package()
+    invalid.files[1].content_base64 = "e30="
+
+    with pytest.raises(ProposalValidationError, match=r"document-type\.json is invalid"):
+        await service.submit(
+            proposal_id=PROPOSAL,
+            target_workspace_id=WORKSPACE,
+            slug="employee-survey",
+            artifact_type=ArtifactType.DOCUMENT_TYPE,
+            artifact_id=None,
+            package=invalid,
+            requested_by=AUTHOR,
+            at=NOW,
+            correlation_id=CORRELATION,
+        )
+
+    assert unit_of_work.commits == 0
 
 
 @pytest.mark.asyncio
@@ -486,10 +622,15 @@ async def test_polling_after_merge_never_trusts_a_client_supplied_commit() -> No
     )
     proposals.records[PROPOSAL] = ProposalRecord(proposal=pull_request_open, package=package())
     merge_commit = "a" * 40
-    service, unit_of_work = build_service(proposals, FakePullRequests(merge_commit=merge_commit))
+    publisher = FakePublisher()
+    service, unit_of_work = build_service(
+        proposals, FakePullRequests(merge_commit=merge_commit), publisher
+    )
 
     merged = await service.poll_merge_status(PROPOSAL, correlation_id=CORRELATION)
 
     assert merged.status is ProposalStatus.MERGED
     assert merged.merged_commit_sha == merge_commit
+    assert merged.resulting_artifact_version_id == publisher.version_id
+    assert publisher.published == [(PROPOSAL, merge_commit)]
     assert unit_of_work.outbox.messages[-1].topic == "proposal.merged"

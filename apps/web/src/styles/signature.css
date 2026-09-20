@@ -1026,6 +1026,227 @@ button:disabled {
     scroll-behavior: auto;
   }
 }
+
+/* Governed application launcher ------------------------------------------------ */
+
+.application-launcher {
+  width: min(1240px, calc(100% - 64px));
+  margin: 0 auto;
+  padding: 52px 0 72px;
+}
+
+.application-launcher__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 32px;
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--kya-line);
+}
+
+.application-launcher__header h1 {
+  margin: 0 0 10px;
+  color: var(--kya-deep);
+  font-size: clamp(2.25rem, 4vw, 3.25rem);
+  line-height: 1.06;
+  letter-spacing: -0.04em;
+}
+
+.application-launcher__header p {
+  max-width: 68ch;
+  margin: 0;
+  color: var(--kya-muted);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.application-launcher__context {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+  color: var(--kya-coffee);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.application-launcher__context svg {
+  width: 20px;
+  height: 20px;
+}
+
+.application-launcher__list {
+  border-bottom: 1px solid var(--kya-line);
+}
+
+.application-launcher__row {
+  display: grid;
+  grid-template-columns: 56px minmax(260px, 1fr) auto 132px;
+  align-items: center;
+  gap: 20px;
+  min-height: 116px;
+  padding: 20px 4px;
+  border-bottom: 1px solid var(--kya-line);
+}
+
+.application-launcher__row:last-child {
+  border-bottom: 0;
+}
+
+.application-launcher__identity {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--kya-green-100);
+  color: var(--kya-teal);
+}
+
+.application-launcher__identity img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.application-launcher__identity svg {
+  width: 25px;
+  height: 25px;
+}
+
+.application-launcher__copy h2 {
+  margin: 0 0 5px;
+  color: var(--kya-deep);
+  font-size: 1.06rem;
+  line-height: 1.3;
+}
+
+.application-launcher__copy p {
+  max-width: 68ch;
+  margin: 0;
+  color: var(--kya-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.application-launcher__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-top: 8px;
+  color: var(--kya-muted);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.application-launcher__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--kya-deep);
+  font-size: 0.79rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.application-launcher__status i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--kya-teal);
+}
+
+.application-launcher__status.is-restricted {
+  color: var(--kya-coffee);
+}
+
+.application-launcher__status.is-restricted i {
+  background: var(--kya-coffee);
+}
+
+.application-launcher__open {
+  width: 132px;
+  justify-content: center;
+}
+
+.application-launcher__open:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.application-launcher__state {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  min-height: 190px;
+  padding: 44px 4px;
+  color: var(--kya-muted);
+}
+
+.application-launcher__state > svg {
+  width: 30px;
+  height: 30px;
+  color: var(--kya-teal);
+}
+
+.application-launcher__state h2 {
+  margin: 0 0 8px;
+  color: var(--kya-deep);
+  font-size: 1.12rem;
+}
+
+.application-launcher__state p {
+  max-width: 62ch;
+  margin: 0 0 18px;
+  line-height: 1.55;
+}
+
+.application-launcher__state--error {
+  color: #a43b32;
+}
+
+.application-launcher__state--error > svg,
+.application-launcher__state--error h2 {
+  color: #a43b32;
+}
+
+@media (max-width: 820px) {
+  .application-launcher {
+    width: min(100% - 32px, 1240px);
+    padding-top: 32px;
+  }
+
+  .application-launcher__header {
+    display: block;
+  }
+
+  .application-launcher__context {
+    margin-top: 18px;
+  }
+
+  .application-launcher__row {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 14px;
+    padding: 20px 0;
+  }
+
+  .application-launcher__identity {
+    width: 46px;
+    height: 46px;
+  }
+
+  .application-launcher__status,
+  .application-launcher__open {
+    grid-column: 2;
+  }
+
+  .application-launcher__open {
+    width: 100%;
+    min-height: 44px;
+  }
+}
 /* Studio — real skill package */
 .signature-studio {
   min-width: 0;

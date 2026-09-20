@@ -25,6 +25,7 @@ class ArtifactType(StrEnum):
     DESIGN_SYSTEM = "design-system"
     CONNECTOR = "connector"
     POLICY = "policy"
+    DOCUMENT_TYPE = "document-type"
 
 
 class ArtifactLifecycle(StrEnum):

@@ -396,9 +396,11 @@ person, machine or cloud account.
 - [x] Provide a permission-filtered Studio review queue with file inspection, deterministic evidence,
       human approval or rejection, and server-governed GitHub pull-request creation.
 - [ ] Validate master templates, code, media, tests and security policy in CI.
-- [ ] Publish canonical manifests, release UUIDs, content digests and verification instructions.
-- [ ] Let AI clients install by human-friendly artifact ID and desired scope.
-- [ ] Record installation receipts and effective visibility in KYA-Platform.
+- [x] Publish merged proposals as canonical manifests, signed release UUIDs, reproducible packages,
+      content digests and verification instructions.
+- [x] Let AI clients resolve installation plans from a human-friendly artifact ID and desired scope.
+- [x] Record installation receipts and calculate effective visibility through KYA-Platform and
+      OpenFGA.
 - [ ] Support promotion from personal to team, entity and group scopes.
 
 **Exit criterion:** a normal user can submit, improve, review, publish and install a capability without

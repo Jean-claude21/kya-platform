@@ -45,6 +45,12 @@ from kya_platform.infrastructure.database.models.data import (
     DataSourceFlowRow,
     DataSourceRow,
 )
+from kya_platform.infrastructure.database.models.documents import (
+    DocumentDefinitionRow,
+    DocumentEvidenceRow,
+    DocumentRecordRow,
+    DocumentRevisionRow,
+)
 from kya_platform.infrastructure.database.models.identity import ExternalIdentity
 from kya_platform.infrastructure.database.models.intelligence import (
     IntelligenceSignalRow,
@@ -68,6 +74,7 @@ from kya_platform.infrastructure.database.models.reliability import (
     OutboxEvent,
 )
 from kya_platform.infrastructure.database.models.secrets import SecretReferenceRow
+from kya_platform.infrastructure.database.models.webhooks import WebhookSubscriptionRow
 from kya_platform.infrastructure.database.models.workspaces import (
     WorkspaceLinkedUnitRow,
     WorkspaceMembershipRow,
@@ -114,6 +121,10 @@ __all__ = [
     "DataSnapshotRow",
     "DataSourceFlowRow",
     "DataSourceRow",
+    "DocumentDefinitionRow",
+    "DocumentEvidenceRow",
+    "DocumentRecordRow",
+    "DocumentRevisionRow",
     "ExternalIdentity",
     "IdempotencyRecord",
     "IntelligenceSignalRow",
@@ -129,6 +140,7 @@ __all__ = [
     "OutboxEvent",
     "PlatformBootstrapClaim",
     "SecretReferenceRow",
+    "WebhookSubscriptionRow",
     "WorkspaceLinkedUnitRow",
     "WorkspaceMembershipRow",
     "WorkspaceRow",

@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "1",
+  "runtime": "python>=3.14,<3.15",
+  "entrypoints": {
+    "server": "src/kya_zoom_mcp/server.py"
+  },
+  "commands": ["serve"],
+  "network": {
+    "mode": "allowlist",
+    "allowedHosts": ["api.zoom.us", "zoom.us", "api.kya-platform.vttlife.com"]
+  },
+  "filesystem": {
+    "readPaths": [],
+    "writePaths": []
+  },
+  "secretReferences": [
+    "infisical://kya-platform/zoom/account-id",
+    "infisical://kya-platform/zoom/client-id",
+    "infisical://kya-platform/zoom/client-secret"
+  ],
+  "requestedPermissions": ["zoom.meeting.read", "zoom.meeting.create"],
+  "resourceLimits": {
+    "timeoutSeconds": 30,
+    "memoryMegabytes": 256
+  }
+}

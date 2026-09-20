@@ -97,14 +97,30 @@ class PullRequestPort(Protocol):
         """Return the merge commit SHA once merged, or None while still open."""
 
 
+class MergedProposalPublisher(Protocol):
+    """Promote the exact reviewed package after GitHub proves its merge commit."""
+
+    async def publish(
+        self,
+        *,
+        proposal: Proposal,
+        package: ProposalPackage,
+        commit_sha: str,
+        correlation_id: UUID,
+    ) -> UUID:
+        """Return the immutable artifact-version identifier; the operation is idempotent."""
+
+
 class ProposalService:
     def __init__(
         self,
         unit_of_work_factory: ProposalUnitOfWorkFactory,
         pull_requests: PullRequestPort,
+        publisher: MergedProposalPublisher | None = None,
     ) -> None:
         self._unit_of_work_factory = unit_of_work_factory
         self._pull_requests = pull_requests
+        self._publisher = publisher
 
     async def get(self, proposal_id: UUID) -> Proposal:
         async with self._unit_of_work_factory() as unit_of_work:
@@ -270,9 +286,19 @@ class ProposalService:
             )
             if commit_sha is None:
                 return record.proposal
+            version_id = (
+                await self._publisher.publish(
+                    proposal=record.proposal,
+                    package=record.package,
+                    commit_sha=commit_sha,
+                    correlation_id=correlation_id,
+                )
+                if self._publisher is not None
+                else proposal_id
+            )
             updated = record.proposal.mark_merged(
                 commit_sha=commit_sha,
-                resulting_artifact_version_id=proposal_id,
+                resulting_artifact_version_id=version_id,
             )
             await unit_of_work.proposals.save(updated, package=record.package)
             await unit_of_work.outbox.add(self._event("proposal.merged", updated, correlation_id))
@@ -310,6 +336,7 @@ class ProposalService:
 
 __all__ = [
     "MAX_OPEN_PROPOSALS_PER_AUTHOR",
+    "MergedProposalPublisher",
     "ProposalNotFoundError",
     "ProposalQuotaExceededError",
     "ProposalRecord",
