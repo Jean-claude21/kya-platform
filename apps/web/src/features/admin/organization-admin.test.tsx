@@ -7,7 +7,12 @@ vi.mock('../../platform/api', () => ({
 }));
 vi.mock('../../platform/active-context', () => ({ getActiveUnitId: () => 'direction-cvsi' }));
 
-import { OrganizationAdminView, type Unit, type UnitType } from './organization-admin';
+import {
+  OrganizationAdminView,
+  type TreeNode,
+  type Unit,
+  type UnitType,
+} from './organization-admin';
 
 const root: Unit = {
   id: '019a2000-0000-7000-8000-000000000001',
@@ -17,6 +22,7 @@ const root: Unit = {
   valid_from: '2026-01-01T00:00:00Z',
   valid_until: null,
 };
+const tree: TreeNode = { unit: root, children: [] };
 const unitTypes: UnitType[] = [
   { key: 'direction', label: 'Direction', allowed_parent_types: ['group'], is_temporary: false },
   { key: 'team', label: 'Équipe', allowed_parent_types: ['direction'], is_temporary: false },
@@ -25,17 +31,21 @@ const unitTypes: UnitType[] = [
 function view(overrides: Partial<Parameters<typeof OrganizationAdminView>[0]> = {}) {
   return (
     <OrganizationAdminView
-      root={root}
-      children={[]}
+      tree={tree}
+      viewed={root}
+      viewedChildren={[]}
       unitTypes={unitTypes}
       error=""
       creation={{ phase: 'idle' }}
       newKey=""
       newName=""
       newTypeKey="direction"
+      parentUnit={root}
       onKeyChange={() => undefined}
       onNameChange={() => undefined}
       onTypeChange={() => undefined}
+      onParentSelect={() => undefined}
+      onView={() => undefined}
       onSubmit={() => undefined}
       {...overrides}
     />
@@ -86,8 +96,10 @@ describe('organization admin', () => {
   });
 
   it('renders truthful loading and error states without a root unit', () => {
-    const loading = renderToStaticMarkup(view({ root: null, error: '' }));
-    const failed = renderToStaticMarkup(view({ root: null, error: 'Organisation indisponible.' }));
+    const loading = renderToStaticMarkup(view({ tree: null, viewed: null, error: '' }));
+    const failed = renderToStaticMarkup(
+      view({ tree: null, viewed: null, error: 'Organisation indisponible.' }),
+    );
 
     expect(loading).toContain('Chargement de la structure');
     expect(failed).toContain('Organisation indisponible.');

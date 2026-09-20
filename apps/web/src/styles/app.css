@@ -4280,6 +4280,109 @@ th {
   color: var(--kya-muted);
   font-size: 12px;
 }
+.org-tree-hint {
+  margin: 0 0 14px;
+  font-size: 12px;
+  color: var(--kya-muted);
+}
+.org-branch {
+  margin-bottom: 2px;
+}
+.org-node {
+  grid-template-columns: 20px 1fr auto;
+}
+.org-node--active {
+  background: var(--kya-green-100);
+}
+.org-node--selected {
+  border-color: var(--kya-teal);
+  box-shadow: inset 0 0 0 1px var(--kya-teal);
+}
+.org-node__toggle {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--kya-muted);
+  cursor: pointer;
+}
+.org-node__toggle--spacer {
+  cursor: default;
+}
+.org-node__label {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  align-items: center;
+  gap: 9px;
+  padding: 6px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.org-node__label span {
+  display: grid;
+}
+.org-node__label small {
+  color: var(--kya-muted);
+}
+.org-node__pick {
+  padding: 4px 8px;
+  border: 1px solid var(--kya-line);
+  border-radius: 7px;
+  background: #fff;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.org-node--selected .org-node__pick {
+  background: var(--kya-teal);
+  color: #fff;
+  border-color: var(--kya-teal);
+}
+.viewed-unit-summary {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--kya-line);
+}
+.viewed-unit-summary dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin: 0 0 14px;
+}
+.viewed-unit-summary dt {
+  color: var(--kya-muted);
+  font-size: 12px;
+}
+.viewed-unit-summary dd {
+  margin: 0;
+  font-size: 13px;
+}
+.viewed-unit-summary h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+.viewed-children-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.viewed-children-list li {
+  display: grid;
+  gap: 2px;
+  padding: 8px;
+  border: 1px solid var(--kya-line);
+  border-radius: 7px;
+}
+.viewed-children-list small {
+  color: var(--kya-muted);
+}
 .assignment-panel,
 .core-records {
   min-width: 0;
