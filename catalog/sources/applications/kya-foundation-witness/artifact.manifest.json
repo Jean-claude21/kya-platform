@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "1",
+  "id": "kya:app:kya-foundation-witness",
+  "type": "app",
+  "name": "Témoin technique du socle",
+  "version": "1.0.0",
+  "summary": "Application isolée de recette : lancement et santé uniquement, sans donnée métier.",
+  "owners": {
+    "business": "platform-recipe",
+    "technical": "platform-recipe",
+    "workspace": "platform"
+  },
+  "compatibility": { "kya-platform": "1" },
+  "risk": "read",
+  "governance": {
+    "visibility": "restricted",
+    "defaultScope": "unit",
+    "allowedScopes": ["unit", "group"],
+    "permissions": ["view", "use"]
+  },
+  "application": {
+    "launch": {
+      "url": "http://xkiytyzxiw5wh3xnkg6sya2s.13.140.178.49.sslip.io",
+      "mode": "new-tab",
+      "healthUrl": "http://xkiytyzxiw5wh3xnkg6sya2s.13.140.178.49.sslip.io/health"
+    }
+  }
+}
