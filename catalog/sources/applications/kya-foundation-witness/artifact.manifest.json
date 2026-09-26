@@ -17,14 +17,8 @@
   "governance": {
     "visibility": "restricted",
     "defaultScope": "unit",
-    "allowedScopes": [
-      "unit",
-      "group"
-    ],
-    "permissions": [
-      "view",
-      "use"
-    ]
+    "allowedScopes": ["unit", "group"],
+    "permissions": ["view", "use"]
   },
   "application": {
     "launch": {
